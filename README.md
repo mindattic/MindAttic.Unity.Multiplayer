@@ -4,7 +4,8 @@ Reusable Unity 6 multiplayer for MindAttic games: attribute RPCs, host or dedica
 > **Status: early.** A game can host, serve and join by IP:port through `NetSession` / `NetBootstrap`, with
 > approval, seats, `NetEntity` RPCs in every direction, synced fields and server-driven scene changes. The RPC
 > and synced-field plumbing is written by the package's source generator. The self-hosted rendezvous service
-> (`server/Rendezvous`) is built; joining by code from the game comes in UM-T13. The design and build order are in
+> (`server/Rendezvous`) is built, and a game hosts and joins by join code (`NetSession.HostWithCode` /
+> `JoinByCode`; Unity Relay for listen servers, the rendezvous service for dedicated servers). The design and build order are in
 > [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
 > [docs/BIBLE.md](docs/BIBLE.md). This README is rewritten to README-STYLE, with a link to the
 > docs site, in UM-T19.
@@ -51,7 +52,10 @@ docker run -p 8080:8080 -e Rendezvous__RegistrationSecret=<secret> mindattic-ren
 ```
 
 It will not start without a registration secret (`Rendezvous__AllowOpenRegistration=true` is for local
-development). Codes live 60 s past the last heartbeat (`Rendezvous__TtlSeconds`), every route is rate limited
+development). A dedicated server registers itself when it has a URL and the secret:
+`-rendezvous https://rendezvous.example.com` (or `MINDATTIC_RENDEZVOUS_URL`) plus `MINDATTIC_RENDEZVOUS_SECRET`;
+`-publicaddress` / `-publicport` override what it advertises, and on RunPod it advertises its `RUNPOD_TCP_PORT_*`
+mapping (with `-transport websocket`). Codes live 60 s past the last heartbeat (`Rendezvous__TtlSeconds`), every route is rate limited
 per IP (`Rendezvous__RateLimits__*`), and `GET /healthz` drives the container's health check. For TLS, put it
 behind a reverse proxy (`Rendezvous__UseForwardedHeaders=true`, `Rendezvous__KnownProxies__0=<proxy IP>`) or give
 Kestrel a certificate; the Dockerfile header lists the variables. Locally: `dotnet run --project server/Rendezvous`

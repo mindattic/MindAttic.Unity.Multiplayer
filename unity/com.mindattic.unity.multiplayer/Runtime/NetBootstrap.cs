@@ -48,6 +48,20 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("Server: seconds a dropped player's seat and player object wait for it to reconnect. 0 frees them at once.")]
         [SerializeField, Range(0f, 600f)] private float reconnectGraceSeconds = (float)NetConfig.DefaultReconnectGraceSeconds;
 
+        [Header("Join codes")]
+        [Tooltip("Auto: Unity Relay for a listen server, the rendezvous service for a dedicated server. None turns join codes off.")]
+        [SerializeField] private JoinCodeProvider joinCodes = JoinCodeProvider.Auto;
+
+        [Tooltip("Base URL of the self-hosted rendezvous service. A dedicated server registers itself there; clients resolve codes with it. "
+            + "-rendezvous or MINDATTIC_RENDEZVOUS_URL override it. The registration secret comes from MINDATTIC_RENDEZVOUS_SECRET, never the scene.")]
+        [SerializeField] private string rendezvousUrl = string.Empty;
+
+        [Tooltip("Server: the address players reach it at, when it differs from what it binds. Empty lets the rendezvous service use the address it sees.")]
+        [SerializeField] private string publicAddress = string.Empty;
+
+        [Tooltip("Server: the port players reach it at, when a host maps it. 0 = the listen port (or RunPod's RUNPOD_TCP_PORT_* mapping).")]
+        [SerializeField, Range(0, 65535)] private int publicPort;
+
         [Header("Player")]
         [Tooltip("The name other players see. Empty uses \"Player\".")]
         [SerializeField] private string displayName = string.Empty;
@@ -69,7 +83,7 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("A headless process (-batchmode, -nographics, a Dedicated Server build) starts as a dedicated server.")]
         [SerializeField] private bool serveWhenHeadless = true;
 
-        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers from the command line.")]
+        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers -joincodes -rendezvous -publicaddress -publicport from the command line, and MINDATTIC_RENDEZVOUS_URL / _SECRET / MINDATTIC_PUBLIC_ADDRESS from the environment.")]
         [SerializeField] private bool readCommandLine = true;
 
         [Tooltip("In a headless process: vsync off, targetFrameRate = tick rate, run in background.")]
@@ -103,6 +117,10 @@ namespace MindAttic.Unity.Multiplayer
                 MaxPlayers = maxPlayers,
                 GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? Application.version : gameVersion,
                 ReconnectGraceSeconds = Mathf.Max(0f, reconnectGraceSeconds),
+                JoinCodes = joinCodes,
+                RendezvousUrl = string.IsNullOrWhiteSpace(rendezvousUrl) ? null : rendezvousUrl.Trim(),
+                PublicAddress = string.IsNullOrWhiteSpace(publicAddress) ? null : publicAddress.Trim(),
+                PublicPort = (ushort)Mathf.Clamp(publicPort, 0, 65535),
             };
 
             if (string.IsNullOrWhiteSpace(config.GameVersion))
@@ -132,6 +150,10 @@ namespace MindAttic.Unity.Multiplayer
             maxPlayers = config.MaxPlayers;
             gameVersion = config.GameVersion;
             reconnectGraceSeconds = (float)config.ReconnectGraceSeconds;
+            joinCodes = config.JoinCodes;
+            rendezvousUrl = config.RendezvousUrl ?? string.Empty;
+            publicAddress = config.PublicAddress ?? string.Empty;
+            publicPort = config.PublicPort;
         }
 
         /// <summary>
@@ -227,6 +249,22 @@ namespace MindAttic.Unity.Multiplayer
             return Session.JoinByAddress(ip, joinPort, BuildConfig());
         }
 
+        /// <summary>
+        /// Hosts a listen server with the configured settings and publishes a join code (Unity Relay unless Join Codes
+        /// says otherwise). The code is also in <see cref="NetSession.PublishedCode"/>; Empty when it failed
+        /// (<see cref="NetSession.JoinCodeFailed"/> says why).
+        /// </summary>
+        public System.Threading.Tasks.Task<JoinCode> HostWithCode()
+        {
+            return Session.HostWithCode(BuildConfig());
+        }
+
+        /// <summary>Joins the game behind <paramref name="code"/> (as a player typed it) with the configured settings.</summary>
+        public System.Threading.Tasks.Task<bool> JoinByCode(string code)
+        {
+            return Session.JoinByCode(code, BuildConfig());
+        }
+
         /// <summary>Leaves the current session, if any.</summary>
         public bool Leave()
         {
@@ -270,7 +308,16 @@ namespace MindAttic.Unity.Multiplayer
             if (NetLaunch.ShouldStart(config, commandLine, headless, autoStart, serveWhenHeadless))
             {
                 Debug.Log("[MindAttic.Multiplayer] Starting " + config);
-                Session.Start(config);
+                if (config.Topology == Topology.Host && config.JoinCodes == JoinCodeProvider.Relay)
+                {
+                    // An explicit Relay host needs its allocation before it starts.
+                    _ = Session.HostWithCode(config);
+                }
+                else
+                {
+                    // A dedicated server with a rendezvous URL registers itself once it is running.
+                    Session.Start(config);
+                }
             }
         }
 

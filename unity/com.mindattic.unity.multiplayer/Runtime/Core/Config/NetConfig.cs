@@ -71,6 +71,37 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// </summary>
         public double ReconnectGraceSeconds { get; set; } = DefaultReconnectGraceSeconds;
 
+        /// <summary>
+        /// Which service publishes and resolves join codes. <see cref="JoinCodeProvider.Auto"/> (the default) means Relay
+        /// for a listen server and the rendezvous service for a dedicated server (<see cref="JoinCodeDefaults"/>).
+        /// </summary>
+        public JoinCodeProvider JoinCodes { get; set; } = JoinCodeProvider.Auto;
+
+        /// <summary>
+        /// Base URL of the self-hosted rendezvous service (for example <c>https://rendezvous.example.com</c>). A dedicated
+        /// server with one registers itself as soon as it is running; a client resolves codes with it. Empty for none.
+        /// </summary>
+        public string RendezvousUrl { get; set; }
+
+        /// <summary>
+        /// The rendezvous service's registration secret, which a dedicated server needs to register. Prefer the
+        /// <c>MINDATTIC_RENDEZVOUS_SECRET</c> environment variable (<see cref="NetEnvironment"/>) to keeping it in a scene.
+        /// Never included in <see cref="ToString"/>.
+        /// </summary>
+        public string RendezvousSecret { get; set; }
+
+        /// <summary>
+        /// The address players reach this server at, when it differs from what it binds (behind NAT or a proxy). Empty
+        /// lets the rendezvous service use the address the registration came from (<see cref="ServerAdvertisement"/>).
+        /// </summary>
+        public string PublicAddress { get; set; }
+
+        /// <summary>
+        /// The port players reach this server at, when a host maps it (0, the default, means <see cref="Port"/>, or the
+        /// <c>RUNPOD_TCP_PORT_*</c> mapping on RunPod; see <see cref="ServerAdvertisement"/>).
+        /// </summary>
+        public ushort PublicPort { get; set; }
+
         /// <summary>The address actually used: <see cref="Address"/>, or the topology's default when it is empty.</summary>
         public string EffectiveAddress
         {
@@ -135,6 +166,21 @@ namespace MindAttic.Unity.Multiplayer.Core
             if (double.IsNaN(ReconnectGraceSeconds) || ReconnectGraceSeconds < 0 || ReconnectGraceSeconds > MaxReconnectGraceSeconds)
             {
                 errors.Add("ReconnectGraceSeconds must be between 0 and " + MaxReconnectGraceSeconds + "; got " + ReconnectGraceSeconds + ".");
+            }
+
+            if (!Enum.IsDefined(typeof(JoinCodeProvider), JoinCodes))
+            {
+                errors.Add("JoinCodes " + (int)JoinCodes + " is not Auto, None, Relay or Rendezvous.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(RendezvousUrl) && !RendezvousClient.IsValidBaseUrl(RendezvousUrl))
+            {
+                errors.Add("RendezvousUrl must be an absolute http:// or https:// URL; got '" + RendezvousUrl + "'.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(PublicAddress) && PublicAddress.Trim().IndexOf(' ') >= 0)
+            {
+                errors.Add("PublicAddress '" + PublicAddress + "' must not contain spaces.");
             }
 
             string address = EffectiveAddress;

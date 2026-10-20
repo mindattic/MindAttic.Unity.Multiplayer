@@ -5,7 +5,9 @@
         "MindAttic.Unity.Multiplayer.Core",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport",
-        "Unity.Services.Multiplayer"
+        "Unity.Services.Multiplayer",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

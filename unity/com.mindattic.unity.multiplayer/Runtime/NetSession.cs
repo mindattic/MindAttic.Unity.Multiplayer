@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using MindAttic.Unity.Multiplayer.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -27,6 +29,11 @@ namespace MindAttic.Unity.Multiplayer
     /// (<see cref="Disconnection.Rejection"/>), and an approved player gets a <see cref="Seat"/>. A player who drops
     /// keeps its seat and its player object for <see cref="NetConfig.ReconnectGraceSeconds"/>; reconnecting with the
     /// same player token within that window gives both back (<see cref="SeatReclaimed"/>).</para>
+    /// <para>Join codes (RFC 0001): <see cref="HostWithCode"/> hosts and publishes a code (Unity Relay by default, since
+    /// it gets through NAT), a dedicated server with a <see cref="NetConfig.RendezvousUrl"/> registers itself with the
+    /// rendezvous service as soon as it is running (and keeps the registration alive), <see cref="PublishCode"/>
+    /// publishes one for a session already running, and <see cref="JoinByCode"/> joins with a code a player typed. A
+    /// published code is withdrawn when the session ends.</para>
     /// <para>Events are raised on Unity's main thread, from NGO's callbacks. An exception thrown by a handler
     /// is logged and does not stop the session's own bookkeeping.</para>
     /// </remarks>
@@ -65,6 +72,14 @@ namespace MindAttic.Unity.Multiplayer
         private readonly RpcGate _gate = new RpcGate();
         private readonly NetSceneFlow _scenes;
         private readonly NetPrefabRegistry _prefabs;
+        private readonly SynchronizationContext _mainThread;
+        private readonly RelayJoinCodeService _relay = new RelayJoinCodeService();
+        private RendezvousJoinCodeService _rendezvous;
+        private string _rendezvousKey;
+        private IJoinCodeService _joinCodeOverride;
+        private JoinCode _publishedCode;
+        private IJoinCodeService _publishedBy;
+        private int _publishGeneration;
 
         /// <summary>Every live session by the NetworkManager it drives, so a <see cref="NetEntity"/> can find its own.</summary>
         private static readonly Dictionary<NetworkManager, NetSession> s_ByManager = new Dictionary<NetworkManager, NetSession>();
@@ -79,6 +94,7 @@ namespace MindAttic.Unity.Multiplayer
             }
 
             _manager = manager;
+            _mainThread = SynchronizationContext.Current;
             _scenes = new NetSceneFlow(manager);
             _prefabs = new NetPrefabRegistry(manager);
             s_ByManager[manager] = this;
@@ -132,6 +148,18 @@ namespace MindAttic.Unity.Multiplayer
         /// received or tried to send a server-to-client call it should not have. The call's handler did not run.
         /// </summary>
         public event Action<RpcRejection> RpcRejected;
+
+        /// <summary>
+        /// Host or Server: a join code was published for this session (by <see cref="HostWithCode"/>, <see cref="PublishCode"/>
+        /// or a dedicated server's self-registration), or replaced after the rendezvous service lost the old one.
+        /// </summary>
+        public event Action<JoinCode> JoinCodePublished;
+
+        /// <summary>
+        /// A join-code operation failed, with a message fit to show: a code that does not parse or that no game is using,
+        /// a rendezvous service that cannot be reached or refused the registration, Relay not installed.
+        /// </summary>
+        public event Action<string> JoinCodeFailed;
 
         /// <summary>Server-driven scene changes: the server loads, every client follows.</summary>
         public NetSceneFlow Scenes
@@ -416,6 +444,15 @@ namespace MindAttic.Unity.Multiplayer
         /// <exception cref="ObjectDisposedException">The session was disposed.</exception>
         public bool Start(NetConfig config)
         {
+            return StartCore(config, null);
+        }
+
+        /// <summary>
+        /// <see cref="Start"/>, with <paramref name="transportSetup"/> run on the configured transport just before NGO
+        /// starts (Relay points it at an allocation there). A setup that returns false aborts the start.
+        /// </summary>
+        private bool StartCore(NetConfig config, Func<UnityTransport, bool> transportSetup)
+        {
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(NetSession));
@@ -441,7 +478,14 @@ namespace MindAttic.Unity.Multiplayer
                 return false;
             }
 
-            Configure(copy);
+            UnityTransport configured = Configure(copy);
+            if (transportSetup != null && !transportSetup(configured))
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] The transport could not be set up for this " + copy.Topology + "; not starting.");
+                return false;
+            }
+
+            ForgetPublishedCode();
             _config = copy;
             _transportFailed = false;
             _machine.Start(copy.Topology);
@@ -543,10 +587,539 @@ namespace MindAttic.Unity.Multiplayer
 
             StopClock();
             ResetSeats();
+            WaitForPendingRevoke();
+            if (_rendezvous != null)
+            {
+                // Stops heartbeats and deletes what is still registered (best effort; anything left expires by itself).
+                _rendezvous.RegistrationLost -= OnRegistrationLost;
+                _rendezvous.Dispose();
+                _rendezvous = null;
+            }
+        }
+
+        /// <summary>
+        /// The join-code service to use instead of the defaults (Relay for a listen server, the rendezvous service for a
+        /// dedicated server): for a custom backend, or <see cref="InMemoryJoinCodeService"/> in tests. Null (the default)
+        /// uses <see cref="NetConfig.JoinCodes"/>. An override publishes endpoint targets, so it suits a reachable server.
+        /// </summary>
+        public IJoinCodeService JoinCodes
+        {
+            get { return _joinCodeOverride; }
+            set { _joinCodeOverride = value; }
+        }
+
+        /// <summary>The Relay service this session uses (its <see cref="RelayJoinCodeService.Region"/> can be set).</summary>
+        public RelayJoinCodeService Relay
+        {
+            get { return _relay; }
+        }
+
+        /// <summary>The code published for the live session; <see cref="JoinCode.Empty"/> when there is none.</summary>
+        public JoinCode PublishedCode
+        {
+            get { return _publishedCode; }
+        }
+
+        /// <summary><see cref="PublishedCode"/> grouped for display (<c>ABC-DEF-GHJ</c>); empty when there is none.</summary>
+        public string PublishedCodeText
+        {
+            get { return _publishedCode.IsEmpty ? string.Empty : JoinCodeFormat.Format(_publishedCode.Value); }
+        }
+
+        /// <summary>
+        /// Hosts a listen server and publishes a join code for it. The provider is <paramref name="config"/>'s
+        /// <see cref="NetConfig.JoinCodes"/>, where Auto means Unity Relay (it gets through NAT, so friends can join a game
+        /// hosted at home with no port forwarding); Rendezvous publishes this host's address instead, which works only when
+        /// players can reach it. <see cref="JoinCodes"/>, when set, is used instead.
+        /// </summary>
+        /// <returns>
+        /// The code (also in <see cref="PublishedCode"/> and raised as <see cref="JoinCodePublished"/>), or
+        /// <see cref="JoinCode.Empty"/> when the host did not start or the code could not be published (the session then
+        /// is left, and <see cref="JoinCodeFailed"/> says why).
+        /// </returns>
+        /// <exception cref="ArgumentException">The config is invalid.</exception>
+        /// <exception cref="InvalidOperationException">A session is already active, or join codes are off (<see cref="JoinCodeProvider.None"/>).</exception>
+        public async Task<JoinCode> HostWithCode(NetConfig config = null)
+        {
+            NetConfig host = WithTopology(config, Core.Topology.Host);
+            host.EnsureValid();
+            if (_machine.IsActive)
+            {
+                throw new InvalidOperationException("Cannot host while the session is " + _machine.State + "; call Leave first.");
+            }
+
+            JoinCodeProvider provider = _joinCodeOverride != null
+                ? JoinCodeProvider.Rendezvous
+                : JoinCodeDefaults.ForPublishing(Core.Topology.Host, host.JoinCodes);
+            if (provider == JoinCodeProvider.None)
+            {
+                throw new InvalidOperationException("Join codes are off (NetConfig.JoinCodes = None); use StartHost.");
+            }
+
+            if (provider != JoinCodeProvider.Relay)
+            {
+                // A reachable host: start, then publish its address like a dedicated server would.
+                if (!StartHost(host) || !await WhenLive())
+                {
+                    return JoinCode.Empty;
+                }
+
+                return await PublishOrLeave();
+            }
+
+            if (!RelayJoinCodeService.IsAvailable)
+            {
+                Fail(RelayJoinCodeService.MissingPackageMessage);
+                return JoinCode.Empty;
+            }
+
+            JoinTarget relayTarget;
+            try
+            {
+                relayTarget = await _relay.AllocateAsync(host.MaxPlayers - 1, host.Transport);
+            }
+            catch (Exception ex)
+            {
+                Fail("Could not get a Unity Relay allocation: " + ex.Message);
+                return JoinCode.Empty;
+            }
+
+            if (!StartCore(host, transport => _relay.ApplyHost(host.Transport, transport)))
+            {
+                return JoinCode.Empty;
+            }
+
+            JoinCode code = await _relay.PublishAsync(relayTarget);
+            SetPublished(code, _relay);
+            return code;
+        }
+
+        /// <summary>
+        /// Publishes a join code for the Host or Server already running: registers its public endpoint
+        /// (<see cref="ServerAdvertisement.For"/>: <see cref="NetConfig.PublicAddress"/>/<see cref="NetConfig.PublicPort"/>,
+        /// RunPod's mapped port, else the listen port at the address the service sees) with the rendezvous service and keeps
+        /// it alive, or publishes it through <see cref="JoinCodes"/> when set. Returns the code already published, if any.
+        /// A dedicated server with a <see cref="NetConfig.RendezvousUrl"/> does this by itself when it starts.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// No Host or Server is running; or its provider is Relay (a Relay allocation is made before the host starts: use
+        /// <see cref="HostWithCode"/>); or no rendezvous URL is configured.
+        /// </exception>
+        /// <exception cref="RendezvousException">The rendezvous service refused the registration or could not be reached.</exception>
+        public async Task<JoinCode> PublishCode()
+        {
+            if (!IsServer || _config == null)
+            {
+                throw new InvalidOperationException("Only a running Host or Server can publish a join code.");
+            }
+
+            if (!_publishedCode.IsEmpty)
+            {
+                return _publishedCode;
+            }
+
+            int generation = _publishGeneration;
+            IJoinCodeService service;
+            JoinCode code;
+            if (_joinCodeOverride != null)
+            {
+                service = _joinCodeOverride;
+                ServerAdvertisement custom = ServerAdvertisement.For(_config, EnvironmentReader);
+                string address = custom.Address ?? (_config.EffectiveAddress == NetConfig.AnyAddress ? NetConfig.LoopbackAddress : _config.EffectiveAddress);
+                code = await service.PublishAsync(JoinTarget.ForEndpoint(address, custom.Port, custom.Transport));
+            }
+            else
+            {
+                JoinCodeProvider provider = JoinCodeDefaults.ForPublishing(_config.Topology, _config.JoinCodes);
+                if (provider == JoinCodeProvider.Relay)
+                {
+                    throw new InvalidOperationException("A Relay join code is set up when the host starts: use HostWithCode, or set NetConfig.JoinCodes = Rendezvous.");
+                }
+
+                if (provider == JoinCodeProvider.None)
+                {
+                    throw new InvalidOperationException("Join codes are off (NetConfig.JoinCodes = None).");
+                }
+
+                RendezvousJoinCodeService rendezvous = RendezvousFor(_config);
+                ServerAdvertisement advertisement = ServerAdvertisement.For(_config, EnvironmentReader);
+                for (int i = 0; i < advertisement.Warnings.Count; i++)
+                {
+                    Debug.LogWarning("[MindAttic.Multiplayer] " + advertisement.Warnings[i]);
+                }
+
+                service = rendezvous;
+                code = await rendezvous.RegisterAsync(advertisement);
+                Debug.Log("[MindAttic.Multiplayer] Registered " + advertisement + " with the rendezvous service as " + JoinCodeFormat.Format(code.Value) + ".");
+            }
+
+            if (generation != _publishGeneration || !IsServer)
+            {
+                // The session ended (or restarted) while the code was being published: take it back.
+                await RevokeQuietly(service, code);
+                return JoinCode.Empty;
+            }
+
+            if (!_publishedCode.IsEmpty)
+            {
+                // Another publish finished first; keep that one.
+                await RevokeQuietly(service, code);
+                return _publishedCode;
+            }
+
+            SetPublished(code, service);
+            return code;
+        }
+
+        /// <summary>
+        /// Joins the game behind a code a player typed. Case, spaces and dashes are ignored, and a single misread
+        /// character (0 for O, 1 for I) is corrected. The code is looked up with <see cref="JoinCodes"/> when set, else by
+        /// <paramref name="config"/>'s <see cref="NetConfig.JoinCodes"/>: Rendezvous asks the service at
+        /// <see cref="NetConfig.RendezvousUrl"/>, Relay asks Unity Relay, and Auto tries the rendezvous service (when a URL
+        /// is set) and then Relay (when installed and the code could be a Relay code). An address target is joined like
+        /// <see cref="JoinByAddress"/>, over the transport the server registered; a Relay target through the allocation.
+        /// </summary>
+        /// <returns>
+        /// True when NGO began connecting (the session is then Connecting, as after <see cref="JoinByAddress"/>). False when
+        /// the code does not parse, no game is using it or it could not be looked up; <see cref="JoinCodeFailed"/> carries
+        /// a message to show the player.
+        /// </returns>
+        /// <exception cref="ArgumentException">The config is invalid.</exception>
+        /// <exception cref="InvalidOperationException">A session is already active.</exception>
+        public async Task<bool> JoinByCode(string code, NetConfig config = null)
+        {
+            NetConfig join = WithTopology(config, Core.Topology.Client);
+            join.EnsureValid();
+            if (_machine.IsActive)
+            {
+                throw new InvalidOperationException("Cannot join while the session is " + _machine.State + "; call Leave first.");
+            }
+
+            JoinCodeParseResult parsed;
+            if (!JoinCode.TryParse(code, out parsed))
+            {
+                Fail(parsed.Message);
+                return false;
+            }
+
+            List<IJoinCodeService> services = ResolversFor(join, parsed.Code);
+            if (services.Count == 0)
+            {
+                Fail(join.JoinCodes == JoinCodeProvider.None
+                    ? "Join codes are off (NetConfig.JoinCodes = None)."
+                    : join.JoinCodes == JoinCodeProvider.Relay && !RelayJoinCodeService.IsAvailable
+                        ? RelayJoinCodeService.MissingPackageMessage
+                        : "No join-code service is set up: set NetConfig.RendezvousUrl, or install com.unity.services.multiplayer for Relay.");
+                return false;
+            }
+
+            JoinTarget target = null;
+            Exception lookupError = null;
+            foreach (IJoinCodeService service in services)
+            {
+                try
+                {
+                    target = await service.ResolveAsync(parsed.Code);
+                }
+                catch (Exception ex)
+                {
+                    lookupError = ex;
+                    Debug.LogWarning("[MindAttic.Multiplayer] Looking up join code with " + service.GetType().Name + " failed: " + ex.Message);
+                }
+
+                if (target != null)
+                {
+                    break;
+                }
+            }
+
+            string shown = JoinCodeFormat.Format(parsed.Code.Value);
+            if (target == null)
+            {
+                Fail(lookupError != null
+                    ? "Could not look up code " + shown + ": " + lookupError.Message
+                    : "No game is using code " + shown + ". It may have ended, or the code may have expired.");
+                return false;
+            }
+
+            if (_disposed || _machine.IsActive)
+            {
+                Fail("Another session started while code " + shown + " was being looked up.");
+                return false;
+            }
+
+            Debug.Log("[MindAttic.Multiplayer] Join code " + shown + " leads to " + target + ".");
+            join.Transport = target.Transport;
+            if (target.Kind == JoinTargetKind.Relay)
+            {
+                return StartCore(join, transport => _relay.ApplyJoin(target, join.Transport, transport));
+            }
+
+            join.Address = target.Address;
+            join.Port = target.Port;
+            return StartCore(join, null);
+        }
+
+        /// <summary>Reads environment variables for <see cref="ServerAdvertisement.For"/>; tests swap it. Null reads the process environment.</summary>
+        internal Func<string, string> EnvironmentReader { get; set; }
+
+        /// <summary>The services <see cref="JoinByCode"/> asks, in order.</summary>
+        private List<IJoinCodeService> ResolversFor(NetConfig join, JoinCode code)
+        {
+            var services = new List<IJoinCodeService>();
+            if (_joinCodeOverride != null)
+            {
+                services.Add(_joinCodeOverride);
+                return services;
+            }
+
+            bool hasRendezvous = !string.IsNullOrWhiteSpace(join.RendezvousUrl);
+            string relayCode;
+            switch (join.JoinCodes)
+            {
+                case JoinCodeProvider.Rendezvous:
+                    if (hasRendezvous)
+                    {
+                        services.Add(RendezvousFor(join));
+                    }
+
+                    break;
+                case JoinCodeProvider.Relay:
+                    if (RelayJoinCodeService.IsAvailable)
+                    {
+                        services.Add(_relay);
+                    }
+
+                    break;
+                case JoinCodeProvider.Auto:
+                    if (hasRendezvous)
+                    {
+                        services.Add(RendezvousFor(join));
+                    }
+
+                    if (RelayJoinCodeService.IsAvailable && RelayCodes.TryGetRelayCode(code, out relayCode))
+                    {
+                        services.Add(_relay);
+                    }
+
+                    break;
+            }
+
+            return services;
+        }
+
+        /// <summary>The rendezvous service for <paramref name="config"/>'s URL and secret, made once and reused while they stay the same.</summary>
+        /// <exception cref="InvalidOperationException">No rendezvous URL is configured.</exception>
+        private RendezvousJoinCodeService RendezvousFor(NetConfig config)
+        {
+            if (string.IsNullOrWhiteSpace(config.RendezvousUrl))
+            {
+                throw new InvalidOperationException("No rendezvous service is configured: set NetConfig.RendezvousUrl (or -rendezvous, or MINDATTIC_RENDEZVOUS_URL).");
+            }
+
+            string key = config.RendezvousUrl.Trim() + "\n" + (config.RendezvousSecret ?? string.Empty);
+            if (_rendezvous != null && _rendezvousKey == key)
+            {
+                return _rendezvous;
+            }
+
+            if (_rendezvous != null && _publishedBy != _rendezvous)
+            {
+                _rendezvous.RegistrationLost -= OnRegistrationLost;
+                _rendezvous.Dispose();
+            }
+
+            _rendezvous = new RendezvousJoinCodeService(config.RendezvousUrl.Trim(), config.RendezvousSecret);
+            _rendezvous.RegistrationLost += OnRegistrationLost;
+            _rendezvousKey = key;
+            return _rendezvous;
+        }
+
+        /// <summary>Registers this server with the rendezvous service in the background (a dedicated server reaching Running, or re-registering after a lost registration).</summary>
+        private async void SelfRegister()
+        {
+            try
+            {
+                await PublishCode();
+            }
+            catch (Exception ex)
+            {
+                Fail("Could not register this server with the rendezvous service: " + ex.Message);
+            }
+        }
+
+        /// <summary>Publishes a code for a host that just started; leaves the session when that fails.</summary>
+        private async Task<JoinCode> PublishOrLeave()
+        {
+            try
+            {
+                JoinCode code = await PublishCode();
+                if (!code.IsEmpty)
+                {
+                    return code;
+                }
+            }
+            catch (Exception ex)
+            {
+                Fail("Could not publish a join code: " + ex.Message);
+            }
+
+            Leave();
+            return JoinCode.Empty;
+        }
+
+        /// <summary>Completes when the session is live (true) or has ended without getting there (false).</summary>
+        private Task<bool> WhenLive()
+        {
+            if (_machine.IsLive)
+            {
+                return Task.FromResult(true);
+            }
+
+            if (!_machine.IsActive)
+            {
+                return Task.FromResult(false);
+            }
+
+            var done = new TaskCompletionSource<bool>();
+            Action started = null;
+            Action<Disconnection> ended = null;
+            started = () =>
+            {
+                Started -= started;
+                Ended -= ended;
+                done.TrySetResult(true);
+            };
+            ended = _ =>
+            {
+                Started -= started;
+                Ended -= ended;
+                done.TrySetResult(false);
+            };
+            Started += started;
+            Ended += ended;
+            return done.Task;
+        }
+
+        private void SetPublished(JoinCode code, IJoinCodeService by)
+        {
+            _publishedCode = code;
+            _publishedBy = by;
+            Debug.Log("[MindAttic.Multiplayer] Join code: " + JoinCodeFormat.Format(code.Value));
+            Raise(JoinCodePublished, code);
+        }
+
+        /// <summary>Forgets the published code without revoking it (a new session is starting).</summary>
+        private void ForgetPublishedCode()
+        {
+            _publishGeneration++;
+            _publishedCode = JoinCode.Empty;
+            _publishedBy = null;
+        }
+
+        private Task _pendingRevoke;
+
+        /// <summary>The session is ending: withdraw its code so it stops resolving now rather than when it expires.</summary>
+        private void WithdrawPublishedCode()
+        {
+            JoinCode code = _publishedCode;
+            IJoinCodeService by = _publishedBy;
+            ForgetPublishedCode();
+            if (code.IsEmpty || by == null)
+            {
+                return;
+            }
+
+            Task revoke;
+            try
+            {
+                revoke = by.RevokeAsync(code);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] Could not withdraw join code " + code + ": " + ex.Message);
+                return;
+            }
+
+            _pendingRevoke = revoke;
+            revoke.ContinueWith(
+                t => Debug.LogWarning("[MindAttic.Multiplayer] Could not withdraw join code " + code + ": " + t.Exception.GetBaseException().Message),
+                TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        /// <summary>Gives an in-flight withdrawal up to 2 s to reach the service before the session closes its connection.</summary>
+        private void WaitForPendingRevoke()
+        {
+            Task revoke = _pendingRevoke;
+            _pendingRevoke = null;
+            if (revoke == null || revoke.IsCompleted)
+            {
+                return;
+            }
+
+            try
+            {
+                // Safe on the main thread: the rendezvous service's awaits never resume on it.
+                revoke.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch (AggregateException)
+            {
+                // Logged by WithdrawPublishedCode's continuation.
+            }
+        }
+
+        private static async Task RevokeQuietly(IJoinCodeService service, JoinCode code)
+        {
+            try
+            {
+                await service.RevokeAsync(code);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] Could not withdraw join code " + code + ": " + ex.Message);
+            }
+        }
+
+        /// <summary>The rendezvous service lost this server's registration (raised off the main thread).</summary>
+        private void OnRegistrationLost(JoinCode code, string reason)
+        {
+            Post(() =>
+            {
+                if (_disposed || code != _publishedCode)
+                {
+                    return;
+                }
+
+                Debug.LogWarning("[MindAttic.Multiplayer] " + reason + " Registering again; the join code will change.");
+                _publishedCode = JoinCode.Empty;
+                _publishedBy = null;
+                if (IsServer)
+                {
+                    SelfRegister();
+                }
+            });
+        }
+
+        private void Post(Action action)
+        {
+            if (_mainThread == null || SynchronizationContext.Current == _mainThread)
+            {
+                action();
+            }
+            else
+            {
+                _mainThread.Post(_ => action(), null);
+            }
+        }
+
+        private void Fail(string message)
+        {
+            Debug.LogWarning("[MindAttic.Multiplayer] " + message);
+            Raise(JoinCodeFailed, message);
         }
 
         /// <summary>Applies the config to the NetworkManager and its Unity Transport (added if missing).</summary>
-        private void Configure(NetConfig config)
+        private UnityTransport Configure(NetConfig config)
         {
             if (_manager.NetworkConfig == null)
             {
@@ -598,6 +1171,10 @@ namespace MindAttic.Unity.Multiplayer
             {
                 transport.SetConnectionData(true, NetConfig.LoopbackAddress, config.Port, config.EffectiveAddress);
             }
+
+            // SetConnectionData also switched the transport back from Relay to direct connections, so a Relay setup
+            // (StartCore's transportSetup) must come after this.
+            return transport;
         }
 
         private static NetConfig WithTopology(NetConfig config, Core.Topology topology)
@@ -758,6 +1335,16 @@ namespace MindAttic.Unity.Multiplayer
             {
                 ResetSeats();
                 _scenes.Detach();
+            }
+
+            if (ended || change.To == SessionState.Stopping)
+            {
+                WithdrawPublishedCode();
+            }
+
+            if (change.To == SessionState.Running && _joinCodeOverride == null && JoinCodeDefaults.ShouldSelfRegister(_config))
+            {
+                SelfRegister();
             }
 
             Raise(StateChanged, change);

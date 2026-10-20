@@ -19,6 +19,11 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// <item><term><c>-transport</c></term><description><c>udp</c>, or <c>websocket</c> / <c>ws</c> (<see cref="NetConfig.Transport"/>).</description></item>
     /// <item><term><c>-tickrate</c></term><description>Ticks per second (<see cref="NetConfig.TickRate"/>).</description></item>
     /// <item><term><c>-maxplayers</c></term><description>Player cap (<see cref="NetConfig.MaxPlayers"/>).</description></item>
+    /// <item><term><c>-joincodes</c></term><description><c>auto</c>, <c>none</c>, <c>relay</c> or <c>rendezvous</c> (<see cref="NetConfig.JoinCodes"/>).</description></item>
+    /// <item><term><c>-rendezvous</c></term><description>Rendezvous service base URL (<see cref="NetConfig.RendezvousUrl"/>).</description></item>
+    /// <item><term><c>-rendezvoussecret</c></term><description>Its registration secret (<see cref="NetConfig.RendezvousSecret"/>); the environment variable is safer, since a command line is visible to other processes.</description></item>
+    /// <item><term><c>-publicaddress</c></term><description>Address players reach this server at (<see cref="NetConfig.PublicAddress"/>).</description></item>
+    /// <item><term><c>-publicport</c></term><description>Port players reach this server at (<see cref="NetConfig.PublicPort"/>).</description></item>
     /// </list>
     /// <para>Anything else is ignored, because Unity and the OS put their own arguments on the same line.
     /// A recognised argument with a missing or unreadable value is reported in
@@ -46,6 +51,21 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>Selects the player cap.</summary>
         public const string MaxPlayersArg = "-maxplayers";
+
+        /// <summary>Selects the join-code provider: auto, none, relay or rendezvous.</summary>
+        public const string JoinCodesArg = "-joincodes";
+
+        /// <summary>Sets the rendezvous service URL.</summary>
+        public const string RendezvousArg = "-rendezvous";
+
+        /// <summary>Sets the rendezvous registration secret.</summary>
+        public const string RendezvousSecretArg = "-rendezvoussecret";
+
+        /// <summary>Sets the address players reach this server at.</summary>
+        public const string PublicAddressArg = "-publicaddress";
+
+        /// <summary>Sets the port players reach this server at.</summary>
+        public const string PublicPortArg = "-publicport";
 
         /// <summary>Unity's batch-mode switch; its presence marks a headless run.</summary>
         public const string BatchModeArg = "-batchmode";
@@ -176,6 +196,49 @@ namespace MindAttic.Unity.Multiplayer.Core
                         errors.Add(TickRateArg + " must be a number from 1 to " + NetConfig.MaxTickRate + "; got '" + value + "'.");
                     }
                 }
+                else if (Is(name, JoinCodesArg))
+                {
+                    JoinCodeProvider provider;
+                    if (TryParseJoinCodes(value, out provider))
+                    {
+                        config.JoinCodes = provider;
+                    }
+                    else
+                    {
+                        errors.Add(JoinCodesArg + " must be auto, none, relay or rendezvous; got '" + value + "'.");
+                    }
+                }
+                else if (Is(name, RendezvousArg))
+                {
+                    if (RendezvousClient.IsValidBaseUrl(value))
+                    {
+                        config.RendezvousUrl = value;
+                    }
+                    else
+                    {
+                        errors.Add(RendezvousArg + " must be an absolute http:// or https:// URL; got '" + value + "'.");
+                    }
+                }
+                else if (Is(name, RendezvousSecretArg))
+                {
+                    config.RendezvousSecret = value;
+                }
+                else if (Is(name, PublicAddressArg))
+                {
+                    config.PublicAddress = value;
+                }
+                else if (Is(name, PublicPortArg))
+                {
+                    ushort publicPort;
+                    if (ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out publicPort) && publicPort != 0)
+                    {
+                        config.PublicPort = publicPort;
+                    }
+                    else
+                    {
+                        errors.Add(PublicPortArg + " must be a number from 1 to 65535; got '" + value + "'.");
+                    }
+                }
                 else if (Is(name, MaxPlayersArg))
                 {
                     int maxPlayers;
@@ -253,10 +316,36 @@ namespace MindAttic.Unity.Multiplayer.Core
             }
         }
 
+        /// <summary>Parses auto, none (or off), relay or rendezvous (ignoring case).</summary>
+        public static bool TryParseJoinCodes(string text, out JoinCodeProvider provider)
+        {
+            switch ((text ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "auto":
+                    provider = JoinCodeProvider.Auto;
+                    return true;
+                case "none":
+                case "off":
+                    provider = JoinCodeProvider.None;
+                    return true;
+                case "relay":
+                    provider = JoinCodeProvider.Relay;
+                    return true;
+                case "rendezvous":
+                    provider = JoinCodeProvider.Rendezvous;
+                    return true;
+                default:
+                    provider = JoinCodeProvider.Auto;
+                    return false;
+            }
+        }
+
         private static bool IsRecognised(string name)
         {
             return Is(name, ModeArg) || Is(name, AddressArg) || Is(name, IpArg) || Is(name, PortArg)
-                || Is(name, TransportArg) || Is(name, TickRateArg) || Is(name, MaxPlayersArg);
+                || Is(name, TransportArg) || Is(name, TickRateArg) || Is(name, MaxPlayersArg)
+                || Is(name, JoinCodesArg) || Is(name, RendezvousArg) || Is(name, RendezvousSecretArg)
+                || Is(name, PublicAddressArg) || Is(name, PublicPortArg);
         }
 
         private static bool Is(string name, string expected)

@@ -47,12 +47,15 @@ namespace MindAttic.Unity.Multiplayer
         }
 
         /// <summary>
-        /// Folds this process's command line (<c>-mode -address -port -transport -tickrate -maxplayers</c>, see
-        /// <see cref="NetCommandLine"/>) into <paramref name="config"/> and logs every unreadable argument.
+        /// Folds this process's environment (<c>MINDATTIC_RENDEZVOUS_URL</c>, <c>MINDATTIC_RENDEZVOUS_SECRET</c>,
+        /// <c>MINDATTIC_PUBLIC_ADDRESS</c>, see <see cref="NetEnvironment"/>) and then its command line (<c>-mode -address
+        /// -port -transport -tickrate -maxplayers -joincodes -rendezvous -publicaddress -publicport</c>, see
+        /// <see cref="NetCommandLine"/>) into <paramref name="config"/>, and logs every unreadable argument.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="config"/> is null.</exception>
         public static NetCommandLineResult ReadCommandLine(NetConfig config)
         {
+            NetEnvironment.Apply(config);
             NetCommandLineResult result = NetCommandLine.Apply(config, Environment.GetCommandLineArgs());
             for (int i = 0; i < result.Errors.Count; i++)
             {
