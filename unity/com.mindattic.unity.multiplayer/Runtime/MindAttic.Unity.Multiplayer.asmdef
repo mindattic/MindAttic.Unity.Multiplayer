@@ -1,0 +1,25 @@
+{
+    "name": "MindAttic.Unity.Multiplayer",
+    "rootNamespace": "MindAttic.Unity.Multiplayer",
+    "references": [
+        "MindAttic.Unity.Multiplayer.Core",
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport",
+        "Unity.Services.Multiplayer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.services.multiplayer",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_UGS"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "com.mindattic.unity.multiplayer",
+  "version": "0.0.0",
+  "displayName": "MindAttic Multiplayer",
+  "description": "Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS).",
+  "unity": "6000.0",
+  "author": { "name": "MindAttic" },
+  "license": "MIT",
+  "keywords": [ "multiplayer", "netcode", "rpc", "dedicated server", "join code" ],
+  "dependencies": {
+    "com.unity.netcode.gameobjects": "2.11.0",
+    "com.unity.transport": "2.7.2"
+  }
+}

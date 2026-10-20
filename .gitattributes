@@ -1,0 +1,25 @@
+# HOUSE-LAW-13: every tracked text file is LF. Narrow overrides only below.
+* text=auto eol=lf
+
+# Unity YAML: LF plus Unity's smart merge
+*.unity text merge=unityyamlmerge eol=lf
+*.prefab text merge=unityyamlmerge eol=lf
+*.asset text merge=unityyamlmerge eol=lf
+*.mat text merge=unityyamlmerge eol=lf
+*.anim text merge=unityyamlmerge eol=lf
+*.controller text merge=unityyamlmerge eol=lf
+*.meta text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.psd binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.ttf binary
+*.otf binary
+*.dll binary
+*.so binary
+*.zip binary

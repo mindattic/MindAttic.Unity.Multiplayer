@@ -1,0 +1,20 @@
+{
+    "name": "MindAttic.Unity.Multiplayer.Editor",
+    "rootNamespace": "MindAttic.Unity.Multiplayer.Editor",
+    "references": [
+        "MindAttic.Unity.Multiplayer.Core",
+        "MindAttic.Unity.Multiplayer",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

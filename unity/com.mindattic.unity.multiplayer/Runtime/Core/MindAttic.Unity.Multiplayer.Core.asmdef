@@ -1,0 +1,14 @@
+{
+    "name": "MindAttic.Unity.Multiplayer.Core",
+    "rootNamespace": "MindAttic.Unity.Multiplayer.Core",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

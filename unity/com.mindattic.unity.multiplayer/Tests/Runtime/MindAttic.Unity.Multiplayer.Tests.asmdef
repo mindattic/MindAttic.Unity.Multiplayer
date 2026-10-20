@@ -1,0 +1,26 @@
+{
+    "name": "MindAttic.Unity.Multiplayer.Tests",
+    "rootNamespace": "MindAttic.Unity.Multiplayer.Tests",
+    "references": [
+        "MindAttic.Unity.Multiplayer.Core",
+        "MindAttic.Unity.Multiplayer",
+        "Unity.Netcode.Runtime",
+        "Unity.Netcode.TestHelpers.Runtime",
+        "Unity.Networking.Transport",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
