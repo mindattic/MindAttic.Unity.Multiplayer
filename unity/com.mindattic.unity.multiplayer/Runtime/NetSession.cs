@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MindAttic.Unity.Multiplayer.Core;
+using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -59,6 +60,18 @@ namespace MindAttic.Unity.Multiplayer
         /// <summary>What a replaced connection is told when the same player connects again from elsewhere.</summary>
         internal const string ReplacedMessage = "You connected again from another session, which took over your seat.";
 
+        /// <summary>
+        /// The named message a server tells a client it is being removed with (kicked, or replaced by a new connection of
+        /// the same player), carrying the reason. The client ends its session on receipt and closes its own connection.
+        /// </summary>
+        internal const string DisconnectNoticeMessage = "MindAttic.Multiplayer.DisconnectNotice";
+
+        /// <summary>
+        /// How long a server waits, after sending <see cref="DisconnectNoticeMessage"/>, for the client to close its own
+        /// connection before closing it from this side: long enough for the notice to get through a slow, lossy link.
+        /// </summary>
+        internal const double LeaveGraceSeconds = 5.0;
+
         private readonly NetworkManager _manager;
         private readonly SessionStateMachine _machine = new SessionStateMachine();
         private NetConfig _config;
@@ -71,6 +84,7 @@ namespace MindAttic.Unity.Multiplayer
         private readonly Dictionary<int, NetworkObject> _seatObjects = new Dictionary<int, NetworkObject>();
         private readonly Dictionary<ulong, int> _reclaimOnConnect = new Dictionary<ulong, int>();
         private readonly Dictionary<ulong, Disconnection> _dropReasons = new Dictionary<ulong, Disconnection>();
+        private readonly Dictionary<ulong, double> _leaving = new Dictionary<ulong, double>();
         private readonly HashSet<ulong> _rejected = new HashSet<ulong>();
         private readonly RpcGate _gate = new RpcGate();
         private readonly NetSceneFlow _scenes;
@@ -437,10 +451,17 @@ namespace MindAttic.Unity.Multiplayer
         /// Server side: removes a client now, frees its seat with no grace window (its player object is despawned)
         /// and tells it <paramref name="reason"/>; it ends with <see cref="DisconnectReason.Kicked"/>.
         /// </summary>
-        /// <returns>False when this is not a running server or the client is not connected (or is the host itself).</returns>
+        /// <remarks>
+        /// The reason goes first, as a reliable message the client leaves on; the server closes the connection itself only
+        /// if the client has not gone within <see cref="LeaveGraceSeconds"/>. (NGO's own <c>DisconnectClient(reason)</c>
+        /// closes the connection right after queuing the reason, so on a lossy link the reason could be lost and the client
+        /// would see only a closed connection.)
+        /// </remarks>
+        /// <returns>False when this is not a running server or the client is not connected (or is the host itself, or is already being removed).</returns>
         public bool Kick(ulong clientId, string reason = null)
         {
-            if (!IsServer || clientId == NetworkManager.ServerClientId || !_manager.ConnectedClients.ContainsKey(clientId))
+            if (!IsServer || clientId == NetworkManager.ServerClientId || !_manager.ConnectedClients.ContainsKey(clientId)
+                || _leaving.ContainsKey(clientId))
             {
                 return false;
             }
@@ -452,8 +473,7 @@ namespace MindAttic.Unity.Multiplayer
                 ReleaseSeatObject(freed);
             }
 
-            _dropReasons[clientId] = new Disconnection(DisconnectReason.Kicked, message);
-            _manager.DisconnectClient(clientId, message);
+            Remove(clientId, message);
             if (freed != null)
             {
                 Raise(SeatReleased, freed);
@@ -596,6 +616,12 @@ namespace MindAttic.Unity.Multiplayer
 
             // The driver exists now and no pipelined packet has gone out yet (a client has only sent its connect request).
             ApplyConditions(configured, copy.EffectiveConditions, true);
+            if (copy.Topology == Core.Topology.Client && _manager.CustomMessagingManager != null)
+            {
+                // NGO makes a new messaging manager with every start, so the handler is registered with every join.
+                _manager.CustomMessagingManager.RegisterNamedMessageHandler(DisconnectNoticeMessage, OnDisconnectNotice);
+            }
+
             _scenes.Attach();
             return true;
         }
@@ -1514,14 +1540,108 @@ namespace MindAttic.Unity.Multiplayer
             if (claim.ReplacedClientId.HasValue)
             {
                 // The same player is back on a new connection while its old one still looks alive (a killed
-                // client the transport has not timed out yet). NGO drops the old one later this frame, before
-                // the new one completes, so the player object is free to hand over when it does.
+                // client the transport has not timed out yet). The old one is told why and leaves (or is closed after
+                // the grace); HandOver takes the player object from it when the new one completes, even if it is still there.
                 ulong stale = claim.ReplacedClientId.Value;
-                _dropReasons[stale] = new Disconnection(DisconnectReason.Kicked, ReplacedMessage);
-                if (_manager.ConnectedClients.ContainsKey(stale))
+                if (!_leaving.ContainsKey(stale))
                 {
-                    _manager.DisconnectClient(stale, ReplacedMessage);
+                    Remove(stale, ReplacedMessage);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Server: removes a remote client with <paramref name="message"/> as its reason (<see cref="DisconnectReason.Kicked"/>
+        /// at both ends). The reason is sent first, as <see cref="DisconnectNoticeMessage"/>, and the client closes its own
+        /// connection on receipt; <see cref="OnTick"/> closes it from here after <see cref="LeaveGraceSeconds"/> if it has not.
+        /// </summary>
+        private void Remove(ulong clientId, string message)
+        {
+            _dropReasons[clientId] = new Disconnection(DisconnectReason.Kicked, message);
+            if (!_manager.ConnectedClients.ContainsKey(clientId))
+            {
+                return;
+            }
+
+            CustomMessagingManager messaging = _manager.CustomMessagingManager;
+            if (messaging != null)
+            {
+                try
+                {
+                    using (FastBufferWriter writer = new FastBufferWriter(FastBufferWriter.GetWriteSize(message), Allocator.Temp))
+                    {
+                        writer.WriteValueSafe(message);
+                        messaging.SendNamedMessage(DisconnectNoticeMessage, clientId, writer, NetworkDelivery.ReliableSequenced);
+                    }
+
+                    _leaving[clientId] = Now + LeaveGraceSeconds;
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
+
+            _manager.DisconnectClient(clientId, message);
+        }
+
+        /// <summary>Server: closes the connections of removed clients that have not left by themselves within the grace.</summary>
+        private void CloseOverdueLeavers()
+        {
+            double now = Now;
+            List<ulong> overdue = null;
+            foreach (KeyValuePair<ulong, double> leaving in _leaving)
+            {
+                if (leaving.Value <= now)
+                {
+                    (overdue ?? (overdue = new List<ulong>())).Add(leaving.Key);
+                }
+            }
+
+            if (overdue == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < overdue.Count; i++)
+            {
+                ulong clientId = overdue[i];
+                _leaving.Remove(clientId);
+                if (_manager.ConnectedClients.ContainsKey(clientId))
+                {
+                    Disconnection why;
+                    _manager.DisconnectClient(clientId, _dropReasons.TryGetValue(clientId, out why) ? why.Message : null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Client: the server is removing this client (<see cref="DisconnectNoticeMessage"/>). The session ends now with
+        /// <see cref="DisconnectReason.Kicked"/> and the server's reason, and this end closes the connection.
+        /// </summary>
+        private void OnDisconnectNotice(ulong senderClientId, FastBufferReader reader)
+        {
+            if (_manager.IsServer || senderClientId != NetworkManager.ServerClientId || !_machine.IsActive)
+            {
+                return;
+            }
+
+            string message;
+            try
+            {
+                reader.ReadValueSafe(out message);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                message = null;
+            }
+
+            _machine.NotifyDisconnected(DisconnectReason.Kicked, string.IsNullOrEmpty(message) ? "You were removed from the server." : message);
+            if (_manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
             }
         }
 
@@ -1562,8 +1682,9 @@ namespace MindAttic.Unity.Multiplayer
         /// <summary>Makes a held player object <paramref name="clientId"/>'s player object again: same GameObject, same state.</summary>
         private void HandOver(NetworkObject playerObject, ulong clientId)
         {
-            if (playerObject.OwnerClientId != NetworkManager.ServerClientId && playerObject.OwnerClientId != clientId
-                && _manager.ConnectedClients.ContainsKey(playerObject.OwnerClientId))
+            ulong previousOwner = playerObject.OwnerClientId;
+            if (previousOwner != NetworkManager.ServerClientId && previousOwner != clientId
+                && _manager.ConnectedClients.ContainsKey(previousOwner) && !_leaving.ContainsKey(previousOwner))
             {
                 Debug.LogWarning("[MindAttic.Multiplayer] Seat player object is still owned by connected client "
                     + playerObject.OwnerClientId + "; not handing it to client " + clientId + ".");
@@ -1573,6 +1694,16 @@ namespace MindAttic.Unity.Multiplayer
             // NGO has no public "make this the client's player object" for a live object, so it is respawned:
             // the server keeps the same instance (and every component's state); clients get a fresh spawn of it.
             playerObject.Despawn(false);
+
+            // A replaced connection still being told why (see Remove) may still hold it as its player object: NGO clears
+            // that only on a destroying despawn, and would strip the new owner's ownership when the old connection leaves.
+            NetworkClient previous;
+            if (previousOwner != clientId && _manager.ConnectedClients.TryGetValue(previousOwner, out previous)
+                && previous.PlayerObject == playerObject)
+            {
+                previous.PlayerObject = null;
+            }
+
             playerObject.SpawnAsPlayerObject(clientId);
         }
 
@@ -1595,6 +1726,7 @@ namespace MindAttic.Unity.Multiplayer
             }
 
             _dropReasons.Remove(clientId);
+            _leaving.Remove(clientId);
             _gate.Forget(clientId);
 
             Seat seat = _admission != null ? _admission.Seats.Release(clientId, Now) : null;
@@ -1619,6 +1751,11 @@ namespace MindAttic.Unity.Multiplayer
 
         private void OnTick(long tick)
         {
+            if (_leaving.Count > 0)
+            {
+                CloseOverdueLeavers();
+            }
+
             if (_admission != null && _admission.Seats.HeldCount > 0)
             {
                 ReleaseExpired(_admission.Seats.Expire(Now));
@@ -1663,6 +1800,7 @@ namespace MindAttic.Unity.Multiplayer
             _seatObjects.Clear();
             _reclaimOnConnect.Clear();
             _dropReasons.Clear();
+            _leaving.Clear();
             _rejected.Clear();
         }
 

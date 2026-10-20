@@ -357,11 +357,35 @@ namespace MindAttic.Unity.Multiplayer.Tests
             Assert.That(_seats.Reclaimed[0].ClientId, Is.EqualTo(newId));
             Assert.That(_host.GetSeatPlayerObject(seat.Index), Is.SameAs(playerObject), "same player object");
 
-            // The stale connection is closed. Its reason (ReplacedMessage) is not asserted here: NGO sends it as a reliable
-            // message and closes the transport connection at once, and the close is not delayed by the simulator stage, so
-            // over this link the reason is lost and the client reports ServerShutdown. UM-T34 fixes that and asserts it here.
-            Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked).Or.EqualTo(DisconnectReason.ServerShutdown), _a.LastDisconnect.ToString());
+            // UM-T34: the stale connection is told why before it is closed. The reason goes first as its own reliable message
+            // and the client leaves on it, so the delayed, lossy link cannot lose it to a close that overtakes it.
+            Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked), _a.LastDisconnect.ToString());
+            Assert.That(_a.LastDisconnect.Message, Is.EqualTo(NetSession.ReplacedMessage));
             Assert.That(_b.State, Is.EqualTo(SessionState.Connected), "the new connection keeps the seat");
+            Assert.That(playerObject.GetComponent<NetworkObject>().OwnerClientId, Is.EqualTo(newId), "the new connection owns the player object");
+
+            // The stale connection's own close reaches the host and leaves the new connection's seat and player object alone.
+            yield return Wait(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(deadId), "the stale connection never closed");
+            yield return null;
+            Assert.That(_b.State, Is.EqualTo(SessionState.Connected), "still connected after the stale connection closed");
+            Assert.That(playerObject.GetComponent<NetworkObject>().OwnerClientId, Is.EqualTo(newId), "still owns the player object");
+            Assert.That(_host.TryGetSeat(newId, out Seat kept) && kept.Status == SeatStatus.Occupied, Is.True, "still seated");
+        }
+
+        [UnityTest]
+        public IEnumerator Kick_OverTheLossyLink_TellsTheClientWhy()
+        {
+            yield return StartHost();
+            yield return JoinLossy(_a);
+            ulong id = _a.LocalClientId;
+
+            Assert.That(_host.Kick(id, "Be nice."), Is.True);
+            Assert.That(_host.Kick(id), Is.False, "already being removed");
+
+            yield return Wait(() => _a.State == SessionState.Disconnected, "the kicked client never left");
+            Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked), _a.LastDisconnect.ToString());
+            Assert.That(_a.LastDisconnect.Message, Is.EqualTo("Be nice."));
+            yield return Wait(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(id), "the host never saw the kicked client go");
         }
 
         // ---------------------------------------------------------------------------------------------------------
