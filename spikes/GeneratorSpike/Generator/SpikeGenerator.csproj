@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- UM-T4 spike: the toy generator. Pinned to what Unity 6 loads: netstandard2.0 +
+       Microsoft.CodeAnalysis.CSharp 4.3.x (UM-LAW-3). Built by ../run-spike.ps1 and copied into
+       ../Unity/Assets/Plugins/Generators/, whose .meta carries the RoslynAnalyzer label. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>MindAttic.Spike.Generators</AssemblyName>
+    <RootNamespace>MindAttic.Spike.Generators</RootNamespace>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <NoWarn>RS2008</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

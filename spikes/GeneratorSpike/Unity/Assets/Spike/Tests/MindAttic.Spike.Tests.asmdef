@@ -1,0 +1,24 @@
+{
+    "name": "MindAttic.Spike.Tests",
+    "rootNamespace": "MindAttic.Spike.Tests",
+    "references": [
+        "MindAttic.Spike.Game",
+        "Unity.Netcode.Runtime",
+        "Unity.Netcode.Runtime.Tests",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

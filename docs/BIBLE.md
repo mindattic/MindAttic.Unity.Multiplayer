@@ -60,9 +60,10 @@ Every fact lives in exactly one place and everything else links to it. Dependenc
 
 ## 6. Verified state {#UM-§6}
 - ⬜ Nothing is built yet. UM-T3 laid down the package skeleton (`package.json`, the four asmdefs, LICENSE, `.gitattributes`).
+- ✅ Generator approach proven (UM-T4, [RFC 0002](rfc/0002-generator-spike.md)): a netstandard2.0 / Roslyn 4.3.1 `IIncrementalGenerator` emits `[Rpc(SendTo.Server)]` stubs and `NetworkVariable`s from C# 9 partial methods and fields; NGO ILPP processes them; host+client and an IL2CPP Linux Dedicated Server run them. Decision: GO, no fallback.
 
 ## 7. Active frontier {#UM-§7}
-The ticket chain in [RFC 0001 § Ticket chain](rfc/0001-architecture.md#ticket-chain), starting with the UM-T4 generator spike.
+The ticket chain in [RFC 0001 § Ticket chain](rfc/0001-architecture.md#ticket-chain). The UM-T4 gate is passed (GO); next is UM-T5.
 
 ## 8. Glossary {#UM-§8}
 - **NGO** — Netcode for GameObjects, Unity's GameObject netcode package.

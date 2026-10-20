@@ -1,0 +1,11 @@
+# UM-T4 spike: everything Unity, dotnet and run-spike.ps1 regenerate.
+Generator/bin/
+Generator/obj/
+Unity/Library/
+Unity/Temp/
+Unity/Logs/
+Unity/UserSettings/
+Unity/Builds/
+Unity/*.csproj
+Unity/*.sln
+logs/
