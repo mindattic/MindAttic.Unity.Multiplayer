@@ -20,6 +20,12 @@ Add the package to the game's `Packages/manifest.json` as a local package:
 It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install
 `com.unity.services.multiplayer` as well to enable Unity Relay join codes.
 
+Then use **MindAttic > Multiplayer > Set Up Scene**. It adds a NetworkManager with Unity Transport and a `NetBootstrap`
+to the open scene, and assigns a `NetPrefabList`: the project's own list, or a new `Assets/NetPrefabs.asset` filled
+with the project's prefabs that have a NetworkObject. You can run it again; it adds only what is missing.
+**MindAttic > Multiplayer > Validate Prefabs** checks every network prefab under Assets. Each needs a NetworkObject on
+its root and a prefab list that registers it, and no `NetEntity` on it may be generic or derive from a generic class.
+
 ## Layout
 | Path | What |
 |---|---|
@@ -30,7 +36,7 @@ It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install
 | `tests/Generators.Tests/` | Snapshot and diagnostic tests for the generator |
 | `tests/Core.Tests/` | NUnit tests for the engine-free Core, compiled straight from `Runtime/Core` |
 | `tests/Core.Build/` | Compiles `Runtime/Core` as netstandard2.1 / C# 9, the way Unity does |
-| `tests/PlayModeHost/` | A bare Unity 6000.4.3f1 project that lists the package in `testables`, for the PlayMode suite |
+| `tests/PlayModeHost/` | A bare Unity 6000.4.3f1 project that lists the package in `testables`, for the PlayMode and EditMode suites |
 | `docs/` | BIBLE, RFCs, user stories |
 
 ## Run a dedicated server
@@ -41,6 +47,22 @@ Game.x86_64 -batchmode -nographics -port 7777 -transport udp
 ```
 
 `-mode host|server|client`, `-address`, `-tickrate` and `-maxplayers` are read too.
+
+**MindAttic > Multiplayer > Build Dedicated Server (Linux)** makes that build. You need the editor's *Linux Dedicated
+Server Build Support* module. It validates the prefabs first and stops on errors. Then it builds the enabled Build
+Settings scenes as a headless Linux x86_64 Dedicated Server into `Builds/LinuxServer/`, and puts a `Dockerfile` and
+`.dockerignore` beside the build. The Dockerfile runs the server as a non-root user on the open scene's
+`NetBootstrap` port and transport:
+
+```
+cd Builds/LinuxServer
+docker build -t game-server .
+docker run --rm -p 7777:7777/udp -e MINDATTIC_RENDEZVOUS_SECRET=<secret> game-server -rendezvous https://rendezvous.example.com
+```
+
+Arguments after the image name are added to the server's command line. CI builds the same way with
+`Unity -batchmode -quit -projectPath <game> -executeMethod MindAttic.Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine`
+and the optional `-serverOutput <dir> -port <n> -transport udp|websocket -serverBackend mono|il2cpp -serverDevelopment`.
 
 ## Test on a bad connection
 `NetConfig.Conditions` (or the Net Bootstrap's *Network conditions* fields, or `-netsim`) makes this peer's link
@@ -74,6 +96,7 @@ dotnet test tests/Core.Tests
 dotnet test tests/Rendezvous.Tests
 dotnet test tests/Generators.Tests          # UPDATE_SNAPSHOTS=1 rewrites Snapshots/ after an intended change
 powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1 batch mode
+powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
 ```
 
 After changing `src/Generators`, run `dotnet build src/Generators -c Release`. It copies the DLL into
