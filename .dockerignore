@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+spikes/
+tests/PlayModeHost/
+unity/**/Library/
