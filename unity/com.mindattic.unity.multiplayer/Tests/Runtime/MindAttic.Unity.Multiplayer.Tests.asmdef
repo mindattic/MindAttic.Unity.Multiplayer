@@ -5,7 +5,7 @@
         "MindAttic.Unity.Multiplayer.Core",
         "MindAttic.Unity.Multiplayer",
         "Unity.Netcode.Runtime",
-        "Unity.Netcode.TestHelpers.Runtime",
+        "Unity.Netcode.Runtime.Tests",
         "Unity.Networking.Transport",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

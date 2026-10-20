@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "com.mindattic.unity.multiplayer": "file:../../../unity/com.mindattic.unity.multiplayer",
+    "com.unity.netcode.gameobjects": "2.11.0",
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.transport": "2.7.2",
+    "com.unity.modules.animation": "1.0.0",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.physics2d": "1.0.0"
+  },
+  "testables": [
+    "com.mindattic.unity.multiplayer",
+    "com.unity.netcode.gameobjects"
+  ]
+}

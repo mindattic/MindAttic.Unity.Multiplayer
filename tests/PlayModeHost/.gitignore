@@ -1,0 +1,9 @@
+# PlayMode test host: everything Unity and run-playmode.ps1 regenerate.
+Library/
+Temp/
+Logs/
+UserSettings/
+Builds/
+*.csproj
+*.sln
+logs/
