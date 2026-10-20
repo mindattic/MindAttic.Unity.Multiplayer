@@ -18,8 +18,8 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// <c>void OnMove(&lt;same parameters&gt;, NetSender sender)</c>.
     /// </summary>
     /// <remarks>
-    /// <para>The sending body and the transport stub (<c>MoveServerRpc</c>) are generated (hand-written in the same shape
-    /// until the generator lands, RFC 0001). Before the handler runs, the server checks ownership
+    /// <para>The sending body and the transport stub (<c>MoveServerRpc</c>) are generated (RFC 0001). The handler may leave
+    /// out the trailing <c>NetSender</c> when it does not need it. Before the handler runs, the server checks ownership
     /// (<see cref="RequireOwnership"/>) and the sender's rate (<see cref="RateLimit"/>); a call that fails either is
     /// dropped and reported, never handled.</para>
     /// <para>A host calling it on itself runs the handler locally with the host as the sender.</para>

@@ -73,7 +73,7 @@ Every check passed. Each step passed when run by hand, and `run-spike.ps1` then 
 - **IL2CPP Linux from a Windows editor needs two toolchain packages in the *building project's* manifest:** `com.unity.toolchain.win-x86_64-linux` 1.1.0 (the 6000.3+ toolchain) and `com.unity.sysroot.linux-x86_64` 2.0.10. Without them the build fails with "No Toolchain found for host platform". These belong to whichever project builds the server (UnityCursory, CI), not to the package. UM-T15's "Build Dedicated Server (Linux)" menu should check for them and say so clearly.
 - **A Mono client and an IL2CPP server interoperate.** The ILPP-generated RPC hashes match across backends and platforms.
 - **Running the Linux server locally needs Docker's Linux engine.** The owner's Docker Desktop defaults to Windows containers, so `run-spike.ps1` switches to the Linux engine for the server step and back to Windows afterwards.
-- **Not tested here; UM-T11 must check it:** the generator placed inside the package (`Runtime/Generators/`, under the adapter's asmdef) instead of under `Assets/`. Unity applies an analyzer in an asmdef's folder to that assembly and to the assemblies that reference it, which should cover game asmdefs and `Assembly-CSharp`. That still needs a test.
+- **Not tested here; checked in UM-T11:** the generator placed inside the package (`Runtime/Generators/`, under the adapter's asmdef) instead of under `Assets/`. Unity applies an analyzer in an asmdef's folder to that assembly and to the assemblies that reference it. UM-T11 confirmed it: the PlayMode test assembly (`MindAttic.Unity.Multiplayer.Tests`, which references the adapter) compiles and passes with its `TestAvatar` plumbing written only by the in-package generator.
 
 ## Reproduce
 ```powershell

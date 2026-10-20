@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    `dotnet test tests/Generators.Tests`: drives the generator, analyzer and suppressor in src/Generators through
+    Roslyn the way Unity does, against the package's real Core attribute sources plus small stand-ins for
+    UnityEngine, Unity.Netcode and NetEntity (Stubs/, embedded, not compiled here). Snapshot files in Snapshots/
+    pin the generated code; set UPDATE_SNAPSHOTS=1 to rewrite them after an intended change, then review the diff.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>MindAttic.Unity.Multiplayer.Generators.Tests</AssemblyName>
+    <RootNamespace>MindAttic.Unity.Multiplayer.Generators.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Stubs\**;Snapshots\**" />
+    <None Remove="Snapshots\**" />
+    <EmbeddedResource Include="Stubs\**\*.cs" LogicalName="Stubs.%(Filename)%(Extension)" />
+    <!-- ProtocolHash (and the attributes) from Core, so the generator's hash is checked against the real one. -->
+    <Compile Include="..\..\unity\com.mindattic.unity.multiplayer\Runtime\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Generators\MindAttic.Unity.Multiplayer.Generators.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

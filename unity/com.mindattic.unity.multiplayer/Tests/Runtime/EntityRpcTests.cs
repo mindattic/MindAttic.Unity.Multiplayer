@@ -13,8 +13,8 @@ namespace MindAttic.Unity.Multiplayer.Tests
     /// <summary>
     /// UM-T10: NetEntity RPCs in every direction and synced fields, over a real Unity Transport on loopback. A Host and
     /// two Clients (Ann, Bob) driven through <see cref="NetSession"/>; one <see cref="TestAvatar"/> owned by Ann. The
-    /// avatar's plumbing is the hand-written stand-in for the generator's output, so these tests must keep passing
-    /// unchanged when UM-T11's generator replaces it.
+    /// avatar's plumbing is the source generator's output (UM-T11), which replaced UM-T10's hand-written stand-in with
+    /// these tests unchanged.
     /// </summary>
     public class EntityRpcTests : NetcodeIntegrationTest
     {

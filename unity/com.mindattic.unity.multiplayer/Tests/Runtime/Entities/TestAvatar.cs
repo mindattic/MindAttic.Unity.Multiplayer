@@ -6,8 +6,8 @@ namespace MindAttic.Unity.Multiplayer.Tests
 {
     /// <summary>
     /// What a game writes: attribute-marked partial methods, synced fields and their handlers, and nothing else. No NGO
-    /// type appears here (BIBLE UM-LAW-2). The other half of this class, <c>TestAvatar.g.cs</c>, is the generator's output,
-    /// hand-written in its exact shape until UM-T11's generator emits it.
+    /// type appears here (BIBLE UM-LAW-2). The other half of this class is written by the package's source generator
+    /// (<c>Runtime/Generators</c>) at compile time; <c>tests/Generators.Tests/Snapshots/TestAvatar.Net.g.cs</c> shows it.
     /// </summary>
     public partial class TestAvatar : NetEntity
     {
@@ -37,7 +37,7 @@ namespace MindAttic.Unity.Multiplayer.Tests
 
         // --- synced state ---------------------------------------------------------------------------------------
 
-#pragma warning disable CS0169, CS0414 // declarations the generator reads; the values live in the generated network variables
+#pragma warning disable CS0169, CS0414 // declarations the generator reads (its suppressor also hides these); the values live in the generated network variables
         [Synced(OnChanged = nameof(MassChanged))] private float _mass;
         [Synced] private int _score;
 #pragma warning restore CS0169, CS0414

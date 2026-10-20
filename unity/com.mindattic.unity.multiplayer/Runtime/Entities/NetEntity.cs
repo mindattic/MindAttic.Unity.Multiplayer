@@ -15,7 +15,8 @@ namespace MindAttic.Unity.Multiplayer
     /// </summary>
     /// <remarks>
     /// <para>Not generic, and a game's subclasses must not be generic either: NGO's IL post-processor cannot give a
-    /// generic class stable RPC ids. A generic subclass is reported as an error when it spawns.</para>
+    /// generic class stable RPC ids. The generator rejects a generic subclass at compile time (MAMP005), and one that
+    /// slips through is reported as an error when it spawns.</para>
     /// <para>Override <see cref="OnSpawned"/> and <see cref="OnDespawned"/> instead of NGO's
     /// <c>OnNetworkSpawn</c>/<c>OnNetworkDespawn</c>, which this class seals so synced-field change handlers are always
     /// wired.</para>

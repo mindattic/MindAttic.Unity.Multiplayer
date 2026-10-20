@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The RPC / [Synced] source generator, its analyzers and its warning suppressor (RFC 0001, UM-T11).
+    Pinned to what Unity 6 loads: netstandard2.0 + Microsoft.CodeAnalysis.CSharp 4.3.x, and its output
+    is C# 9 only (BIBLE UM-LAW-3).
+
+    `dotnet build src/Generators -c Release` copies the DLL into the package at
+    unity/com.mindattic.unity.multiplayer/Runtime/Generators/, whose .meta carries the RoslynAnalyzer label
+    (every platform unticked). Commit the refreshed DLL with the source change that produced it.
+    Release builds embed no PDB path, so the same sources give the same bytes from any checkout.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>MindAttic.Unity.Multiplayer.Generators</AssemblyName>
+    <RootNamespace>MindAttic.Unity.Multiplayer.Generators</RootNamespace>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <IsPackable>false</IsPackable>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- RS2008: release-tracking files for analyzer IDs; the IDs are documented in Diagnostics.cs instead. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="CopyToUnityPackage" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildThisFileDirectory)..\..\unity\com.mindattic.unity.multiplayer\Runtime\Generators\" />
+  </Target>
+
+</Project>
