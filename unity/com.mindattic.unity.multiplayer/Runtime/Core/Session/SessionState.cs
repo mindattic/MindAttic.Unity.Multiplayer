@@ -57,9 +57,15 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>The transport failed (for example the port was already in use).</summary>
         TransportFailure = 7,
+
+        /// <summary>Server side: the client closed its connection (it left, quit or its process ended cleanly).</summary>
+        ClientLeft = 8,
     }
 
-    /// <summary>A disconnect reason plus an optional human-readable message.</summary>
+    /// <summary>
+    /// A disconnect reason plus an optional human-readable message and, for a refused connection, the
+    /// typed approval reason the server sent.
+    /// </summary>
     public readonly struct Disconnection : IEquatable<Disconnection>
     {
         /// <summary>No disconnect.</summary>
@@ -67,9 +73,22 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>Creates a disconnection record.</summary>
         public Disconnection(DisconnectReason reason, string message)
+            : this(reason, message, ApprovalRejection.None)
+        {
+        }
+
+        /// <summary>Creates a disconnection record that carries the server's approval rejection.</summary>
+        /// <param name="reason">Why it happened.</param>
+        /// <param name="message">Detail for the player or the log.</param>
+        /// <param name="rejection">
+        /// Why connection approval refused the client (with <see cref="DisconnectReason.Rejected"/>);
+        /// <see cref="ApprovalRejection.None"/> otherwise.
+        /// </param>
+        public Disconnection(DisconnectReason reason, string message, ApprovalRejection rejection)
         {
             Reason = reason;
             _message = message;
+            Rejection = rejection;
         }
 
         private readonly string _message;
@@ -83,10 +102,16 @@ namespace MindAttic.Unity.Multiplayer.Core
             get { return _message ?? string.Empty; }
         }
 
+        /// <summary>
+        /// When <see cref="Reason"/> is <see cref="DisconnectReason.Rejected"/> and the server said why in the
+        /// MindAttic wire format: version, protocol, full, banned or bad payload. Otherwise <see cref="ApprovalRejection.None"/>.
+        /// </summary>
+        public ApprovalRejection Rejection { get; }
+
         /// <inheritdoc />
         public bool Equals(Disconnection other)
         {
-            return Reason == other.Reason && string.Equals(Message, other.Message, StringComparison.Ordinal);
+            return Reason == other.Reason && Rejection == other.Rejection && string.Equals(Message, other.Message, StringComparison.Ordinal);
         }
 
         /// <inheritdoc />
@@ -98,13 +123,14 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return ((int)Reason * 397) ^ StringComparer.Ordinal.GetHashCode(Message);
+            return (((int)Reason * 397) ^ ((int)Rejection * 31)) ^ StringComparer.Ordinal.GetHashCode(Message);
         }
 
         /// <inheritdoc />
         public override string ToString()
         {
-            return Message.Length == 0 ? Reason.ToString() : Reason + ": " + Message;
+            string reason = Rejection == ApprovalRejection.None ? Reason.ToString() : Reason + " (" + Rejection + ")";
+            return Message.Length == 0 ? reason : reason + ": " + Message;
         }
     }
 

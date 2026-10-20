@@ -17,6 +17,12 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <summary>Default simulation and network tick rate, in ticks per second.</summary>
         public const int DefaultTickRate = 30;
 
+        /// <summary>Default seconds a dropped player's seat is held for them to reconnect.</summary>
+        public const double DefaultReconnectGraceSeconds = 60.0;
+
+        /// <summary>Longest accepted <see cref="ReconnectGraceSeconds"/> (one day).</summary>
+        public const double MaxReconnectGraceSeconds = 86400.0;
+
         /// <summary>Default port (Unity Transport's conventional 7777).</summary>
         public const ushort DefaultPort = 7777;
 
@@ -58,6 +64,12 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>The game's version string. Connection approval rejects a client whose version differs.</summary>
         public string GameVersion { get; set; } = "0";
+
+        /// <summary>
+        /// Server side: how long a dropped player's seat (and player object) waits for the same player token to
+        /// reconnect before it is freed. Zero frees it at once.
+        /// </summary>
+        public double ReconnectGraceSeconds { get; set; } = DefaultReconnectGraceSeconds;
 
         /// <summary>The address actually used: <see cref="Address"/>, or the topology's default when it is empty.</summary>
         public string EffectiveAddress
@@ -118,6 +130,11 @@ namespace MindAttic.Unity.Multiplayer.Core
             if (string.IsNullOrWhiteSpace(GameVersion))
             {
                 errors.Add("GameVersion must not be empty: connection approval compares it.");
+            }
+
+            if (double.IsNaN(ReconnectGraceSeconds) || ReconnectGraceSeconds < 0 || ReconnectGraceSeconds > MaxReconnectGraceSeconds)
+            {
+                errors.Add("ReconnectGraceSeconds must be between 0 and " + MaxReconnectGraceSeconds + "; got " + ReconnectGraceSeconds + ".");
             }
 
             string address = EffectiveAddress;

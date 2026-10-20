@@ -111,6 +111,21 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         }
 
         [Test]
+        public void Client_RejectedWithATypedReason_KeepsTheRejection()
+        {
+            _machine.Start(Topology.Client);
+
+            var why = new Disconnection(DisconnectReason.Rejected, "The server runs game version 1.2; you have 1.1.", ApprovalRejection.VersionMismatch);
+            Assert.That(_machine.NotifyDisconnected(why), Is.True);
+
+            Assert.That(_machine.LastDisconnect, Is.EqualTo(why));
+            Assert.That(_machine.LastDisconnect.Rejection, Is.EqualTo(ApprovalRejection.VersionMismatch));
+            Assert.That(_machine.LastDisconnect.ToString(), Does.StartWith("Rejected (VersionMismatch): "));
+            Assert.That(why, Is.Not.EqualTo(new Disconnection(DisconnectReason.Rejected, why.Message)), "the rejection is part of equality");
+            Assert.Throws<ArgumentException>(() => _machine.NotifyDisconnected(Disconnection.None));
+        }
+
+        [Test]
         public void Client_CanStartAgainFromDisconnected_ClearingLastDisconnect()
         {
             _machine.Start(Topology.Client);

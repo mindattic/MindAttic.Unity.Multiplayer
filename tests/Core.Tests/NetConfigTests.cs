@@ -44,6 +44,22 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
             Assert.That(config.EffectiveAddress, Is.EqualTo("10.0.0.5"));
         }
 
+        [TestCase(-0.5)]
+        [TestCase(double.NaN)]
+        [TestCase(NetConfig.MaxReconnectGraceSeconds + 1)]
+        public void Validate_RejectsReconnectGraceOutOfRange(double grace)
+        {
+            var config = new NetConfig { ReconnectGraceSeconds = grace };
+            Assert.That(config.Validate(), Has.Some.Contains("ReconnectGraceSeconds"));
+        }
+
+        [Test]
+        public void ReconnectGrace_DefaultsToAMinute_AndZeroIsAllowed()
+        {
+            Assert.That(new NetConfig().ReconnectGraceSeconds, Is.EqualTo(NetConfig.DefaultReconnectGraceSeconds));
+            Assert.That(new NetConfig { ReconnectGraceSeconds = 0 }.Validate(), Is.Empty);
+        }
+
         [Test]
         public void Validate_RejectsPortZero()
         {

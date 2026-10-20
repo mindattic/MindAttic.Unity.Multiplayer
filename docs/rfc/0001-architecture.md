@@ -48,12 +48,14 @@ unity/com.mindattic.unity.multiplayer/      package.json (unity 6000.0; deps net
   Runtime/Core/   MindAttic.Unity.Multiplayer.Core.asmdef  (noEngineReferences, netstandard2.1)
                   SessionStateMachine, JoinCode format, NetConfig, ITickClock, attributes
                   ([ToServer]/[ToClients]/[ToOwner]/[ToClient]/[Synced]), approval payload,
-                  protocol-hash contract, rendezvous wire protocol + client
+                  protocol-hash contract, SeatRegistry + ConnectionAdmission (engine-free seat
+                  rules), rendezvous wire protocol + client
   Runtime/        MindAttic.Unity.Multiplayer.asmdef  (NGO adapter)
                   NetSession (StartHost/StartServer/JoinByAddress/JoinByCode/Leave), NetEntity
                   (non-generic NetworkBehaviour base), NetSender, transports (UDP | WebSocket),
                   RelayJoinCodeService, RendezvousJoinCodeService, ConnectionApproval
-                  (version + protocol hash + player token), SeatRegistry (reconnect → same seat),
+                  (version + protocol hash + player token), seats (reconnect → same seat and
+                  player object, over Core's SeatRegistry),
                   NetworkTickClock, server-driven scene flow, per-sender rate limiter,
                   headless bootstrap (-batchmode, targetFrameRate=tick), NetBootstrap component
   Runtime/Generators/  MindAttic.Unity.Multiplayer.Generators.dll  (RoslynAnalyzer label)

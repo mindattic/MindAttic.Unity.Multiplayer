@@ -12,7 +12,7 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// <see cref="Start"/> again or <see cref="Reset"/> to Idle.</para>
     /// <para>Requests from game code (<see cref="Start"/>) throw on an illegal transition, because they are
     /// programming errors. Notifications from the transport (<see cref="NotifyStarted"/>,
-    /// <see cref="NotifyConnected"/>, <see cref="NotifyStopped"/>, <see cref="NotifyDisconnected"/>) and
+    /// <see cref="NotifyConnected"/>, <see cref="NotifyStopped"/>, <see cref="NotifyDisconnected(Disconnection)"/>) and
     /// <see cref="Stop"/> are tolerant: a late or duplicate one is ignored and returns false, since
     /// transports report events after the session has already ended.</para>
     /// <para>Not thread-safe: drive it from one thread (Unity's main thread).</para>
@@ -161,20 +161,31 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <exception cref="ArgumentException"><paramref name="reason"/> is <see cref="DisconnectReason.None"/>.</exception>
         public bool NotifyDisconnected(DisconnectReason reason, string message = null)
         {
+            return NotifyDisconnected(new Disconnection(reason, message));
+        }
+
+        /// <summary>
+        /// The session ended without a local request; the same as <see cref="NotifyDisconnected(DisconnectReason, string)"/>
+        /// but keeping the whole record (for example a server's <see cref="Disconnection.Rejection"/>).
+        /// </summary>
+        /// <exception cref="ArgumentException">The reason is <see cref="DisconnectReason.None"/> or undefined.</exception>
+        public bool NotifyDisconnected(Disconnection disconnection)
+        {
+            DisconnectReason reason = disconnection.Reason;
             if (reason == DisconnectReason.None || !Enum.IsDefined(typeof(DisconnectReason), reason))
             {
-                throw new ArgumentException("A disconnect needs a real reason, not " + reason + ".", nameof(reason));
+                throw new ArgumentException("A disconnect needs a real reason, not " + reason + ".", nameof(disconnection));
             }
 
             switch (State)
             {
                 case SessionState.Connecting:
                 case SessionState.Connected:
-                    End(SessionState.Disconnected, new Disconnection(reason, message));
+                    End(SessionState.Disconnected, disconnection);
                     return true;
                 case SessionState.Starting:
                 case SessionState.Running:
-                    End(SessionState.Idle, new Disconnection(reason, message));
+                    End(SessionState.Idle, disconnection);
                     return true;
                 case SessionState.Stopping:
                     End(SessionState.Idle, _pendingStop);

@@ -45,6 +45,19 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("Version clients must match. Empty uses Application.version.")]
         [SerializeField] private string gameVersion = string.Empty;
 
+        [Tooltip("Server: seconds a dropped player's seat and player object wait for it to reconnect. 0 frees them at once.")]
+        [SerializeField, Range(0f, 600f)] private float reconnectGraceSeconds = (float)NetConfig.DefaultReconnectGraceSeconds;
+
+        [Header("Player")]
+        [Tooltip("The name other players see. Empty uses \"Player\".")]
+        [SerializeField] private string displayName = string.Empty;
+
+        [Tooltip("The colour this player plays as.")]
+        [SerializeField] private Color32 playerColor = new Color32(255, 255, 255, 255);
+
+        [Tooltip("Keep this player's token in PlayerPrefs so a restarted game gets its seat back. -playertoken <token> on the command line overrides it.")]
+        [SerializeField] private bool rememberPlayer = true;
+
         [Header("Launch")]
         [Tooltip("Start the session above as soon as the scene starts.")]
         [SerializeField] private bool autoStart;
@@ -57,6 +70,12 @@ namespace MindAttic.Unity.Multiplayer
 
         [Tooltip("In a headless process: vsync off, targetFrameRate = tick rate, run in background.")]
         [SerializeField] private bool applyHeadlessSettings = true;
+
+        /// <summary>Command-line argument that sets the player token (for several clients on one machine, or bots).</summary>
+        public const string PlayerTokenArg = "-playertoken";
+
+        /// <summary>PlayerPrefs key prefix the remembered player token is stored under (suffixed per install folder).</summary>
+        public const string PlayerTokenPrefsKey = "MindAttic.Multiplayer.PlayerToken";
 
         /// <summary>The first enabled NetBootstrap in the loaded scenes, for game code that has no reference to it.</summary>
         public static NetBootstrap Instance { get; private set; }
@@ -79,6 +98,7 @@ namespace MindAttic.Unity.Multiplayer
                 TickRate = tickRate,
                 MaxPlayers = maxPlayers,
                 GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? Application.version : gameVersion,
+                ReconnectGraceSeconds = Mathf.Max(0f, reconnectGraceSeconds),
             };
 
             if (string.IsNullOrWhiteSpace(config.GameVersion))
@@ -107,6 +127,76 @@ namespace MindAttic.Unity.Multiplayer
             tickRate = config.TickRate;
             maxPlayers = config.MaxPlayers;
             gameVersion = config.GameVersion;
+            reconnectGraceSeconds = (float)config.ReconnectGraceSeconds;
+        }
+
+        /// <summary>
+        /// The identity this component gives its session: the token from <c>-playertoken</c>, else the remembered one
+        /// (created and stored on first use) when <see cref="rememberPlayer"/> is on, else a fresh one; with the
+        /// Inspector's name and colour.
+        /// </summary>
+        public PlayerIdentity BuildIdentity()
+        {
+            string name = string.IsNullOrWhiteSpace(displayName) ? PlayerIdentity.DefaultDisplayName : displayName.Trim();
+            var color = new PlayerColor(playerColor.r, playerColor.g, playerColor.b, playerColor.a);
+            string token = CommandLineToken();
+            if (token == null && rememberPlayer)
+            {
+                token = RememberedToken();
+            }
+
+            try
+            {
+                return new PlayerIdentity(token ?? PlayerIdentity.NewToken(), name, color);
+            }
+            catch (System.ArgumentException ex)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] " + ex.Message + " Using a fresh identity.");
+                return PlayerIdentity.CreateNew(null, color);
+            }
+        }
+
+        private static string CommandLineToken()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i + 1 < args.Length; i++)
+            {
+                if (string.Equals(args[i], PlayerTokenArg, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return args[i + 1];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The stored token, keyed by install folder so Multiplayer Play Mode's virtual players (each runs from its
+        /// own folder) do not share one and take over each other's seats.
+        /// </summary>
+        private static string RememberedToken()
+        {
+            string key = PlayerTokenPrefsKey + "." + StableHash(Application.dataPath);
+            string token = PlayerPrefs.GetString(key, string.Empty);
+            if (token.Length == 0)
+            {
+                token = PlayerIdentity.NewToken();
+                PlayerPrefs.SetString(key, token);
+                PlayerPrefs.Save();
+            }
+
+            return token;
+        }
+
+        private static string StableHash(string text)
+        {
+            ulong hash = 14695981039346656037UL;
+            foreach (char c in text ?? string.Empty)
+            {
+                hash = (hash ^ c) * 1099511628211UL;
+            }
+
+            return hash.ToString("x16");
         }
 
         /// <summary>Starts the configured topology (<see cref="BuildConfig"/>).</summary>
@@ -142,6 +232,7 @@ namespace MindAttic.Unity.Multiplayer
         private void Awake()
         {
             Session = new NetSession(GetComponent<NetworkManager>());
+            Session.Identity = BuildIdentity();
             if (Instance == null)
             {
                 Instance = this;
