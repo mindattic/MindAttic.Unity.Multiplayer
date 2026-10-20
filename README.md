@@ -20,7 +20,14 @@ It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install
 | Path | What |
 |---|---|
 | `unity/com.mindattic.unity.multiplayer/` | The Unity package (`package.json`, Runtime, Editor, Tests) |
+| `tests/Core.Tests/` | NUnit tests for the engine-free Core, compiled straight from `Runtime/Core` |
+| `tests/Core.Build/` | Compiles `Runtime/Core` as netstandard2.1 / C# 9, the way Unity does |
 | `docs/` | BIBLE, RFCs, user stories |
+
+## Test
+```
+dotnet test tests/Core.Tests
+```
 
 ## License
 MIT. See [LICENSE](LICENSE).

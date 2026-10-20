@@ -59,11 +59,12 @@ The source generator emits only C# 9 constructs (extended partial methods, no fi
 Every fact lives in exactly one place and everything else links to it. Dependency versions live in `package.json`; the design and ticket order live in RFC 0001; laws live here; story status lives in [USER_STORIES.md](USER_STORIES.md). A second copy is a bug.
 
 ## 6. Verified state {#UM-§6}
-- ⬜ Nothing is built yet. UM-T3 laid down the package skeleton (`package.json`, the four asmdefs, LICENSE, `.gitattributes`).
+- ✅ Package skeleton (UM-T3): `package.json`, the four asmdefs, LICENSE, `.gitattributes`.
 - ✅ Generator approach proven (UM-T4, [RFC 0002](rfc/0002-generator-spike.md)): a netstandard2.0 / Roslyn 4.3.1 `IIncrementalGenerator` emits `[Rpc(SendTo.Server)]` stubs and `NetworkVariable`s from C# 9 partial methods and fields; NGO ILPP processes them; host+client and an IL2CPP Linux Dedicated Server run them. Decision: GO, no fallback.
+- ✅ Core session contracts (UM-T5): `NetConfig` (topology, address, port, transport, tick rate 30, max players, game version, `Validate`), `SessionStateMachine` (Host/Server `Idle → Starting → Running → Stopping → Idle`; Client `Idle → Connecting → Connected → Disconnected` with a `DisconnectReason`), and the `ITickClock` contract with `ManualTickClock`. Verified by `dotnet test tests/Core.Tests` (NetConfigTests, SessionStateMachineTests, ManualTickClockTests); `tests/Core.Build` compiles the same sources as netstandard2.1 / C# 9.
 
 ## 7. Active frontier {#UM-§7}
-The ticket chain in [RFC 0001 § Ticket chain](rfc/0001-architecture.md#ticket-chain). The UM-T4 gate is passed (GO); next is UM-T5.
+The ticket chain in [RFC 0001 § Ticket chain](rfc/0001-architecture.md#ticket-chain). The UM-T4 gate is passed (GO) and UM-T5 is done; next is UM-T6.
 
 ## 8. Glossary {#UM-§8}
 - **NGO** — Netcode for GameObjects, Unity's GameObject netcode package.

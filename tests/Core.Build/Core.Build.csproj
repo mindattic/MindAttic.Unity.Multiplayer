@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compiles Runtime/Core exactly as Unity does: netstandard2.1, C# 9, no engine references.
+    It ships nothing; Core.Tests builds it first so an API missing from netstandard2.1, or a
+    language feature newer than C# 9, fails `dotnet test` instead of the Unity import.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>MindAttic.Unity.Multiplayer.Core</AssemblyName>
+    <RootNamespace>MindAttic.Unity.Multiplayer.Core</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\unity\com.mindattic.unity.multiplayer\Runtime\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>
