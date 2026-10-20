@@ -94,9 +94,17 @@ public partial class CursorAvatar : NetEntity
 - **Fallback if the spike shows ILPP problems:** hand-written stubs shaped exactly like the generator output. Not reflection.
 
 ### Hosting
-- **Default (documented):** the Linux Dedicated Server build in Docker on a UDP-capable CPU VPS (Hetzner, Vultr, DigitalOcean, etc.).
-- **RunPod (supported):** pods appear to expose TCP/HTTP only, so the server runs with `UseWebSockets=true` and registers its mapped `RUNPOD_TCP_PORT_*` with the rendezvous service. **First verify RunPod's current UDP support** in ticket UM-T18.
-- The rendezvous service runs as a second container on the same box.
+**The hosting provider is undecided (owner, 2026-10-20) and will be chosen later.** The design keeps it open: UM-T23 adds `IHostingProfile` and a provider-neutral server package. That package is a self-contained Linux build with `server.json` plus command-line overrides, declared ports, `Logs/`, `Saves/`, clean shutdown on SIGTERM and a health endpoint. Every host gets the same package, so choosing one later changes no game code.
+- **GenericVps:** the first profile built. It runs the Docker image plus the rendezvous container on a UDP-capable CPU VPS (Hetzner, Vultr, DigitalOcean and similar).
+- **RunPod:** pods appear to expose TCP/HTTP only, so this profile uses `UseWebSockets=true` and registers its mapped `RUNPOD_TCP_PORT_*` with the rendezvous service. UM-T18 verifies RunPod's current UDP support first.
+- **Later, possibly:** G-Portal (not a default; reachable only through its Private Server program for studios), Nitrado, Edgegap and GameLift. Each would plug in as a new profile.
+
+**The owner's home network allows no port forwarding (an HOA-controlled network).** That has three consequences:
+- A listen server hosted from home must use **Relay** join codes.
+- Join by IP from home works on the LAN only.
+- Internet play by IP needs a dedicated server on a rented host.
+
+The self-hosted rendezvous service maps codes to addresses but cannot get through NAT, so it is for dedicated servers only. Development needs no port forwarding: localhost, LAN, Multiplayer Play Mode and Relay all work behind NAT.
 
 ### UnityCursory (public)
 Unity 6 2D top-down with URP 2D and an orthographic camera.
@@ -178,13 +186,14 @@ Each ticket requires the one before it unless it notes otherwise. "MP" means the
 13. **UM-T15 (feature)** Editor: the setup wizard, the prefab validator, and the Build Dedicated Server menu.
 14. **UM-T16 (feature)** The Minimal sample in Samples~.
 15. **UM-T17 (chore)** CI with `ci.yml`: dotnet tests and the GameCI PlayMode run, plus a nightly Docker Compose smoke test (server plus 2 headless bot clients). This needs a Unity license secret, which Ryan supplies.
-16. **UM-T18 (docs)** Hosting guide for VPS+Docker (the default) and RunPod over WebSocket. Includes checking RunPod's current UDP support.
+16. **UM-T18 (docs)** Hosting guide: one section per hosting profile (GenericVps, RunPod), how to pick one, and the no-port-forwarding path (Relay for home hosting). Includes checking RunPod's current UDP support. Requires UM-T23.
 17. **UM-T19 (docs)** DocFX site:
    - guides: Getting Started in 10 minutes, Topologies, Attributes reference, Join codes, Reconnect and seats, Testing, Hosting, Porting a game, Troubleshooting
    - API reference generated from XML docs
    - published to GitHub Pages by `docs.yml`
    - README rewritten to README-STYLE, linking the site
 18. **UM-T20 (chore)** Tag v1.0.0. Release notes.
+19. **UM-T23 (feature)** Server package + hosting profiles (see Hosting). Requires UM-T15. UM-T18 and UC-T13 require it.
 
 **UnityCursory** (UC-T3 requires UM-T10, so early porting can start before the generator lands. UC-T7 requires UM-T20, library v1.0.0; UC-T12 requires MAU-T2, MindAttic.Unity profiles; UC-T15 requires UM-T19, the DocFX site.)
 1. **UC-T3 (chore)** Unity 6000.4.3f1 project:
