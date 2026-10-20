@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/NetFlowArena.unity
+    guid: fad90a58bfbf422ca3cd52ec3643b47f
   m_configObjects: {}

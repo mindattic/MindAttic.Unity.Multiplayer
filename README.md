@@ -1,8 +1,9 @@
 # MindAttic.Unity.Multiplayer
 Reusable Unity 6 multiplayer for MindAttic games: attribute RPCs, host or dedicated server, join by IP or code.
 
-> **Status: early.** A game can host, serve and join by IP:port through `NetSession` / `NetBootstrap`;
-> attribute RPCs, approval, seats and join codes are still to come. The design and build order are in
+> **Status: early.** A game can host, serve and join by IP:port through `NetSession` / `NetBootstrap`, with
+> approval, seats, `NetEntity` RPCs in every direction, synced fields and server-driven scene changes. The RPC
+> plumbing is still hand-written until the source generator lands; join codes are still to come. The design and build order are in
 > [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
 > [docs/BIBLE.md](docs/BIBLE.md). This README is rewritten to README-STYLE, with a link to the
 > docs site, in UM-T19.

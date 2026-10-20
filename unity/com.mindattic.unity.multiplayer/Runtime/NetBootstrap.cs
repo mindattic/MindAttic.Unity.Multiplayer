@@ -58,6 +58,10 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("Keep this player's token in PlayerPrefs so a restarted game gets its seat back. -playertoken <token> on the command line overrides it.")]
         [SerializeField] private bool rememberPlayer = true;
 
+        [Header("Prefabs")]
+        [Tooltip("Prefabs this game spawns over the network, registered before any session starts.")]
+        [SerializeField] private NetPrefabList[] prefabLists = new NetPrefabList[0];
+
         [Header("Launch")]
         [Tooltip("Start the session above as soon as the scene starts.")]
         [SerializeField] private bool autoStart;
@@ -233,6 +237,17 @@ namespace MindAttic.Unity.Multiplayer
         {
             Session = new NetSession(GetComponent<NetworkManager>());
             Session.Identity = BuildIdentity();
+            if (prefabLists != null)
+            {
+                foreach (NetPrefabList list in prefabLists)
+                {
+                    if (list != null)
+                    {
+                        Session.Prefabs.Register(list);
+                    }
+                }
+            }
+
             if (Instance == null)
             {
                 Instance = this;

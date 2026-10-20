@@ -62,6 +62,12 @@ namespace MindAttic.Unity.Multiplayer
         private readonly Dictionary<ulong, int> _reclaimOnConnect = new Dictionary<ulong, int>();
         private readonly Dictionary<ulong, Disconnection> _dropReasons = new Dictionary<ulong, Disconnection>();
         private readonly HashSet<ulong> _rejected = new HashSet<ulong>();
+        private readonly RpcGate _gate = new RpcGate();
+        private readonly NetSceneFlow _scenes;
+        private readonly NetPrefabRegistry _prefabs;
+
+        /// <summary>Every live session by the NetworkManager it drives, so a <see cref="NetEntity"/> can find its own.</summary>
+        private static readonly Dictionary<NetworkManager, NetSession> s_ByManager = new Dictionary<NetworkManager, NetSession>();
 
         /// <summary>Wraps <paramref name="manager"/>. The session owns its start, stop and transport settings from now on.</summary>
         /// <exception cref="ArgumentNullException"><paramref name="manager"/> is null.</exception>
@@ -73,6 +79,9 @@ namespace MindAttic.Unity.Multiplayer
             }
 
             _manager = manager;
+            _scenes = new NetSceneFlow(manager);
+            _prefabs = new NetPrefabRegistry(manager);
+            s_ByManager[manager] = this;
             _machine.StateChanged += OnMachineStateChanged;
             _manager.OnServerStarted += OnServerStarted;
             _manager.OnServerStopped += OnServerStopped;
@@ -117,6 +126,79 @@ namespace MindAttic.Unity.Multiplayer
 
         /// <summary>Server side: a seat was freed (grace window over, or kicked); its held player object has been despawned.</summary>
         public event Action<Seat> SeatReleased;
+
+        /// <summary>
+        /// Server side: a <see cref="ToServerAttribute"/> call was dropped (not the owner, over its rate limit), or a client
+        /// received or tried to send a server-to-client call it should not have. The call's handler did not run.
+        /// </summary>
+        public event Action<RpcRejection> RpcRejected;
+
+        /// <summary>Server-driven scene changes: the server loads, every client follows.</summary>
+        public NetSceneFlow Scenes
+        {
+            get { return _scenes; }
+        }
+
+        /// <summary>The prefabs this session can spawn over the network. Register them before the session starts.</summary>
+        public NetPrefabRegistry Prefabs
+        {
+            get { return _prefabs; }
+        }
+
+        /// <summary>The checks generated RPC stubs run (ownership, per-sender rate); cleared with each session.</summary>
+        internal RpcGate Gate
+        {
+            get { return _gate; }
+        }
+
+        /// <summary>The session driving <paramref name="manager"/>, or null when none does.</summary>
+        internal static NetSession For(NetworkManager manager)
+        {
+            NetSession session;
+            return manager != null && s_ByManager.TryGetValue(manager, out session) ? session : null;
+        }
+
+        /// <summary>
+        /// Who <paramref name="clientId"/> is, as a <see cref="NetSender"/>: on the server, its seat and display name when it
+        /// is seated; otherwise just the id.
+        /// </summary>
+        public NetSender GetSender(ulong clientId)
+        {
+            Seat seat;
+            if (_admission != null && _admission.Seats.TryGetByClient(clientId, out seat))
+            {
+                return new NetSender(clientId, seat.Index, seat.DisplayName);
+            }
+
+            return new NetSender(clientId, -1, clientId == _manager.LocalClientId ? _identity.DisplayName : string.Empty);
+        }
+
+        /// <summary>Raises <see cref="RpcRejected"/> and logs the drop (a rate-limited flood logs on its 1st, 10th, 100th... refusal).</summary>
+        internal void ReportRejected(RpcRejection rejection)
+        {
+            if (rejection.Verdict != RpcVerdict.RateLimited || ShouldLogRateLimited(_gate.Limiter.RejectedCount(rejection.SenderClientId)))
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] Dropped RPC " + rejection);
+            }
+
+            Raise(RpcRejected, rejection);
+        }
+
+        /// <summary>True for the 1st, 10th, 100th, ... refusal: enough to see a flood without the log becoming one.</summary>
+        internal static bool ShouldLogRateLimited(long count)
+        {
+            if (count <= 1)
+            {
+                return true;
+            }
+
+            while (count % 10 == 0)
+            {
+                count /= 10;
+            }
+
+            return count == 1;
+        }
 
         /// <summary>Where the session is in its life.</summary>
         public SessionState State
@@ -399,6 +481,7 @@ namespace MindAttic.Unity.Multiplayer
                 return false;
             }
 
+            _scenes.Attach();
             return true;
         }
 
@@ -441,6 +524,12 @@ namespace MindAttic.Unity.Multiplayer
             // now, so it closes its own books: a disposed session always ends Idle (or Disconnected).
             _machine.NotifyStopped();
             _disposed = true;
+            if (For(_manager) == this)
+            {
+                s_ByManager.Remove(_manager);
+            }
+
+            _scenes.Detach();
             _manager.OnServerStarted -= OnServerStarted;
             _manager.OnServerStopped -= OnServerStopped;
             _manager.OnClientStopped -= OnClientStopped;
@@ -668,6 +757,7 @@ namespace MindAttic.Unity.Multiplayer
             if (ended)
             {
                 ResetSeats();
+                _scenes.Detach();
             }
 
             Raise(StateChanged, change);
@@ -847,6 +937,7 @@ namespace MindAttic.Unity.Multiplayer
             }
 
             _dropReasons.Remove(clientId);
+            _gate.Forget(clientId);
 
             Seat seat = _admission != null ? _admission.Seats.Release(clientId, Now) : null;
             Raise(ClientDisconnected, clientId);
@@ -910,6 +1001,7 @@ namespace MindAttic.Unity.Multiplayer
                 _admission = null;
             }
 
+            _gate.Clear();
             _seatObjects.Clear();
             _reclaimOnConnect.Clear();
             _dropReasons.Clear();
