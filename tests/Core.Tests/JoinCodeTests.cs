@@ -28,7 +28,7 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         [Test]
         public void DefaultCode_Has50BitsOfEntropy()
         {
-            Assert.That(JoinCodeFormat.EntropyBits(JoinCodeFormat.DefaultDataLength), Is.EqualTo(50));
+            Assert.That(JoinCodeFormat.EntropyBits(JoinCodeFormat.DefaultDataLength), Is.EqualTo(40));
         }
 
         [Test]
@@ -144,8 +144,8 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         [Test]
         public void Format_GroupsInFours()
         {
-            Assert.That(JoinCodeFormat.Format("ABCDEFGHJKL"), Is.EqualTo("ABCD-EFGH-JKL"));
-            Assert.That(JoinCodeFormat.Format("ABCDEFGH"), Is.EqualTo("ABCD-EFGH"));
+            Assert.That(JoinCodeFormat.Format("ABCDEFGHJ"), Is.EqualTo("ABC-DEF-GHJ"));
+            Assert.That(JoinCodeFormat.Format("ABCDEFGH"), Is.EqualTo("ABC-DEF-GH"));
             Assert.That(JoinCodeFormat.Format("ABCDEFG", 3, ' '), Is.EqualTo("ABC DEF G"));
             Assert.That(JoinCodeFormat.Format(string.Empty), Is.EqualTo(string.Empty));
             Assert.Throws<ArgumentOutOfRangeException>(() => JoinCodeFormat.Format("ABC", 0, '-'));

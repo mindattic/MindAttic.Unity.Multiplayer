@@ -250,7 +250,7 @@ namespace MindAttic.Unity.Multiplayer.Core
             return false;
         }
 
-        /// <summary>The code grouped for display, <c>ABCD-EFGH-JKM</c>; empty for <see cref="Empty"/>.</summary>
+        /// <summary>The code grouped for display, <c>ABC-EFG-HJK</c>; empty for <see cref="Empty"/>.</summary>
         public override string ToString()
         {
             return JoinCodeFormat.Format(Value);

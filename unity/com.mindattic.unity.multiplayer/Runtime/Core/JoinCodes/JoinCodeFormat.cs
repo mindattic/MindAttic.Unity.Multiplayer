@@ -41,11 +41,11 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <summary>Most data characters a code may have (the check character not counted).</summary>
         public const int MaxDataLength = 16;
 
-        /// <summary>Data characters in a freshly generated code: 10, i.e. 50 bits of entropy.</summary>
-        public const int DefaultDataLength = 10;
+        /// <summary>Data characters in a freshly generated code: 8, i.e. 40 bits of entropy; with the check character a code is 9 characters, shown as <c>ABC-EFG-HJK</c>.</summary>
+        public const int DefaultDataLength = 8;
 
         /// <summary>Characters per group when a code is formatted for display.</summary>
-        public const int DefaultGroupSize = 4;
+        public const int DefaultGroupSize = 3;
 
         /// <summary>The separator <see cref="Format(string)"/> puts between groups.</summary>
         public const char DefaultSeparator = '-';
@@ -153,7 +153,7 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>
         /// Splits <paramref name="canonical"/> into groups of <see cref="DefaultGroupSize"/> joined by
-        /// <see cref="DefaultSeparator"/>, for display: <c>ABCD-EFGH-JKM</c>.
+        /// <see cref="DefaultSeparator"/>, for display: <c>ABC-EFG-HJK</c>.
         /// </summary>
         public static string Format(string canonical)
         {
