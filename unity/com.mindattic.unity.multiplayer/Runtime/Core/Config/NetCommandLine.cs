@@ -24,6 +24,8 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// <item><term><c>-rendezvoussecret</c></term><description>Its registration secret (<see cref="NetConfig.RendezvousSecret"/>); the environment variable is safer, since a command line is visible to other processes.</description></item>
     /// <item><term><c>-publicaddress</c></term><description>Address players reach this server at (<see cref="NetConfig.PublicAddress"/>).</description></item>
     /// <item><term><c>-publicport</c></term><description>Port players reach this server at (<see cref="NetConfig.PublicPort"/>).</description></item>
+    /// <item><term><c>-netsim</c></term><description>Simulated network conditions: <c>none</c>, <c>broadband</c>, <c>mobile4g</c>, <c>mobile3g</c>, <c>lossy</c> or <c>custom</c> (<see cref="NetConfig.Conditions"/>).</description></item>
+    /// <item><term><c>-latency</c> / <c>-jitter</c> / <c>-loss</c></term><description>Simulated milliseconds of delay, milliseconds of jitter and percent of packets lost. Each switches to <see cref="NetConditionsProfile.Custom"/>, keeping the other numbers of the profile chosen so far (<see cref="NetConfig.UseCustomConditions"/>).</description></item>
     /// </list>
     /// <para>Anything else is ignored, because Unity and the OS put their own arguments on the same line.
     /// A recognised argument with a missing or unreadable value is reported in
@@ -66,6 +68,18 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>Sets the port players reach this server at.</summary>
         public const string PublicPortArg = "-publicport";
+
+        /// <summary>Selects the simulated network conditions profile.</summary>
+        public const string NetSimArg = "-netsim";
+
+        /// <summary>Sets the simulated latency in milliseconds (custom conditions).</summary>
+        public const string LatencyArg = "-latency";
+
+        /// <summary>Sets the simulated jitter in milliseconds (custom conditions).</summary>
+        public const string JitterArg = "-jitter";
+
+        /// <summary>Sets the simulated packet loss in percent (custom conditions).</summary>
+        public const string LossArg = "-loss";
 
         /// <summary>Unity's batch-mode switch; its presence marks a headless run.</summary>
         public const string BatchModeArg = "-batchmode";
@@ -239,6 +253,57 @@ namespace MindAttic.Unity.Multiplayer.Core
                         errors.Add(PublicPortArg + " must be a number from 1 to 65535; got '" + value + "'.");
                     }
                 }
+                else if (Is(name, NetSimArg))
+                {
+                    NetConditionsProfile profile;
+                    if (NetConditions.TryParseProfile(value, out profile))
+                    {
+                        config.Conditions = profile;
+                    }
+                    else
+                    {
+                        errors.Add(NetSimArg + " must be none, broadband, mobile4g, mobile3g, lossy or custom; got '" + value + "'.");
+                    }
+                }
+                else if (Is(name, LatencyArg))
+                {
+                    int latency;
+                    if (TryParseInRange(value, 0, NetConditions.MaxLatencyMs, out latency))
+                    {
+                        config.UseCustomConditions();
+                        config.SimulatedLatencyMs = latency;
+                    }
+                    else
+                    {
+                        errors.Add(LatencyArg + " must be a number of milliseconds from 0 to " + NetConditions.MaxLatencyMs + "; got '" + value + "'.");
+                    }
+                }
+                else if (Is(name, JitterArg))
+                {
+                    int jitter;
+                    if (TryParseInRange(value, 0, NetConditions.MaxLatencyMs, out jitter))
+                    {
+                        config.UseCustomConditions();
+                        config.SimulatedJitterMs = jitter;
+                    }
+                    else
+                    {
+                        errors.Add(JitterArg + " must be a number of milliseconds from 0 to " + NetConditions.MaxLatencyMs + "; got '" + value + "'.");
+                    }
+                }
+                else if (Is(name, LossArg))
+                {
+                    int loss;
+                    if (TryParseInRange(value.TrimEnd('%'), 0, 100, out loss))
+                    {
+                        config.UseCustomConditions();
+                        config.SimulatedPacketLossPercent = loss;
+                    }
+                    else
+                    {
+                        errors.Add(LossArg + " must be a percentage from 0 to 100; got '" + value + "'.");
+                    }
+                }
                 else if (Is(name, MaxPlayersArg))
                 {
                     int maxPlayers;
@@ -345,7 +410,13 @@ namespace MindAttic.Unity.Multiplayer.Core
             return Is(name, ModeArg) || Is(name, AddressArg) || Is(name, IpArg) || Is(name, PortArg)
                 || Is(name, TransportArg) || Is(name, TickRateArg) || Is(name, MaxPlayersArg)
                 || Is(name, JoinCodesArg) || Is(name, RendezvousArg) || Is(name, RendezvousSecretArg)
-                || Is(name, PublicAddressArg) || Is(name, PublicPortArg);
+                || Is(name, PublicAddressArg) || Is(name, PublicPortArg)
+                || Is(name, NetSimArg) || Is(name, LatencyArg) || Is(name, JitterArg) || Is(name, LossArg);
+        }
+
+        private static bool TryParseInRange(string text, int min, int max, out int value)
+        {
+            return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value) && value >= min && value <= max;
         }
 
         private static bool Is(string name, string expected)

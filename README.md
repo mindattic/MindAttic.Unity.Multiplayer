@@ -42,6 +42,13 @@ Game.x86_64 -batchmode -nographics -port 7777 -transport udp
 
 `-mode host|server|client`, `-address`, `-tickrate` and `-maxplayers` are read too.
 
+## Test on a bad connection
+`NetConfig.Conditions` (or the Net Bootstrap's *Network conditions* fields, or `-netsim`) makes this peer's link
+slow and lossy: `Broadband` (20 ms), `Mobile4G` (60 ms, 1% loss), `Mobile3G` (200 ms, 3% loss), `Lossy` (150 ms,
+5% loss) or `Custom` (`-latency 150 -jitter 10 -loss 5`). Each packet the peer sends and receives is delayed and may
+be dropped by Unity Transport's simulator stage; reliable messages are resent, unreliable ones are lost.
+`NetSession.SetConditions` changes it while the game runs. It works in the editor and development builds only.
+
 ## Run the rendezvous service
 A dedicated server registers its public IP:port and gets a join code; players resolve the code to connect.
 The routes are in Core's `RendezvousProtocol`. Build the image from the repository root:

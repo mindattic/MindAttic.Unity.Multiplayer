@@ -62,6 +62,19 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("Server: the port players reach it at, when a host maps it. 0 = the listen port (or RunPod's RUNPOD_TCP_PORT_* mapping).")]
         [SerializeField, Range(0, 65535)] private int publicPort;
 
+        [Header("Network conditions (editor and development builds)")]
+        [Tooltip("Simulate a slow or lossy link on this peer, for testing. None simulates nothing; Custom uses the three numbers below. -netsim, -latency, -jitter and -loss override it.")]
+        [SerializeField] private NetConditionsProfile conditions = NetConditionsProfile.None;
+
+        [Tooltip("Custom: milliseconds added to every packet this peer sends and receives.")]
+        [SerializeField, Range(0, NetConditions.MaxLatencyMs)] private int simulatedLatencyMs = 100;
+
+        [Tooltip("Custom: up to this many milliseconds more or less than the latency, per packet (at most the latency).")]
+        [SerializeField, Range(0, NetConditions.MaxLatencyMs)] private int simulatedJitterMs = 10;
+
+        [Tooltip("Custom: percentage of packets dropped each way. Reliable messages are resent; unreliable ones are lost.")]
+        [SerializeField, Range(0, 100)] private int simulatedPacketLossPercent = 2;
+
         [Header("Player")]
         [Tooltip("The name other players see. Empty uses \"Player\".")]
         [SerializeField] private string displayName = string.Empty;
@@ -83,7 +96,7 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("A headless process (-batchmode, -nographics, a Dedicated Server build) starts as a dedicated server.")]
         [SerializeField] private bool serveWhenHeadless = true;
 
-        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers -joincodes -rendezvous -publicaddress -publicport from the command line, and MINDATTIC_RENDEZVOUS_URL / _SECRET / MINDATTIC_PUBLIC_ADDRESS from the environment.")]
+        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers -joincodes -rendezvous -publicaddress -publicport -netsim -latency -jitter -loss from the command line, and MINDATTIC_RENDEZVOUS_URL / _SECRET / MINDATTIC_PUBLIC_ADDRESS from the environment.")]
         [SerializeField] private bool readCommandLine = true;
 
         [Tooltip("In a headless process: vsync off, targetFrameRate = tick rate, run in background.")]
@@ -121,6 +134,10 @@ namespace MindAttic.Unity.Multiplayer
                 RendezvousUrl = string.IsNullOrWhiteSpace(rendezvousUrl) ? null : rendezvousUrl.Trim(),
                 PublicAddress = string.IsNullOrWhiteSpace(publicAddress) ? null : publicAddress.Trim(),
                 PublicPort = (ushort)Mathf.Clamp(publicPort, 0, 65535),
+                Conditions = conditions,
+                SimulatedLatencyMs = Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs),
+                SimulatedJitterMs = Mathf.Clamp(simulatedJitterMs, 0, Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs)),
+                SimulatedPacketLossPercent = Mathf.Clamp(simulatedPacketLossPercent, 0, 100),
             };
 
             if (string.IsNullOrWhiteSpace(config.GameVersion))
@@ -154,6 +171,10 @@ namespace MindAttic.Unity.Multiplayer
             rendezvousUrl = config.RendezvousUrl ?? string.Empty;
             publicAddress = config.PublicAddress ?? string.Empty;
             publicPort = config.PublicPort;
+            conditions = config.Conditions;
+            simulatedLatencyMs = config.SimulatedLatencyMs;
+            simulatedJitterMs = config.SimulatedJitterMs;
+            simulatedPacketLossPercent = config.SimulatedPacketLossPercent;
         }
 
         /// <summary>

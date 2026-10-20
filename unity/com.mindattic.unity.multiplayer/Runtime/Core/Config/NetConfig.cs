@@ -102,6 +102,53 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// </summary>
         public ushort PublicPort { get; set; }
 
+        /// <summary>
+        /// Simulated network conditions (latency, jitter, packet loss) for this peer's link, for testing how the game plays
+        /// on a bad connection. <see cref="NetConditionsProfile.None"/> (the default) simulates nothing;
+        /// <see cref="NetConditionsProfile.Custom"/> uses <see cref="SimulatedLatencyMs"/>, <see cref="SimulatedJitterMs"/>
+        /// and <see cref="SimulatedPacketLossPercent"/>. Editor and development builds only (see <see cref="NetConditions"/>).
+        /// </summary>
+        public NetConditionsProfile Conditions { get; set; } = NetConditionsProfile.None;
+
+        /// <summary>With <see cref="NetConditionsProfile.Custom"/>: milliseconds added to each packet sent and received (<see cref="NetConditions.LatencyMs"/>).</summary>
+        public int SimulatedLatencyMs { get; set; }
+
+        /// <summary>With <see cref="NetConditionsProfile.Custom"/>: random variation of that delay, in milliseconds (<see cref="NetConditions.JitterMs"/>).</summary>
+        public int SimulatedJitterMs { get; set; }
+
+        /// <summary>With <see cref="NetConditionsProfile.Custom"/>: percentage of packets dropped each way (<see cref="NetConditions.PacketLossPercent"/>).</summary>
+        public int SimulatedPacketLossPercent { get; set; }
+
+        /// <summary>The conditions <see cref="Conditions"/> stands for: a named profile's numbers, or the custom ones.</summary>
+        public NetConditions EffectiveConditions
+        {
+            get
+            {
+                return Conditions == NetConditionsProfile.Custom
+                    ? new NetConditions(SimulatedLatencyMs, SimulatedJitterMs, SimulatedPacketLossPercent)
+                    : NetConditions.For(Conditions);
+            }
+        }
+
+        /// <summary>
+        /// Switches <see cref="Conditions"/> to <see cref="NetConditionsProfile.Custom"/>, starting the custom numbers from
+        /// the profile chosen so far, so one of them can be changed and the rest kept (<c>-netsim mobile4g -loss 10</c>).
+        /// Does nothing when the profile is already Custom.
+        /// </summary>
+        public void UseCustomConditions()
+        {
+            if (Conditions == NetConditionsProfile.Custom)
+            {
+                return;
+            }
+
+            NetConditions start = EffectiveConditions;
+            SimulatedLatencyMs = start.LatencyMs;
+            SimulatedJitterMs = start.JitterMs;
+            SimulatedPacketLossPercent = start.PacketLossPercent;
+            Conditions = NetConditionsProfile.Custom;
+        }
+
         /// <summary>The address actually used: <see cref="Address"/>, or the topology's default when it is empty.</summary>
         public string EffectiveAddress
         {
@@ -183,6 +230,15 @@ namespace MindAttic.Unity.Multiplayer.Core
                 errors.Add("PublicAddress '" + PublicAddress + "' must not contain spaces.");
             }
 
+            if (!Enum.IsDefined(typeof(NetConditionsProfile), Conditions))
+            {
+                errors.Add("Conditions " + (int)Conditions + " is not None, Broadband, Mobile4G, Mobile3G, Lossy or Custom.");
+            }
+            else if (Conditions == NetConditionsProfile.Custom)
+            {
+                errors.AddRange(EffectiveConditions.Validate());
+            }
+
             string address = EffectiveAddress;
             if (address.IndexOf(' ') >= 0)
             {
@@ -217,7 +273,8 @@ namespace MindAttic.Unity.Multiplayer.Core
         public override string ToString()
         {
             return Topology + " " + EffectiveAddress + ":" + Port + " over " + Transport
-                + " at " + TickRate + " Hz, max " + MaxPlayers + " players, version " + GameVersion;
+                + " at " + TickRate + " Hz, max " + MaxPlayers + " players, version " + GameVersion
+                + (Conditions == NetConditionsProfile.None ? string.Empty : ", simulating " + Conditions + " (" + EffectiveConditions + ")");
         }
     }
 }

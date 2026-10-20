@@ -34,6 +34,9 @@ namespace MindAttic.Unity.Multiplayer
     /// rendezvous service as soon as it is running (and keeps the registration alive), <see cref="PublishCode"/>
     /// publishes one for a session already running, and <see cref="JoinByCode"/> joins with a code a player typed. A
     /// published code is withdrawn when the session ends.</para>
+    /// <para>Network conditions (UM-T14): <see cref="NetConfig.Conditions"/> makes this peer's link slow and lossy for
+    /// testing (latency, jitter, packet loss through Unity Transport's simulator stage, editor and development builds
+    /// only), from the moment it starts; <see cref="SetConditions"/> changes them while it runs.</para>
     /// <para>Events are raised on Unity's main thread, from NGO's callbacks. An exception thrown by a handler
     /// is logged and does not stop the session's own bookkeeping.</para>
     /// </remarks>
@@ -80,6 +83,7 @@ namespace MindAttic.Unity.Multiplayer
         private JoinCode _publishedCode;
         private IJoinCodeService _publishedBy;
         private int _publishGeneration;
+        private NetConditions _conditions;
 
         /// <summary>Every live session by the NetworkManager it drives, so a <see cref="NetEntity"/> can find its own.</summary>
         private static readonly Dictionary<NetworkManager, NetSession> s_ByManager = new Dictionary<NetworkManager, NetSession>();
@@ -298,6 +302,71 @@ namespace MindAttic.Unity.Multiplayer
         public IReadOnlyList<ulong> ConnectedClientIds
         {
             get { return _manager.IsServer && _manager.IsListening ? _manager.ConnectedClientsIds : NoClients; }
+        }
+
+        /// <summary>
+        /// The network conditions this peer is simulating (<see cref="NetConfig.Conditions"/> at start, or the last
+        /// <see cref="SetConditions"/>); <see cref="NetConditions.None"/> when nothing is simulated or the build cannot.
+        /// </summary>
+        public NetConditions Conditions
+        {
+            get { return _conditions; }
+        }
+
+        /// <summary>
+        /// Changes the simulated network conditions of the live session at once, on connections already open too (for
+        /// example to make a running game lossy from a debug menu). The next start takes <see cref="NetConfig.Conditions"/>
+        /// again. Editor and development builds only (see <see cref="NetConditions"/>).
+        /// </summary>
+        /// <returns>True when they now apply; false (with a warning) when no session is running or this build has no simulator.</returns>
+        /// <exception cref="ArgumentException"><paramref name="conditions"/> are out of range (see <see cref="NetConditions.Validate"/>).</exception>
+        public bool SetConditions(NetConditions conditions)
+        {
+            if (!conditions.IsValid)
+            {
+                throw new ArgumentException("Invalid NetConditions: " + string.Join(" ", conditions.Validate()), nameof(conditions));
+            }
+
+            if (!_manager.IsListening)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] SetConditions needs a running session; set NetConfig.Conditions before starting instead.");
+                return false;
+            }
+
+            return ApplyConditions(_manager.NetworkConfig.NetworkTransport as UnityTransport, conditions, false);
+        }
+
+        /// <summary>
+        /// Puts <paramref name="conditions"/> on the started transport and records them in <see cref="Conditions"/>. At start,
+        /// no simulation leaves the stage alone (so Multiplayer Tools' Network Simulator, if used instead, keeps control).
+        /// </summary>
+        private bool ApplyConditions(UnityTransport transport, NetConditions conditions, bool atStart)
+        {
+            if (atStart && conditions.IsNone)
+            {
+                _conditions = NetConditions.None;
+                return true;
+            }
+
+            string problem;
+            if (!TransportConditions.TryApply(transport, conditions, out problem))
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] Simulated network conditions (" + conditions + ") were not applied: " + problem + ".");
+                if (atStart)
+                {
+                    _conditions = NetConditions.None;
+                }
+
+                return false;
+            }
+
+            _conditions = conditions;
+            if (!conditions.IsNone)
+            {
+                Debug.Log("[MindAttic.Multiplayer] Simulating network conditions on this " + (_config != null ? _config.Topology.ToString() : "peer") + ": " + conditions + ".");
+            }
+
+            return true;
         }
 
         /// <summary>The fixed-rate clock of the live session; null when no session is live.</summary>
@@ -525,6 +594,8 @@ namespace MindAttic.Unity.Multiplayer
                 return false;
             }
 
+            // The driver exists now and no pipelined packet has gone out yet (a client has only sent its connect request).
+            ApplyConditions(configured, copy.EffectiveConditions, true);
             _scenes.Attach();
             return true;
         }
