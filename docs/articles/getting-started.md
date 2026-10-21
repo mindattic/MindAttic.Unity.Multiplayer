@@ -115,6 +115,16 @@ frontEnd.AddScreen("Options", s => s.AddRange("Volume", 0, 100, 80, SetVolume, t
 [Drop-in front end](front-end.md) covers every hook, the settings asset, the player's identity, the message for every
 way a game can end, and how a dedicated server or bot using the same scene never shows a menu.
 
+Want players to vote on a restart, a level or a kick? Add **Net Votes** to the same GameObject and register what can be
+voted on; the front end shows the vote overlay by itself:
+
+```csharp
+NetVotes.Instance.AddKind(new VoteKind("restart", "Restart the round?") { Passed = v => RestartRound() });
+NetVotes.Instance.Board.StartVote("restart");   // from any player's button
+```
+
+See [Votes](votes.md).
+
 ## Drive it from your own UI
 
 The front end's buttons and your own UI make the same calls on `NetBootstrap`, the component on the NetworkManager:
@@ -161,6 +171,8 @@ line can always retarget a build.
 ## Where to next
 
 - [Drop-in front end](front-end.md) for everything the menus do and every hook.
+- [Votes](votes.md) for restart, change-level and kick votes: a `NetVotes` component, your vote kinds, and the
+  ready-made overlay.
 - [Topologies](topologies.md) for listen server vs. dedicated server, and how to build the Linux player.
 - [Attributes reference](attributes.md) for every option on `[ToServer]` / `[ToClients]` / `[ToOwner]` /
   `[ToClient]` / `[Synced]`.

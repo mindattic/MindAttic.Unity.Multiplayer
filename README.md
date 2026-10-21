@@ -61,6 +61,9 @@ hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.g
   dialogs in plain words, automatic reconnect to the same seat and an in-game Esc menu, built from MindAttic
   Components and optional. See
   [Drop-in front end](https://mindattic.github.io/Unity.Multiplayer/articles/front-end.html).
+- **Votes** — restart, change-level, kick or any vote a game defines: one `NetVotes` component, a `VoteKind` per
+  vote with its effect on the server, two-thirds quorum, timeouts and early rejection, and a ready-made overlay with
+  the front end. See [Votes](https://mindattic.github.io/Unity.Multiplayer/articles/votes.html).
 - **Editor tooling** — one-click scene setup, a prefab validator, and a Linux Dedicated Server build, all from
   the **MindAttic ▸ Multiplayer** menu.
 - **A hosting pipeline** — the same server package deploys to any GenericVps-shaped host, RunPod, or a

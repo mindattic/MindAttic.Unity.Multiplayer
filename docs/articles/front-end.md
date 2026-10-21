@@ -170,6 +170,12 @@ Every button is also a method, so a game can drive the same flow from its own UI
 the dialogs and the reconnect: `Host()` / `HostAsync()`, `JoinByAddress(text)` / `JoinByAddressAsync`,
 `JoinByCode(code)` / `JoinByCodeAsync`, `StartGame()`, `Leave()`, `ConfirmLeave()`, `OpenSettings()`.
 
+### Votes
+
+With a `NetVotes` component beside the `NetBootstrap` (see [Votes](votes.md)), every vote shows in a ready-made overlay
+under the same theme: the question, the tally and countdown, Yes / No, and a toast with the result. It appears only in
+game, never over the menus, and a headless peer never builds it.
+
 ### Loading a level when the host presses Start
 
 Either handle `GameStarted` yourself, or set **Game Scene** on a settings asset: the server then loads it for everyone

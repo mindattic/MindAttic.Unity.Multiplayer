@@ -2,6 +2,8 @@
   href: getting-started.md
 - name: Drop-in front end
   href: front-end.md
+- name: Votes
+  href: votes.md
 - name: Topologies
   href: topologies.md
 - name: Attributes reference

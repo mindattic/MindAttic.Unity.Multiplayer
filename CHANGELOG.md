@@ -9,6 +9,18 @@ carries the package's own version.
 
 ### Added
 
+- **Votes kit** (UM-T54) — server-authoritative votes any game can offer, promoted from Unity.Cursory. Core (engine-free)
+  gets `VoteBox` (one vote at a time over a roster of client ids; passes when Yes reaches the quorum, rejected as soon
+  as it cannot, lapses on the `ITickClock`; a leaver is dropped and the quorum recomputed), `VoteRules` (quorum fraction,
+  default 2/3 rounded up; timeout, default 15 s; optional per-starter cooldown; who may start; the starter's own Yes),
+  `VoteKind` (id, question and description worded from the request, `Check`, `MayVote`, the server-side `Passed`
+  effect, per-kind quorum and time), `VoteRequest` (an optional `long` and `string` payload), `VoteStatus`,
+  `VoteResult` and `VoteText` (the overlay's words). The adapter gets `VoteBoard`, a `NetEntity` spawned from the
+  package's own prefab (`RegisterPrefab`, `Spawn`, `AddKind`, `StartVote`, `CastVote`, `Status`, `LocalChoice`,
+  `VoteChanged`, `VoteEnded`, `VoteRefused`) with a built-in kick vote through `NetSession.Kick`
+  (`AddKickKind`, `StartKickVote`), and `NetVotes`, the one component that sets it all up beside a `NetBootstrap`. The
+  front end gets `VoteOverlay` (question, tally, quorum bar, Yes/No, result toasts), wired by itself when a `NetFrontEnd`
+  has menus. See [Votes](docs/articles/votes.md).
 - **Front-end test kit** (UM-T62) — `Unity.Multiplayer.UI.Testing` (editor and test builds only, and only with
   MindAttic Components) lets a game's own PlayMode tests drive its `NetFrontEnd`: `FrontEndTesting.ForceMenus` builds
   the menus in a batch-mode run, `Bind`, `MainScreen`/`LobbyScreen`/`LobbyCode`/`LobbyRoster`/`BusyDialog`/
