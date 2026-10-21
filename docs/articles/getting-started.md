@@ -35,23 +35,21 @@ it `SpaceCrates` and put it in `C:\Games`. Or from a terminal:
 & "C:\Program Files\Unity\Hub\Editor\6000.4.3f1\Editor\Unity.exe" -batchmode -quit -createProject C:\Games\SpaceCrates
 ```
 
-Open `C:\Games\SpaceCrates\Packages\manifest.json`. Add the multiplayer package at the top of `"dependencies"`, and
-list Netcode for GameObjects under `"testables"` after the `"dependencies"` block (add the `"testables"` array if the
-file has none):
+Open `C:\Games\SpaceCrates\Packages\manifest.json` and add the multiplayer package at the top of `"dependencies"`:
 
 ```json
 {
   "dependencies": {
     "com.mindattic.unity.multiplayer": "file:../../Unity.Multiplayer/unity/com.mindattic.unity.multiplayer",
     ...
-  },
-  "testables": [ "com.unity.netcode.gameobjects" ]
+  }
 }
 ```
 
-The package pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. The `testables` entry is needed for the
-package's test kit (`Unity.Multiplayer.Testing`), which builds on NGO's test helpers. Without it, that assembly does not
-compile, and batch mode refuses to run. Open the project in the editor.
+The package pulls in Netcode for GameObjects 2.x and Unity Transport 2.x, and that one line is enough to compile and run
+(batch mode included). The package's test kit (`Unity.Multiplayer.Testing`) builds on NGO's test helpers, so it only
+compiles once you list NGO under `"testables"`, which the wizard in step 3 does for you; until then the kit is simply
+absent. Open the project in the editor.
 
 ## 3. Run the New Game wizard (1 minute)
 

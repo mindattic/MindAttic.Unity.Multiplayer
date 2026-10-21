@@ -170,6 +170,17 @@ namespace Unity.Multiplayer.Editor.Tests
             Assert.That(NewGame.NightlyWorkflow(null), Does.Contain("mindattic/Unity.Multiplayer/.github/workflows/game-smoke.yml@main"));
         }
 
+        [Test]
+        public void TestKitDefineFollowsTheManifestsTestables()
+        {
+            Assert.That(TestKitDefine.ListsNgoAsTestable("{ \"dependencies\": {}, \"testables\": [ \"com.unity.netcode.gameobjects\" ] }"), Is.True);
+            Assert.That(TestKitDefine.ListsNgoAsTestable("{ \"dependencies\": { \"com.unity.netcode.gameobjects\": \"2.11.0\" } }"), Is.False);
+            Assert.That(TestKitDefine.ListsNgoAsTestable("{ \"testables\": [ \"com.other\" ] }"), Is.False);
+            Assert.That(TestKitDefine.WithSymbol("A;B", true), Is.EqualTo("A;B;" + TestKitDefine.Symbol));
+            Assert.That(TestKitDefine.WithSymbol("A;" + TestKitDefine.Symbol, false), Is.EqualTo("A"));
+            Assert.That(TestKitDefine.WithSymbol("", true), Is.EqualTo(TestKitDefine.Symbol));
+        }
+
         private static HashSet<string> Guids(string folder, string pattern)
         {
             var guids = new HashSet<string>();

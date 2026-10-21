@@ -7,6 +7,15 @@ carries the package's own version.
 
 ## [Unreleased]
 
+### Fixed
+
+- A project that adds only the package line compiles and runs batch mode again (UM-T67). The test kit
+  (`Unity.Multiplayer.Testing`) builds on NGO's test helpers, which only compile for a testable NGO, and its define
+  constraint let it compile in every editor. It now also requires `MINDATTIC_NGO_TESTABLE`, which the editor script
+  `TestKitDefine` sets while `Packages/manifest.json` lists NGO under `"testables"` (and removes otherwise). Without the
+  testables line the kit is absent; with it, it appears on the next domain reload. The game template's test assembly
+  carries the same constraint.
+
 ## [2.0.0] — 2026-10-21
 
 The one-stop shop release. With MindAttic Components and Unity.Shared, the package is now one kit for a whole

@@ -21,7 +21,8 @@
     ],
     "autoReferenced": false,
     "defineConstraints": [
-        "UNITY_INCLUDE_TESTS"
+        "UNITY_INCLUDE_TESTS",
+        "MINDATTIC_NGO_TESTABLE"
     ],
     "versionDefines": [],
     "noEngineReferences": false

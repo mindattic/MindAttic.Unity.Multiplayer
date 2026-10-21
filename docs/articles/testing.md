@@ -22,7 +22,9 @@ never happened, not a bare timeout.
 
 2. Reference the kit from your PlayMode test assembly. Its define constraint is `UNITY_EDITOR ||
    UNITY_INCLUDE_TESTS`: it compiles in the Editor and in test builds, and it (with NUnit and NGO's test helpers)
-   never reaches a player build. It deliberately does not use `UNITY_INCLUDE_TESTS` alone, which Unity honours only
+   never reaches a player build. It also requires `MINDATTIC_NGO_TESTABLE`, a symbol the package's editor script sets
+   while the manifest lists NGO under `"testables"`, so a project without that line compiles fine and simply has no kit
+   (a test assembly that references the kit should carry the same constraint). It deliberately does not use `UNITY_INCLUDE_TESTS` alone, which Unity honours only
    for packages listed under `testables`; like Unity's own Performance Testing package, it is a test utility a game
    uses without making the package's own tests part of its Test Runner.
 

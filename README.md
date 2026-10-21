@@ -106,15 +106,14 @@ git clone https://github.com/mindattic/MindAttic.Components
 git clone https://github.com/mindattic/Unity.Shared
 ```
 
-Add the package to the game's `Packages/manifest.json` as a local package, with Netcode for GameObjects listed as a
-testable (the package's test kit builds on NGO's test helpers and does not compile without it):
+Add the package to the game's `Packages/manifest.json` as a local package (the package alone compiles; to use its test kit
+also list Netcode for GameObjects as a testable, see [Testing](docs/articles/testing.md)):
 
 ```json
 "dependencies": {
   "com.mindattic.unity.multiplayer": "file:../../Unity.Multiplayer/unity/com.mindattic.unity.multiplayer",
   ...
-},
-"testables": [ "com.unity.netcode.gameobjects" ]
+}
 ```
 
 It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install `com.unity.services.multiplayer` as

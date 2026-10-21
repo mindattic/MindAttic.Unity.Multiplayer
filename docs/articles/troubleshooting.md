@@ -27,7 +27,7 @@ runs before they're fixed. Full table and examples: [Attributes reference](attri
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `NetSessionTest.cs`: CS0234 "The type or namespace name 'TestHelpers' does not exist in the namespace 'Unity.Netcode'", CS0246 `NetcodeIntegrationTest`; batch mode says "Scripts have compiler errors" | The package's test kit (`Unity.Multiplayer.Testing`) builds on NGO's test helpers, which only compile when NGO is a testable. | Add `"testables": [ "com.unity.netcode.gameobjects" ]` to `Packages/manifest.json` ([Getting started](getting-started.md#2-make-a-unity-project-beside-them-2-minutes)). |
+| Your test assembly cannot find `NetSessionTest`, `FreePort` or `Unity.Multiplayer.Testing` | The test kit builds on NGO's test helpers, which only compile when NGO is a testable, so it is absent until `Packages/manifest.json` lists NGO under `"testables"` (the package alone still compiles). | Add `"testables": [ "com.unity.netcode.gameobjects" ]` ([Testing](testing.md#set-up)); the kit appears on the next domain reload (the editor sets `MINDATTIC_NGO_TESTABLE`). |
 | **New Game…** or **Add Front End** says MindAttic Components is missing | The front end and the vote overlay are built from it, and a `package.json` cannot depend on a `file:` package. | Click **Add missing lines to Packages/manifest.json** in **New Game…**, or add the line it shows. See [The kit](kit.md). |
 
 ## Editor: Validate Prefabs

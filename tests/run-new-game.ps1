@@ -6,8 +6,8 @@
 .DESCRIPTION
   In batch mode, each step its own Unity process (package changes and new scripts need a fresh domain):
     1. unity -createProject: a fresh, empty 6000.4.3f1 project (default %TEMP%\MindAttic.NewGame\<GameName>).
-    2. Packages/manifest.json gets the multiplayer package by file: path and NGO under "testables" (getting-started
-       step 2: without the testable, the package's test kit assembly cannot compile and batch mode refuses to run).
+    2. Packages/manifest.json gets the multiplayer package by file: path and nothing else (getting-started step 2; the
+       package alone must compile and run batch mode, UM-T67), or with -WithTestables also NGO under "testables".
     3. NewGame.CreateFromCommandLine -checkOnly must FAIL (exit 2) and name the missing manifest lines (MindAttic
        Components, the test framework when the project lacks it; Unity.Shared as optional).
     4. ... -addPackages adds them (the kit's repos found beside this one); the manifest must then hold them.
@@ -28,6 +28,7 @@ param(
     [string]$GameName = 'SpaceCrates',
     [string]$Root = (Join-Path $env:TEMP 'MindAttic.NewGame'),
     [switch]$Author,
+    [switch]$WithTestables,
     [switch]$Smoke
 )
 $ErrorActionPreference = 'Stop'
@@ -70,10 +71,11 @@ $manifestPath = Join-Path $project 'Packages/manifest.json'
 $manifest = Get-Content $manifestPath -Raw
 $line = '"com.mindattic.unity.multiplayer": "file:' + ($package -replace '\\', '/') + '",'
 $manifest = $manifest -replace '"dependencies"\s*:\s*\{', ("`"dependencies`": {`n    " + $line)
-if ($manifest -match '"testables"') { $manifest = $manifest -replace '"testables"\s*:\s*\[', "`"testables`": [`n    `"com.unity.netcode.gameobjects`"," }
+if (-not $WithTestables) { Write-Host "Added to Packages/manifest.json: $line (no testables)" }
+elseif ($manifest -match '"testables"') { $manifest = $manifest -replace '"testables"\s*:\s*\[', "`"testables`": [`n    `"com.unity.netcode.gameobjects`"," }
 else { $manifest = $manifest.TrimEnd().TrimEnd('}').TrimEnd() + ",`n  `"testables`": [ `"com.unity.netcode.gameobjects`" ]`n}`n" }
 [IO.File]::WriteAllText($manifestPath, $manifest)
-Write-Host "Added to Packages/manifest.json: $line and testables: com.unity.netcode.gameobjects"
+if ($WithTestables) { Write-Host "Added to Packages/manifest.json: $line and testables: com.unity.netcode.gameobjects" }
 
 # --- 3. the wizard names what is missing ---------------------------------------------------------------------------
 $code = Invoke-Unity 'check.log' @('-executeMethod', 'Unity.Multiplayer.Editor.NewGame.CreateFromCommandLine', '-checkOnly')
