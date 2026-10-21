@@ -1,0 +1,46 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [ "**/*.cs" ],
+          "exclude": [ "**/AssemblyInfo.cs" ],
+          "src": "../unity/com.mindattic.unity.multiplayer/Runtime/Core"
+        }
+      ],
+      "dest": "api",
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [ "api/**/*.yml", "api/**/toc.yml" ]
+      },
+      {
+        "files": [ "articles/**.md", "articles/**/toc.yml", "toc.yml", "index.md" ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [ "images/**" ]
+      }
+    ],
+    "output": "_site",
+    "globalMetadata": {
+      "_appTitle": "Unity.Multiplayer",
+      "_appName": "Unity.Multiplayer",
+      "_appFooter": "Unity.Multiplayer · MIT licensed · Part of MindAttic",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/mindattic/Unity.Multiplayer",
+        "branch": "main"
+      }
+    },
+    "sitemap": {
+      "baseUrl": "https://mindattic.github.io/Unity.Multiplayer"
+    },
+    "template": [ "default", "modern" ]
+  }
+}

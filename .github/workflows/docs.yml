@@ -1,0 +1,56 @@
+# UM-T19: builds the DocFX site (docs/docfx.json: guides under docs/articles/, API reference reflected from
+# Unity.Multiplayer.Core's XML doc comments) and publishes it to GitHub Pages at
+# https://mindattic.github.io/Unity.Multiplayer/. No Unity install needed: Core is engine-free
+# (noEngineReferences, UM-LAW-2), so `docfx metadata` compiles it straight from source with the .NET SDK alone.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "unity/com.mindattic.unity.multiplayer/Runtime/Core/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install docfx
+        run: dotnet tool install --global docfx --version 2.81.0
+
+      - name: docfx docs/docfx.json
+        run: docfx docs/docfx.json --warningsAsErrors
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

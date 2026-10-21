@@ -1,151 +1,192 @@
 # Unity.Multiplayer
-Reusable Unity 6 multiplayer for MindAttic games: attribute RPCs, host or dedicated server, join by IP or code.
 
-> **Status: early.** A game can host, serve and join by IP:port through `NetSession` / `NetBootstrap`, with
-> approval, seats, `NetEntity` RPCs in every direction, synced fields and server-driven scene changes. The RPC
-> and synced-field plumbing is written by the package's source generator. The self-hosted rendezvous service
-> (`server/Rendezvous`) is built, and a game hosts and joins by join code (`NetSession.HostWithCode` /
-> `JoinByCode`; Unity Relay for listen servers, the rendezvous service for dedicated servers). The design and build order are in
-> [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
-> [docs/BIBLE.md](docs/BIBLE.md). This README is rewritten to README-STYLE, with a link to the
-> docs site, in UM-T19.
+Reusable Unity 6 multiplayer for MindAttic games: attribute-decorated RPCs and synced fields, a listen server or
+a dedicated server from the exact same game code, and joining by IP:port or a short typed join code.
 
-## Use it from a Unity project
+![Unity](https://img.shields.io/badge/unity-6000.4-black)
+![Netcode for GameObjects](https://img.shields.io/badge/netcode-2.x-blue)
+![.NET](https://img.shields.io/badge/dotnet-10-512BD4)
+![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Status](https://img.shields.io/badge/status-early-yellow)
+
+The whole networked surface of a game object is usually three declarations:
+
+```csharp
+public partial class MinimalPlayer : NetEntity
+{
+    [ToServer(RateLimit = 20)]
+    public partial void SetDirection(Vector2 direction);
+
+    [ToClients]
+    public partial void Bumped();
+
+    [Synced] private Vector2 _position;
+}
+```
+
+Try it: the full docs site, with a 10-minute getting-started guide, every attribute's rules, and the complete
+hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.github.io/Unity.Multiplayer/).
+
+> **Status: early**, pre-1.0.0 — see Roadmap below for exactly what's built and what's left. The design and
+> build order are in [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
+> [docs/BIBLE.md](docs/BIBLE.md).
+
+## Why
+
+- Network a new game object in three attributes, not a day of hand-rolled `NetworkVariable`s and RPCs.
+- Ship a listen server for tonight's game and a dedicated server for a persistent world from the same game
+  code — the topology is one setting, never a fork.
+- A player who disconnects gets the same seat and the same player object back if they reconnect within a
+  minute, with no special-casing in game code.
+- Players join by typing a short, typo-tolerant code, whether the host is behind a home router (Unity Relay)
+  or a dedicated box you rented (the self-hosted rendezvous service).
+- An ownership mistake, a missing handler or a bad RPC shape is a compile error from the package's own source
+  generator and analyzer, never a runtime surprise.
+- One `mp-host` CLI and one server package deploy to fifteen-plus hosting providers, from a $4 VPS to AWS
+  GameLift, without a hand-written Dockerfile per host.
+
+## Features
+
+- **Attribute RPCs and synced state** — `[ToServer]`, `[ToClients]`, `[ToOwner]`, `[ToClient]`, `[Synced]`,
+  with per-RPC rate limiting, ownership checks and a change handler, all generated at compile time. See
+  [Attributes reference](https://mindattic.github.io/Unity.Multiplayer/articles/attributes.html).
+- **Any topology, same code** — listen server, dedicated server or client from one `NetConfig`. See
+  [Topologies](https://mindattic.github.io/Unity.Multiplayer/articles/topologies.html).
+- **Join codes and reconnect** — Unity Relay or a self-hosted rendezvous service behind one interface, and
+  seats that survive a drop. See [Join codes](https://mindattic.github.io/Unity.Multiplayer/articles/join-codes.html)
+  and [Reconnect and seats](https://mindattic.github.io/Unity.Multiplayer/articles/reconnect-seats.html).
+- **Editor tooling** — one-click scene setup, a prefab validator, and a Linux Dedicated Server build, all from
+  the **MindAttic ▸ Multiplayer** menu.
+- **A hosting pipeline** — the same server package deploys to any GenericVps-shaped host, RunPod, or a
+  per-match allocator (Edgegap, Gameye, AWS GameLift) through one `mp-host` CLI. See
+  [Hosting](https://mindattic.github.io/Unity.Multiplayer/articles/hosting.html).
+- **Bad-connection testing** — simulate latency, jitter and packet loss per peer, in the editor or a
+  development build, without touching the network.
+
+## Quick start
+
+Prerequisites: Unity 6000.4.3f1, and this package's repository checked out beside your game's.
+
 Add the package to the game's `Packages/manifest.json` as a local package:
 
 ```json
-"com.mindattic.unity.multiplayer": "file:../../MindAttic.Unity.Multiplayer/unity/com.mindattic.unity.multiplayer"
+"com.mindattic.unity.multiplayer": "file:../../Unity.Multiplayer/unity/com.mindattic.unity.multiplayer"
 ```
 
-It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install
-`com.unity.services.multiplayer` as well to enable Unity Relay join codes.
+It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install `com.unity.services.multiplayer` as
+well for Unity Relay join codes.
 
-Then use **MindAttic > Multiplayer > Set Up Scene**. It adds a NetworkManager with Unity Transport and a `NetBootstrap`
-to the open scene, and assigns a `NetPrefabList`: the project's own list, or a new `Assets/NetPrefabs.asset` filled
-with the project's prefabs that have a NetworkObject. You can run it again; it adds only what is missing.
-**MindAttic > Multiplayer > Validate Prefabs** checks every network prefab under Assets. Each needs a NetworkObject on
-its root and a prefab list that registers it, and no `NetEntity` on it may be generic or derive from a generic class.
+Then, in **Window > Package Manager**, select **MindAttic Multiplayer**, open **Samples** and import
+**Minimal**. Open its `Minimal.unity` scene, press Play and click **Host**; a second copy (Multiplayer Play
+Mode, or a build) clicks **Join by IP** or **Join by code**. Each player's square is moved by the server
+through one `[ToServer]` call, one `[ToClients]` call and one `[Synced]` field — the sample's own
+[README](unity/com.mindattic.unity.multiplayer/Samples~/Minimal/README.md) walks through every line, and the
+docs site's [Getting started in 10 minutes](https://mindattic.github.io/Unity.Multiplayer/articles/getting-started.html)
+covers the same ground with more detail.
 
-## Try the Minimal sample
-In **Window > Package Manager**, select MindAttic Multiplayer, open **Samples** and import **Minimal**. Open its
-`Minimal.unity`, press Play and click **Host**; a second copy (Multiplayer Play Mode or a build) clicks **Join by IP**
-or **Join by code**. Each player's square is moved by the server through one `[ToServer]` call, one `[ToClients]` call
-and one `[Synced]` field. The sample's
-[README](unity/com.mindattic.unity.multiplayer/Samples~/Minimal/README.md) is the 10-minute walkthrough of every line.
+For your own scene: run **MindAttic ▸ Multiplayer ▸ Set Up Scene**, give your player prefab a `NetworkObject`
+and a `partial class` deriving from `NetEntity`, mark methods and fields with the attributes above, and run
+**MindAttic ▸ Multiplayer ▸ Validate Prefabs** before you ship. See
+[Porting a game](https://mindattic.github.io/Unity.Multiplayer/articles/porting.html) for moving an existing
+project onto the package.
 
-## Layout
+## Project layout
+
 | Path | What |
 |---|---|
 | `unity/com.mindattic.unity.multiplayer/` | The Unity package (`package.json`, Runtime, Editor, Tests); `Runtime/Generators/` holds the built generator DLL |
 | `unity/com.mindattic.unity.multiplayer/Samples~/Minimal/` | The Minimal sample Package Manager imports (scene, player prefab, menu, line-by-line README) |
 | `src/Generators/` | The source generator, analyzers and suppressor (netstandard2.0, Roslyn 4.3.1) |
+| `src/Hosting.Cli/` | `mp-host`: builds a server package and deploys it to any hosting profile |
 | `server/Rendezvous/` | The rendezvous service (ASP.NET Core .NET 10 minimal API + Dockerfile): join code to a dedicated server's IP:port |
-| `tests/Rendezvous.Tests/` | NUnit tests that host the service in-process with `WebApplicationFactory` |
-| `tests/Generators.Tests/` | Snapshot and diagnostic tests for the generator |
-| `tests/Core.Tests/` | NUnit tests for the engine-free Core, compiled straight from `Runtime/Core` |
-| `tests/Core.Build/` | Compiles `Runtime/Core` as netstandard2.1 / C# 9, the way Unity does |
-| `tests/MinimalSample/` | The batch-mode importer and PlayMode tests `run-sample.ps1` runs against the imported Minimal sample; its `Runtime/SmokeDriver.cs` and `Editor/SmokeHostBuild.cs` build the nightly smoke test's Linux player |
-| `tests/PlayModeHost/` | A bare Unity 6000.4.3f1 project that lists the package in `testables`, for the PlayMode and EditMode suites |
-| `smoke/` | The nightly Docker Compose smoke test: the rendezvous service, a dedicated server and two headless bot clients joining by code (`.github/workflows/nightly-smoke.yml`, `tests/run-smoke.ps1` locally) |
-| `docs/` | BIBLE, RFCs, user stories |
+| `tests/` | `Core.Tests`, `Generators.Tests`, `Rendezvous.Tests`, `Hosting.Cli.Tests` (plain `dotnet test`); `Core.Build` compiles Core the way Unity does; `PlayModeHost` and `MinimalSample` run the Unity PlayMode/EditMode suites |
+| `smoke/` | The nightly Docker Compose smoke test: rendezvous, a dedicated server and two headless bot clients joining by code |
+| `docs/` | DocFX site (`docfx.json`, `articles/`), BIBLE, RFCs, user stories |
 
 ## Run a dedicated server
+
 Add a `NetBootstrap` to the NetworkManager's GameObject. A headless launch serves by itself:
 
-```
+```bash
 Game.x86_64 -batchmode -nographics -port 7777 -transport udp
 ```
 
 `-mode host|server|client`, `-address`, `-tickrate`, `-maxplayers`, `-name` and `-password` are read too.
-
-**MindAttic > Multiplayer > Build Dedicated Server (Linux)** makes that build. You need the editor's *Linux Dedicated
-Server Build Support* module. It validates the prefabs first and stops on errors. Then it builds the enabled Build
-Settings scenes as a headless Linux x86_64 Dedicated Server into `Builds/LinuxServer/`, and puts a `Dockerfile` and
-`.dockerignore` beside the build. The Dockerfile runs the server as a non-root user on the open scene's
-`NetBootstrap` port and transport:
-
-```
-cd Builds/LinuxServer
-docker build -t game-server .
-docker run --rm -p 7777:7777/udp -e MINDATTIC_RENDEZVOUS_SECRET=<secret> game-server -rendezvous https://rendezvous.example.com
-```
-
-Arguments after the image name are added to the server's command line. CI builds the same way with
-`Unity -batchmode -quit -projectPath <game> -executeMethod Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine`
-and the optional `-serverOutput <dir> -port <n> -transport udp|websocket -serverBackend mono|il2cpp -serverDevelopment`.
-
-## Build a server package for a host
-**MindAttic > Multiplayer > Build Server Package > GenericVps (default)** or **> RunPod** builds the same Linux server
-plus everything a host needs, into `Builds/ServerPackage/<profile>/`. The hosting provider is still undecided, so every
-host gets the same package and only the profile's extra files differ:
-
-| In the package | What |
-|---|---|
-| `<Game>.x86_64`, `<Game>_Data/`, `UnityPlayer.so` | The self-contained Linux x86_64 Dedicated Server build |
-| `server.json` | The settings (`name`, `password`, `port`, `maxPlayers`, `transport`, `healthPort`, `adminCommands`, `logsDirectory`, `savesDirectory`, ...) |
-| `start.sh` | Starts the server; arguments override `server.json`: `./start.sh -port 7778 -maxPlayers 4 -name "Friday game" -password hunter2` |
-| `server-package.json` | The manifest a deploy tool reads: profile, executable, declared ports, health path, stop signal |
-| `Logs/`, `Saves/` | One log file per run (the newest 10 kept), and the game's persistent data (`ServerHost.Current.Paths.SavesDirectory`) |
-| GenericVps: `Dockerfile`, `docker-compose.yml`, `HOSTING.txt` | The server image plus the rendezvous service on any UDP-capable VPS |
-| RunPod: `Dockerfile`, `HOSTING.txt` | WebSocket transport on a mapped TCP port (RunPod passes TCP/HTTP only) |
-
-Settings layer as `server.json`, then the environment (`MINDATTIC_SERVER_PASSWORD`, `MINDATTIC_RENDEZVOUS_URL` / `_SECRET`,
-`MINDATTIC_PUBLIC_ADDRESS`), then the command line. Bad settings stop the server with exit code 1. The running server
-answers `GET /healthz` on its health port (default 8081: 200 while running, 503 while starting or stopping). With
-`adminCommands` on it reads `help`, `status`, `players`, `kick <clientId> [reason]` and `stop` from standard input. On
-SIGTERM or SIGINT it shuts down cleanly: `ServerHost.ShuttingDown` fires (save there), the session closes, and the
-process exits. A server password is checked at connection approval; clients set `NetBootstrap.Password` or
-`NetConfig.Password`. CI builds a package with
-`-executeMethod Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverProfile GenericVps`.
-More profiles (G-Portal's Private Server program, Nitrado, Edgegap, GameLift) can be added later as `IHostingProfile`s
-without changing games.
-
-## Test on a bad connection
-`NetConfig.Conditions` (or the Net Bootstrap's *Network conditions* fields, or `-netsim`) makes this peer's link
-slow and lossy: `Broadband` (20 ms), `Mobile4G` (60 ms, 1% loss), `Mobile3G` (200 ms, 3% loss), `Lossy` (150 ms,
-5% loss) or `Custom` (`-latency 150 -jitter 10 -loss 5`). Each packet the peer sends and receives is delayed and may
-be dropped by Unity Transport's simulator stage; reliable messages are resent, unreliable ones are lost.
-`NetSession.SetConditions` changes it while the game runs. It works in the editor and development builds only.
+**MindAttic ▸ Multiplayer ▸ Build Dedicated Server (Linux)** makes that build and writes its Dockerfile.
+**MindAttic ▸ Multiplayer ▸ Build Server Package** adds `server.json`, `start.sh`, a health endpoint and
+per-profile hosting files into `Builds/ServerPackage/<profile>/`. Full detail, every setting and every hosting
+provider: [Topologies](https://mindattic.github.io/Unity.Multiplayer/articles/topologies.html) and
+[Hosting](https://mindattic.github.io/Unity.Multiplayer/articles/hosting.html) on the docs site.
 
 ## Run the rendezvous service
-A dedicated server registers its public IP:port and gets a join code; players resolve the code to connect.
-The routes are in Core's `RendezvousProtocol`. Build the image from the repository root:
 
-```
+A dedicated server registers its public IP:port and gets a join code; players resolve the code to connect.
+
+```bash
 docker build -f server/Rendezvous/Dockerfile -t mindattic-rendezvous .
 docker run -p 8080:8080 -e Rendezvous__RegistrationSecret=<secret> mindattic-rendezvous
 ```
 
 It will not start without a registration secret (`Rendezvous__AllowOpenRegistration=true` is for local
-development). A dedicated server registers itself when it has a URL and the secret:
-`-rendezvous https://rendezvous.example.com` (or `MINDATTIC_RENDEZVOUS_URL`) plus `MINDATTIC_RENDEZVOUS_SECRET`;
-`-publicaddress` / `-publicport` override what it advertises, and on RunPod it advertises its `RUNPOD_TCP_PORT_*`
-mapping (with `-transport websocket`). Codes live 60 s past the last heartbeat (`Rendezvous__TtlSeconds`), every route is rate limited
-per IP (`Rendezvous__RateLimits__*`), and `GET /healthz` drives the container's health check. For TLS, put it
-behind a reverse proxy (`Rendezvous__UseForwardedHeaders=true`, `Rendezvous__KnownProxies__0=<proxy IP>`) or give
-Kestrel a certificate; the Dockerfile header lists the variables. Locally: `dotnet run --project server/Rendezvous`
-(Development allows open registration).
+development only). See [Join codes](https://mindattic.github.io/Unity.Multiplayer/articles/join-codes.html) for
+the full protocol, TLS and secrets.
+
+## Test on a bad connection
+
+`NetConfig.Conditions` (or the Net Bootstrap's Inspector fields, or `-netsim`) makes this peer's link slow and
+lossy: `Broadband`, `Mobile4G`, `Mobile3G`, `Lossy` or `Custom` (`-latency 150 -jitter 10 -loss 5`). Editor and
+development builds only. Details:
+[Topologies § Testing a bad connection](https://mindattic.github.io/Unity.Multiplayer/articles/topologies.html#testing-a-bad-connection).
 
 ## Test
-```
+
+```bash
 dotnet test tests/Core.Tests
 dotnet test tests/Rendezvous.Tests
 dotnet test tests/Generators.Tests          # UPDATE_SNAPSHOTS=1 rewrites Snapshots/ after an intended change
+dotnet test tests/Hosting.Cli.Tests
 powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1 batch mode
 powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
 powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager and runs its PlayMode tests (-Author rebuilds its scene and prefabs)
 powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Linux player (server + 2 bots, same build, role picked by MINDATTIC_ROLE)
 ```
 
-CI (`.github/workflows/ci.yml`) runs the three `dotnet test` suites and the PlayMode/EditMode suites through
-GameCI's `unity-test-runner` (`-runTests -batchmode`, filtered to one assembly per mode), and needs a `UNITY_LICENSE`
-repository secret. A nightly job (`.github/workflows/nightly-smoke.yml`) builds the Linux player above and runs it
-as a dedicated server plus two headless bot clients under Docker Compose (`smoke/docker-compose.yml`): the server
-registers with the rendezvous service and publishes a join code, and each bot joins by that code and drives its
-square into the arena wall, proving the join-code flow and an RPC round trip end to end.
+CI (`.github/workflows/ci.yml`) runs the `dotnet test` suites and the PlayMode/EditMode suites through GameCI's
+`unity-test-runner`, and needs a `UNITY_LICENSE` repository secret. A nightly job
+(`.github/workflows/nightly-smoke.yml`) runs the Docker Compose smoke test above end to end.
+`.github/workflows/docs.yml` publishes the docs site. See
+[Testing](https://mindattic.github.io/Unity.Multiplayer/articles/testing.html) for what each suite covers.
 
 After changing `src/Generators`, run `dotnet build src/Generators -c Release`. It copies the DLL into
 `Runtime/Generators/`, where Unity loads it; commit that DLL along with the source change.
 
+## Roadmap
+
+Built and verified (each backed by a test suite — see [docs/BIBLE.md](docs/BIBLE.md) for exactly which one):
+session and config, join codes, connection approval and seats, the NGO adapter and headless bootstrap, every
+RPC direction and synced fields, the source generator and its analyzer, the rendezvous service, network
+condition simulation, the editor tooling, the Minimal sample, CI and the nightly smoke test, the full hosting
+pipeline (`mp-host` plus every provider's profile), and this docs site.
+
+Planned, not yet done: **v1.0.0** — a CHANGELOG, a tag, a GitHub release and a version banner on the docs site
+(tracked as UM-T20). Until that tag, treat the package's API as still able to change between commits.
+
+## Documentation
+
+- [Docs site](https://mindattic.github.io/Unity.Multiplayer/) — guides (getting started, topologies,
+  attributes, join codes, reconnect and seats, testing, hosting, porting, troubleshooting) and the API
+  reference generated from this repo's XML doc comments.
+- [docs/BIBLE.md](docs/BIBLE.md) — the project's rules and verified state.
+- [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md) — the design and build order.
+- [docs/USER_STORIES.md](docs/USER_STORIES.md) — every ticket and its status.
+- [AGENTS.md](AGENTS.md) — agent and contributor instructions for working in this repo.
+
 ## License
+
 MIT. See [LICENSE](LICENSE).
+
+Part of [MindAttic](https://mindattic.com) — see more projects at
+[github.com/mindattic](https://github.com/mindattic). Related: [Unity.Cursory](https://github.com/mindattic/Unity.Cursory)
+(the first game built on this package), [Unity.Shared](https://github.com/mindattic/Unity.Shared) (player
+profiles every MindAttic Unity game shares) and [MindAttic.Vault](https://github.com/mindattic/MindAttic.Vault)
+(where `mp-host` keeps hosting credentials).

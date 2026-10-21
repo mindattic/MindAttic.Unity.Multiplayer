@@ -7,8 +7,9 @@ to GHCR -> provision -> boot the container(s) -> open ports -> health check -> r
 rendezvous -> print join code). Choosing a host later never changes game code; it only changes which
 `IHostingProfile`/`IProvisioner` `mp-host` uses. This page is the map of that hosting table: how to
 pick a path, what's common to all of them (ports, secrets, TLS, updates), and where each provider's
-own page covers its specifics. See [RFC 0001](../rfc/0001-architecture.md#hosting) for the design this
-table implements.
+own page covers its specifics. See
+[RFC 0001 § Hosting](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/rfc/0001-architecture.md#hosting)
+for the design this table implements.
 
 ## Which path do you need?
 

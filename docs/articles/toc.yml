@@ -1,0 +1,53 @@
+- name: Getting started in 10 minutes
+  href: getting-started.md
+- name: Topologies
+  href: topologies.md
+- name: Attributes reference
+  href: attributes.md
+- name: Join codes
+  href: join-codes.md
+- name: Reconnect and seats
+  href: reconnect-seats.md
+- name: Testing
+  href: testing.md
+- name: Hosting
+  href: hosting.md
+  items:
+    - name: GenericVps (the default)
+      href: hosting/genericvps.md
+    - name: Bring your own box / LAN (Local)
+      href: hosting/local.md
+    - name: Hetzner Cloud
+      href: hosting/hetzner.md
+    - name: Vultr
+      href: hosting/vultr.md
+    - name: DigitalOcean
+      href: hosting/digitalocean.md
+    - name: Linode / Akamai
+      href: hosting/linode.md
+    - name: OVHcloud
+      href: hosting/ovhcloud.md
+    - name: AWS EC2
+      href: hosting/aws-ec2.md
+    - name: AWS Lightsail
+      href: hosting/aws-lightsail.md
+    - name: Google Compute Engine
+      href: hosting/gce.md
+    - name: Azure VM
+      href: hosting/azure-vm.md
+    - name: Fly.io
+      href: hosting/flyio.md
+    - name: Oracle Cloud (Always Free tier)
+      href: hosting/oracle-oci.md
+    - name: RunPod
+      href: hosting/runpod.md
+    - name: Edgegap
+      href: hosting/edgegap.md
+    - name: Gameye
+      href: hosting/gameye.md
+    - name: AWS GameLift
+      href: hosting/gamelift.md
+- name: Porting a game
+  href: porting.md
+- name: Troubleshooting
+  href: troubleshooting.md
