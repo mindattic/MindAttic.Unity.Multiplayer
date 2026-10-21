@@ -93,6 +93,7 @@ namespace Unity.Multiplayer
         private readonly NetSceneFlow _scenes;
         private readonly NetPrefabRegistry _prefabs;
         private readonly NetRoster _roster;
+        private readonly NetRegistry _objects;
         private readonly SynchronizationContext _mainThread;
         private readonly RelayJoinCodeService _relay = new RelayJoinCodeService();
         private RendezvousJoinCodeService _rendezvous;
@@ -120,6 +121,7 @@ namespace Unity.Multiplayer
             _scenes = new NetSceneFlow(manager);
             _prefabs = new NetPrefabRegistry(manager);
             _roster = new NetRoster(this);
+            _objects = new NetRegistry(this);
             s_ByManager[manager] = this;
             _machine.StateChanged += OnMachineStateChanged;
             _manager.OnServerStarted += OnServerStarted;
@@ -204,6 +206,16 @@ namespace Unity.Multiplayer
         public NetRoster Roster
         {
             get { return _roster; }
+        }
+
+        /// <summary>
+        /// The spawned objects that carry a <see cref="NetKey"/>, by their game-given key, on this peer: look one up with
+        /// <see cref="NetRegistry.TryGet{T}(string, out T)"/>, hear of them through <see cref="NetRegistry.Spawned"/> /
+        /// <see cref="NetRegistry.Despawned"/>, and spawn one on the server with <see cref="NetRegistry.Spawn"/> (UM-T60).
+        /// </summary>
+        public NetRegistry Objects
+        {
+            get { return _objects; }
         }
 
         /// <summary>Server side: the player on <paramref name="clientId"/> now plays as <paramref name="displayName"/> in <paramref name="color"/> (an accepted rename).</summary>
@@ -605,6 +617,7 @@ namespace Unity.Multiplayer
             ForgetPublishedCode();
             JoinedAllocation = null;
             _roster.Reset();
+            _objects.Reset();
             _config = copy;
             _transportFailed = false;
             _machine.Start(copy.Topology);
@@ -1548,6 +1561,7 @@ namespace Unity.Multiplayer
                 ResetSeats();
                 _scenes.Detach();
                 _roster.Reset();
+                _objects.Reset();
             }
 
             if (ended || change.To == SessionState.Stopping)

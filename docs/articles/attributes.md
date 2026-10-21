@@ -115,6 +115,10 @@ Rules the generator and analyzer enforce:
 - The field must not be `static`, `readonly` or `const`, and its generated property name must not collide with
   an existing member (MAMP012).
 
+To find an object itself by a name the game chooses (a level's block id, `"door:A"`), not by spawn order, give its
+prefab a `NetKey` and spawn it with `session.Objects.Spawn(prefab, key)`; every peer then looks it up with
+`session.Objects.TryGet(key, out T)`. See [Networked objects by key](objects.md).
+
 ## How a call is handled, and what the generator writes
 
 For `[ToServer]`/`[ToClients]`/`[ToOwner]`/`[ToClient]`, the method you declare is the **send side** — you call

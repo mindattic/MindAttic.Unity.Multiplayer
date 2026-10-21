@@ -6,6 +6,8 @@
   href: votes.md
 - name: Players, names and colours
   href: players.md
+- name: Networked objects by key
+  href: objects.md
 - name: Topologies
   href: topologies.md
 - name: Attributes reference

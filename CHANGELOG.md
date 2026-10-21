@@ -9,6 +9,17 @@ carries the package's own version.
 
 ### Added
 
+- **Networked objects by key** (UM-T60) — a stable, game-given name for any networked object, so clients never match
+  objects by spawn order. Put a `NetKey` on a network prefab's root and spawn instances on the server with
+  `NetSession.Objects.Spawn(prefab, key, position, rotation, parent, ownerClientId)`; every peer finds them in
+  `NetSession.Objects` (`NetRegistry`, also `NetRegistry.Current`) with `TryGet<T>(key, out T)` (the `NetKey` or any
+  component on the object), `TryGet(key, out GameObject)`, `Get<T>(key)`, `Contains`, `Keys`, `All`, and hears of them
+  through `Spawned` / `Despawned`; `Despawn(key)` on the server frees the key at once. The key rides in the object's
+  spawn (NGO's per-behaviour synchronization data), so it is there before any `OnSpawned`, for late joiners too, and it
+  cannot change while the object is spawned. A key in use is refused by `Spawn` with an `ArgumentException` naming the
+  key and its holder; an object spawned another way with a missing or duplicate key is logged as an error on every
+  peer and left out. Core (engine-free) gets `NetKeys` (validation and messages) and `NetKeyTable<T>`. See
+  [Networked objects by key](docs/articles/objects.md).
 - **Votes kit** (UM-T54) — server-authoritative votes any game can offer, promoted from Unity.Cursory. Core (engine-free)
   gets `VoteBox` (one vote at a time over a roster of client ids; passes when Yes reaches the quorum, rejected as soon
   as it cannot, lapses on the `ITickClock`; a leaver is dropped and the quorum recomputed), `VoteRules` (quorum fraction,

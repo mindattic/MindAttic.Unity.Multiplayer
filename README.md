@@ -51,6 +51,9 @@ hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.g
 - **Attribute RPCs and synced state** — `[ToServer]`, `[ToClients]`, `[ToOwner]`, `[ToClient]`, `[Synced]`,
   with per-RPC rate limiting, ownership checks and a change handler, all generated at compile time. See
   [Attributes reference](https://mindattic.github.io/Unity.Multiplayer/articles/attributes.html).
+- **Objects found by name** — a `NetKey` on a prefab and a key from the server (`"block:12"`, `"door:A"`), and every
+  peer finds that object with `NetSession.Objects.TryGet(key, out T)`, late joiners included, whatever order things
+  spawned in. See [Networked objects by key](https://mindattic.github.io/Unity.Multiplayer/articles/objects.html).
 - **Any topology, same code** — listen server, dedicated server or client from one `NetConfig`. See
   [Topologies](https://mindattic.github.io/Unity.Multiplayer/articles/topologies.html).
 - **Join codes and reconnect** — Unity Relay or a self-hosted rendezvous service behind one interface, and
