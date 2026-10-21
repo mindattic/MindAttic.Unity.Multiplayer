@@ -55,10 +55,12 @@ the editor loads, with no pop-up.
 | In game | The menus are gone. **Esc**, or gamepad Start or B, opens the in-game menu: **Resume**, **Invite players** (the host's code and roster again), **Settings**, the game's own items, and **Leave game** (**End game** for the host), with a confirm. |
 | Settings | Name and colour (eight colours that read well on dark and light), plus the game's own settings. It saves when you go back. |
 
-**Host** publishes a join code when one can be published: Unity Relay when `com.unity.services.multiplayer` is
-installed, or the rendezvous service when the NetBootstrap has a Rendezvous URL. When it cannot, for example when Relay
-is installed but the project is not linked to Unity Cloud, the game is hosted anyway. A toast says why there is no code,
-and players join by IP.
+**Host** publishes a join code when one can be published. With the NetBootstrap's Join Codes left at Auto it tries
+Unity Relay when `com.unity.services.multiplayer` is installed, then the rendezvous service when the NetBootstrap has a
+Rendezvous URL (the same rule as `NetSession.HostWithCode`, see [Join codes](join-codes.md)); Relay or Rendezvous
+chosen explicitly is the only one tried. When none can, for example when Relay is installed but the project is not
+linked to Unity Cloud and there is no URL, the game is hosted anyway. A toast says why there is no code, and players
+join by IP.
 
 ### When a game ends
 

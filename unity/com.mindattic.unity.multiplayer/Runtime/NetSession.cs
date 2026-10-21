@@ -735,9 +735,10 @@ namespace Unity.Multiplayer
 
         /// <summary>
         /// Hosts a listen server and publishes a join code for it. The provider is <paramref name="config"/>'s
-        /// <see cref="NetConfig.JoinCodes"/>, where Auto means Unity Relay (it gets through NAT, so friends can join a game
-        /// hosted at home with no port forwarding); Rendezvous publishes this host's address instead, which works only when
-        /// players can reach it. <see cref="JoinCodes"/>, when set, is used instead.
+        /// <see cref="NetConfig.JoinCodes"/>, where Auto means Unity Relay when it is installed (it gets through NAT, so
+        /// friends can join a game hosted at home with no port forwarding), else the rendezvous service when a
+        /// <see cref="NetConfig.RendezvousUrl"/> is set (<see cref="JoinCodeDefaults.ForHosting"/>); Rendezvous publishes this
+        /// host's address, which works only when players can reach it. <see cref="JoinCodes"/>, when set, is used instead.
         /// </summary>
         /// <returns>
         /// The code (also in <see cref="PublishedCode"/> and raised as <see cref="JoinCodePublished"/>), or
@@ -757,7 +758,7 @@ namespace Unity.Multiplayer
 
             JoinCodeProvider provider = _joinCodeOverride != null
                 ? JoinCodeProvider.Rendezvous
-                : JoinCodeDefaults.ForPublishing(Core.Topology.Host, host.JoinCodes);
+                : JoinCodeDefaults.ForHosting(host.JoinCodes, RelayJoinCodeService.IsAvailable, !string.IsNullOrWhiteSpace(host.RendezvousUrl));
             if (provider == JoinCodeProvider.None)
             {
                 throw new InvalidOperationException("Join codes are off (NetConfig.JoinCodes = None); use StartHost.");
@@ -837,7 +838,10 @@ namespace Unity.Multiplayer
             }
             else
             {
-                JoinCodeProvider provider = JoinCodeDefaults.ForPublishing(_config.Topology, _config.JoinCodes);
+                // A running host can only publish through the rendezvous service (a Relay allocation is made before it starts).
+                JoinCodeProvider provider = _config.Topology == Core.Topology.Host
+                    ? JoinCodeDefaults.ForHosting(_config.JoinCodes, false, !string.IsNullOrWhiteSpace(_config.RendezvousUrl))
+                    : JoinCodeDefaults.ForPublishing(_config.Topology, _config.JoinCodes);
                 if (provider == JoinCodeProvider.Relay)
                 {
                     throw new InvalidOperationException("A Relay join code is set up when the host starts: use HostWithCode, or set NetConfig.JoinCodes = Rendezvous.");

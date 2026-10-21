@@ -24,7 +24,7 @@ A code is 8 data characters plus one check character, written as three groups of
 |---|---|---|
 | Gets through home-router NAT | Yes | No — needs a reachable address |
 | Needs | `com.unity.services.multiplayer` installed, project linked to Unity Cloud | `NetConfig.RendezvousUrl` pointed at a running `server/Rendezvous` instance |
-| Default for | Listen server (`Topology.Host`) | Dedicated server (`Topology.Server`) |
+| Default for | Listen server (`Topology.Host`), when installed | Dedicated server (`Topology.Server`); a listen server without Relay |
 | Implementation | `RelayJoinCodeService` | `RendezvousJoinCodeService` (Core, engine-free) over `RendezvousClient` |
 
 Both implement the same engine-free [`IJoinCodeService`](xref:Unity.Multiplayer.Core.IJoinCodeService)
@@ -36,7 +36,7 @@ doesn't need to know which one is live.
 ```csharp
 public enum JoinCodeProvider
 {
-    Auto,        // the topology's default: Relay for Host, Rendezvous for Server
+    Auto,        // the topology's default: Relay (else the rendezvous URL) for Host, Rendezvous for Server
     None,        // join by address only
     Relay,
     Rendezvous,
@@ -44,7 +44,11 @@ public enum JoinCodeProvider
 ```
 
 `JoinCodeDefaults.ForPublishing(topology, configured)` is the rule `Auto` expands to: Relay for a Host,
-Rendezvous for a Server, and `None` for a Client (a client never publishes a code). A dedicated server with a
+Rendezvous for a Server, and `None` for a Client (a client never publishes a code). A listen server refines it with
+what is set up, through `JoinCodeDefaults.HostingOrder(configured, relayInstalled, hasRendezvousUrl)`: `Auto` tries
+Relay first when `com.unity.services.multiplayer` is installed, then the rendezvous service when `RendezvousUrl` is
+set. `HostWithCode` uses the first of those (`ForHosting`), and the drop-in front end's **Host** tries each in turn
+before hosting for joining by IP. An explicit `Relay` or `Rendezvous` is kept as chosen. A dedicated server with a
 rendezvous URL registers itself as soon as it's `Running`, and re-registers with a new code if the service ever
 forgets it (`RegistrationLost`).
 

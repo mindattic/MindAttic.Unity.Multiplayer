@@ -105,6 +105,32 @@ namespace Unity.Multiplayer.Core.Tests
             Assert.That(JoinCodeDefaults.ForPublishing(topology, configured), Is.EqualTo(expected));
         }
 
+        // UM-T63: a listen server's providers, in the order it tries them.
+        [TestCase(JoinCodeProvider.Auto, true, true, new[] { JoinCodeProvider.Relay, JoinCodeProvider.Rendezvous })]
+        [TestCase(JoinCodeProvider.Auto, false, true, new[] { JoinCodeProvider.Rendezvous })]
+        [TestCase(JoinCodeProvider.Auto, true, false, new[] { JoinCodeProvider.Relay })]
+        [TestCase(JoinCodeProvider.Auto, false, false, new JoinCodeProvider[0])]
+        [TestCase(JoinCodeProvider.Relay, true, true, new[] { JoinCodeProvider.Relay })]
+        [TestCase(JoinCodeProvider.Relay, false, true, new JoinCodeProvider[0])]
+        [TestCase(JoinCodeProvider.Rendezvous, true, true, new[] { JoinCodeProvider.Rendezvous })]
+        [TestCase(JoinCodeProvider.Rendezvous, true, false, new JoinCodeProvider[0])]
+        [TestCase(JoinCodeProvider.None, true, true, new JoinCodeProvider[0])]
+        public void HostingOrder(JoinCodeProvider configured, bool relay, bool url, JoinCodeProvider[] expected)
+        {
+            Assert.That(JoinCodeDefaults.HostingOrder(configured, relay, url), Is.EqualTo(expected));
+        }
+
+        [TestCase(JoinCodeProvider.Auto, true, true, JoinCodeProvider.Relay)]
+        [TestCase(JoinCodeProvider.Auto, false, true, JoinCodeProvider.Rendezvous)]
+        [TestCase(JoinCodeProvider.Auto, false, false, JoinCodeProvider.Relay)]
+        [TestCase(JoinCodeProvider.Rendezvous, false, false, JoinCodeProvider.Rendezvous)]
+        [TestCase(JoinCodeProvider.Relay, false, true, JoinCodeProvider.Relay)]
+        [TestCase(JoinCodeProvider.None, true, true, JoinCodeProvider.None)]
+        public void ForHosting(JoinCodeProvider configured, bool relay, bool url, JoinCodeProvider expected)
+        {
+            Assert.That(JoinCodeDefaults.ForHosting(configured, relay, url), Is.EqualTo(expected));
+        }
+
         [Test]
         public void ADedicatedServerWithARendezvousUrl_SelfRegisters()
         {

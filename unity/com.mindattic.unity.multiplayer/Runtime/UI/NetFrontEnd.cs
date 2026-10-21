@@ -325,10 +325,32 @@ namespace Unity.Multiplayer.UI
             try
             {
                 await WhenCanStart();
-                if (WantsJoinCode(config))
+                IReadOnlyList<JoinCodeProvider> providers = JoinCodeProvidersFor(config);
+                if (providers.Count > 0)
                 {
-                    // An empty code means the host did not start, or started and left again when the code failed.
-                    started = !(await _session.HostWithCode(config)).IsEmpty;
+                    // Each provider in turn (Relay, then the rendezvous URL, for the default Auto). An empty code means the
+                    // host did not start, or started and left again when the code failed.
+                    foreach (JoinCodeProvider provider in providers)
+                    {
+                        if (_cancelled || this == null)
+                        {
+                            break;
+                        }
+
+                        NetConfig attempt = config.Clone();
+                        if (_session.JoinCodes == null)
+                        {
+                            attempt.JoinCodes = provider;
+                        }
+
+                        await WhenCanStart();
+                        started = !(await _session.HostWithCode(attempt)).IsEmpty;
+                        if (started)
+                        {
+                            break;
+                        }
+                    }
+
                     if (!started && !_cancelled && this != null)
                     {
                         Toast("No join code: " + (_codeFailure ?? "the join-code service did not answer")
@@ -929,22 +951,19 @@ namespace Unity.Multiplayer.UI
             return DisconnectText.ShouldShow(why) ? DisconnectText.For(why) : (DisconnectMessage?)null;
         }
 
-        private bool WantsJoinCode(NetConfig config)
+        /// <summary>
+        /// The join-code providers Host tries, in order (UM-T63): the session's own service when one is set, else
+        /// <see cref="JoinCodeDefaults.HostingOrder"/>, the rule <see cref="NetSession.HostWithCode"/> follows. Empty when
+        /// none can publish a code, and the game is hosted for joining by address.
+        /// </summary>
+        private IReadOnlyList<JoinCodeProvider> JoinCodeProvidersFor(NetConfig config)
         {
             if (_session.JoinCodes != null)
             {
-                return true;
+                return new[] { JoinCodeProvider.Rendezvous };
             }
 
-            switch (JoinCodeDefaults.ForPublishing(Topology.Host, config.JoinCodes))
-            {
-                case JoinCodeProvider.Relay:
-                    return RelayJoinCodeService.IsAvailable;
-                case JoinCodeProvider.Rendezvous:
-                    return !string.IsNullOrWhiteSpace(config.RendezvousUrl);
-                default:
-                    return false;
-            }
+            return JoinCodeDefaults.HostingOrder(config.JoinCodes, RelayJoinCodeService.IsAvailable, !string.IsNullOrWhiteSpace(config.RendezvousUrl));
         }
 
         private bool JoinByCodeOffered()

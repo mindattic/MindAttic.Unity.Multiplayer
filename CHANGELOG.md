@@ -57,6 +57,14 @@ carries the package's own version.
   config; `Configure(Action<NetConfig>)` edits a copy of the current defaults; both are refused while the
   session runs. `DefaultConfig` reads the defaults back. The environment and command line still override them.
 
+### Fixed
+
+- **A host with the default Join Codes uses a configured rendezvous URL** (UM-T63) — with `JoinCodes` left at `Auto`,
+  `NetFrontEnd`'s Host and `NetSession.HostWithCode` tried only Unity Relay, so a game with a rendezvous URL but no
+  Relay hosted with no code. `Auto` for a listen server is now Relay when it is installed, then the rendezvous service
+  when a URL is set (`JoinCodeDefaults.HostingOrder` / `ForHosting`); the front end tries each in turn before hosting
+  for joining by IP, and `PublishCode` on a running host uses the URL.
+
 ## [1.0.0] — 2026-10-21
 
 First stable release. Everything below was built across UM-T2 through UM-T19 and UM-T23 through UM-T46; full

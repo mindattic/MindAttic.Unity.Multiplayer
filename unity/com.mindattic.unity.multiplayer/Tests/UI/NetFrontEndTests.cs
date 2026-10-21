@@ -41,6 +41,7 @@ namespace Unity.Multiplayer.UI.Tests
         private string _hostVersion;
         private string _clientVersion;
         private bool _codes;
+        private bool _defaultJoinCodes;
         private readonly List<Disconnection> _clientLeft = new List<Disconnection>();
         private int _clientReconnects;
         private int _hostGameStarts;
@@ -64,6 +65,7 @@ namespace Unity.Multiplayer.UI.Tests
             _hostVersion = "test";
             _clientVersion = "test";
             _codes = false;
+            _defaultJoinCodes = false;
             _clientLeft.Clear();
             _clientReconnects = 0;
             _hostGameStarts = 0;
@@ -103,7 +105,7 @@ namespace Unity.Multiplayer.UI.Tests
             var config = new NetConfig { Port = _port, GameVersion = _hostVersion, JoinCodes = JoinCodeProvider.None, ReconnectGraceSeconds = 30 };
             if (_codes)
             {
-                config.JoinCodes = JoinCodeProvider.Rendezvous;
+                config.JoinCodes = _defaultJoinCodes ? JoinCodeProvider.Auto : JoinCodeProvider.Rendezvous;
                 config.RendezvousUrl = _rendezvous.Url;
                 config.RendezvousSecret = _rendezvous.Secret;
             }
@@ -254,6 +256,31 @@ namespace Unity.Multiplayer.UI.Tests
             yield return ClientInGame();
             Assert.That(_clientSession.Config.Port, Is.EqualTo(_port), "joined the host the code leads to");
             yield return Wait(() => _host.LobbyRoster.Count == 2, 5f, () => "the roster never showed Bob");
+        }
+
+        [UnityTest]
+        public IEnumerator HostFromMenu_DefaultJoinCodes_WithARendezvousUrl_ShowsARendezvousCode()
+        {
+            if (RelayJoinCodeService.IsAvailable)
+            {
+                Assert.Ignore("com.unity.services.multiplayer is installed; the default tries Relay first.");
+            }
+
+            // UM-T63: Join Codes left at Auto (the NetBootstrap default) with a rendezvous URL: Relay is not installed, so
+            // the host publishes through the rendezvous service instead of hosting with no code.
+            _rendezvous = new InProcessRendezvousServer();
+            _codes = true;
+            _defaultJoinCodes = true;
+            yield return CreateFrontEnds();
+            yield return HostFromMenu();
+            yield return Wait(() => _host.LobbyCode != null, 10f, () => "the lobby never showed a join code");
+            Assert.That(_host.LobbyCode.Code, Is.EqualTo(_hostSession.PublishedCodeText));
+            Assert.That(_rendezvous.Find(_hostSession.PublishedCode), Is.Not.Null, "published through the rendezvous service");
+
+            Click(_client.MainScreen, "Join by code");
+            _client.MainMenu.Current.GetComponentInChildren<MaTextbox>().Text = _host.LobbyCode.Code;
+            Click(_client.MainMenu.Current, "Join");
+            yield return ClientInGame();
         }
 
         [UnityTest]

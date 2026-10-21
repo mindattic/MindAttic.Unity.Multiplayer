@@ -172,7 +172,7 @@ namespace Unity.Multiplayer.Tests
         }
 
         [UnityTest]
-        public IEnumerator ListenServer_DefaultsToRelay()
+        public IEnumerator ListenServer_WithNothingSetUp_DefaultsToRelay()
         {
             Assert.That(JoinCodeDefaults.ForPublishing(Topology.Host, ServerConfig().JoinCodes), Is.EqualTo(JoinCodeProvider.Relay));
             if (RelayJoinCodeService.IsAvailable)
@@ -180,13 +180,38 @@ namespace Unity.Multiplayer.Tests
                 Assert.Ignore("com.unity.services.multiplayer is installed; a real Relay allocation needs a linked Cloud project.");
             }
 
+            NetConfig config = ServerConfig();
+            config.RendezvousUrl = null; // nothing but the default: Relay is chosen, and its absence reported
             LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("com.unity.services.multiplayer"));
-            Task<JoinCode> host = Server.HostWithCode(ServerConfig());
+            Task<JoinCode> host = Server.HostWithCode(config);
             yield return WaitFor(host);
             Assert.That(host.Result.IsEmpty, Is.True);
             Assert.That(_serverFailures, Has.Some.Contains("com.unity.services.multiplayer"), "Relay was chosen and its absence reported");
             Assert.That(Server.IsActive, Is.False, "no host is started without its Relay allocation");
-            Assert.That(_rendezvous.Count, Is.EqualTo(0), "the rendezvous service is not used for a listen server by default");
+            Assert.That(_rendezvous.Count, Is.EqualTo(0), "no rendezvous URL, so the rendezvous service is not used");
+        }
+
+        [UnityTest]
+        public IEnumerator ListenServer_DefaultJoinCodes_WithoutRelay_UseTheRendezvousUrl()
+        {
+            if (RelayJoinCodeService.IsAvailable)
+            {
+                Assert.Ignore("com.unity.services.multiplayer is installed; Auto picks Relay first.");
+            }
+
+            // UM-T63: JoinCodes left at Auto with a rendezvous URL configured publishes through the rendezvous service.
+            NetConfig config = ServerConfig();
+            Assert.That(config.JoinCodes, Is.EqualTo(JoinCodeProvider.Auto));
+            config.PublicAddress = NetConfig.LoopbackAddress;
+            Task<JoinCode> host = Server.HostWithCode(config);
+            yield return WaitFor(host);
+            Assert.That(host.Result.IsEmpty, Is.False, string.Join(" | ", _serverFailures));
+            Assert.That(_rendezvous.Find(host.Result), Is.Not.Null, "registered with the rendezvous service");
+
+            Task<bool> join = Client.JoinByCode(JoinCodeFormat.Format(host.Result.Value), ClientConfig());
+            yield return WaitFor(join);
+            Assert.That(join.Result, Is.True, string.Join(" | ", _clientFailures));
+            yield return WaitUntil(() => Client.State == SessionState.Connected, "the client never connected to the host by code");
         }
 
         [UnityTest]
