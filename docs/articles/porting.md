@@ -127,8 +127,9 @@ the game plays correctly in a listen server, **MindAttic ▸ Multiplayer ▸ Bui
 
 ## A worked example
 
-MindAttic's own co-op puzzle game, Cursory, is being ported from an ASP.NET Blazor Server + SignalR prototype
-onto this package (tracked as the UnityCursory repo's UC-T3 through UC-T15 tickets; see
+MindAttic's own co-op physics puzzle, Cursory, was ported from an ASP.NET Blazor Server + SignalR prototype onto
+this package as [Unity.Cursory](https://github.com/mindattic/Unity.Cursory) (its UC-T3 through UC-T15 tickets; see
 [RFC 0001 § UnityCursory](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/rfc/0001-architecture.md#unitycursory-public)
-for the full mapping from the old simulation to this package's `[Synced]`/`[ToServer]` surface). That repo's own
-README links back to this guide once the port lands.
+for the mapping from the old simulation to this package's `[Synced]`/`[ToServer]` surface).
+[Case study: Unity.Cursory](case-study-cursory.md) walks through how the finished game uses each piece of the
+[kit](kit.md), with links to its files, and ends with a table of what to copy into your own game.
