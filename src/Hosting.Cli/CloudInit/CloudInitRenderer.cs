@@ -212,7 +212,13 @@ public static class CloudInitRenderer
         text.Append(marker).Append('\n');
     }
 
-    private static string YamlQuote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    // Escapes for YAML's own quoting (\ and ") AND, separately, for Docker Compose's variable
+    // interpolation of the parsed file ($VAR / ${VAR}): a literal '$' in a secret or env value (for
+    // example a generated password) would otherwise be read as a variable reference and silently
+    // replaced -- usually with an empty string, since there is no such variable -- corrupting the
+    // value. Compose's own escape for a literal '$' is '$$'.
+    private static string YamlQuote(string value) =>
+        "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "$$") + "\"";
 
     /// <summary>A package-relative directory's path inside the container: absolute paths as given, relative ones under <see cref="ContainerWorkDir"/>.</summary>
     private static string ContainerPath(string directory)

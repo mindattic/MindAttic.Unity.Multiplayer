@@ -50,6 +50,23 @@ public class CloudInitRendererTests
     }
 
     [Test]
+    public void RenderCompose_escapes_a_literal_dollar_sign_so_compose_does_not_interpolate_it()
+    {
+        // Docker Compose itself interpolates $VAR/${VAR} in every string value it parses; a secret or
+        // password containing a literal '$' must be doubled ('$$') or Compose silently replaces it.
+        string compose = CloudInitRenderer.RenderCompose(
+            TestManifests.WithHealthPort(), "img", "rzv",
+            new Dictionary<string, string>
+            {
+                ["MINDATTIC_SERVER_PASSWORD"] = "P@ss$123",
+                ["MINDATTIC_RENDEZVOUS_SECRET"] = "s3cr$t",
+            });
+        Assert.That(compose, Does.Contain("P@ss$$123"));
+        Assert.That(compose, Does.Contain("s3cr$$t"));
+        Assert.That(compose, Does.Not.Contain("P@ss$123"));
+    }
+
+    [Test]
     public void RenderBootstrapScript_logs_in_pulls_and_starts_then_removes_the_token()
     {
         string script = CloudInitRenderer.RenderBootstrapScript("ghcr.io", "octocat");
