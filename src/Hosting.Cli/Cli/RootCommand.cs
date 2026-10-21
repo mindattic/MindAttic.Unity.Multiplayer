@@ -76,6 +76,18 @@ public static class RootCommand
             log.Error(ex.Message);
             return 1;
         }
+        catch (IOException ex)
+        {
+            // A missing/unreadable file the user named (e.g. --ssh-public-key, --package's manifest)
+            // should read as a clean error, not an unhandled-exception stack trace.
+            log.Error(ex.Message);
+            return 1;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            log.Error(ex.Message);
+            return 1;
+        }
     }
 
     private static int Help(IDeployLog log)
