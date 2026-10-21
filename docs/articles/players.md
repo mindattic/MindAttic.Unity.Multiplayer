@@ -76,7 +76,7 @@ if (!result.Accepted)
 }
 ```
 
-Pass `null` for the part that stays. The server is the judge ([UM-LAW-1](../BIBLE.md#UM-LAW-1)); it checks every
+Pass `null` for the part that stays. The server is the judge ([UM-LAW-1](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/BIBLE.md#um-law-1--the-server-owns-state)); it checks every
 request with `PlayerChangeRequest.Validate`:
 
 - **Name** (`PlayerNames.Validate`): 1 to 32 characters; letters and digits in any script, combining marks, punctuation

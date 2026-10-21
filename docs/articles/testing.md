@@ -118,7 +118,7 @@ owns the session lifecycle. Everything else of `NetcodeIntegrationTest` (`m_Serv
   `FreePort.Assign(m_NetworkManagers)` points all their transports at one and returns it.
 - **`TestSessions.Create(networkManager)`** — a `NetSession` over a NetworkManager your test made. A game gets its
   session from `NetBootstrap.Session`; the constructor is internal so the runtime API never takes an NGO type
-  ([UM-LAW-2](../BIBLE.md#UM-LAW-2)), and this assembly, which never ships in a player, is the one public way to
+  ([UM-LAW-2](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/BIBLE.md#um-law-2--nothing-above-the-ngo-adapter-imports-unitynetcode)), and this assembly, which never ships in a player, is the one public way to
   build one. `TestSessions.ManagerOf(session)` goes the other way.
 - **`NetAwait`** — the waits, as statics with an explicit timeout: `Until`, `ForSpawn`, `ForCopy`, `ForSynced`,
   `ForTask`, `FindSpawned`, and `UntilAsync`, `ForSpawnAsync`, `ForSyncedAsync` for test code written with

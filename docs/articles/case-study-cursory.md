@@ -45,7 +45,7 @@ level, builds the physics world, binds the simulation to the session's tick cloc
 state, the vote board and the whistle board. `Serve(session)` does the same for a test's own session. The template's
 `Arena.Serve` is the same shape.
 
-This is the library's one rule ([UM-LAW-1](../BIBLE.md#UM-LAW-1)) in practice: the server owns the game state, and
+This is the library's one rule ([UM-LAW-1](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/BIBLE.md#um-law-1--the-server-owns-state)) in practice: the server owns the game state, and
 clients send what they want to happen.
 
 ## Networked entities and attributes

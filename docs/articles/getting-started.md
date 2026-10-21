@@ -143,7 +143,7 @@ public partial class Player : NetEntity
 ```
 
 The server owns the game state, and clients send what they want to happen; that is the one rule the whole package is
-built on ([UM-LAW-1](../BIBLE.md#UM-LAW-1)). The class is `partial` because the package's source generator writes the
+built on ([UM-LAW-1](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/BIBLE.md#um-law-1--the-server-owns-state)). The class is `partial` because the package's source generator writes the
 other half. Names and colours are not copied onto the player: they come from the session's [roster](players.md), so a
 rename shows everywhere at once. See [Attributes reference](attributes.md).
 
