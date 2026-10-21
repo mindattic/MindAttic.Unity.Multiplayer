@@ -19,6 +19,8 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// <item><term><c>-transport</c></term><description><c>udp</c>, or <c>websocket</c> / <c>ws</c> (<see cref="NetConfig.Transport"/>).</description></item>
     /// <item><term><c>-tickrate</c></term><description>Ticks per second (<see cref="NetConfig.TickRate"/>).</description></item>
     /// <item><term><c>-maxplayers</c></term><description>Player cap (<see cref="NetConfig.MaxPlayers"/>).</description></item>
+    /// <item><term><c>-name</c></term><description>The server's name (<see cref="NetConfig.ServerName"/>).</description></item>
+    /// <item><term><c>-password</c></term><description>The server password (<see cref="NetConfig.Password"/>); <c>MINDATTIC_SERVER_PASSWORD</c> is safer, since a command line is visible to other processes.</description></item>
     /// <item><term><c>-joincodes</c></term><description><c>auto</c>, <c>none</c>, <c>relay</c> or <c>rendezvous</c> (<see cref="NetConfig.JoinCodes"/>).</description></item>
     /// <item><term><c>-rendezvous</c></term><description>Rendezvous service base URL (<see cref="NetConfig.RendezvousUrl"/>).</description></item>
     /// <item><term><c>-rendezvoussecret</c></term><description>Its registration secret (<see cref="NetConfig.RendezvousSecret"/>); the environment variable is safer, since a command line is visible to other processes.</description></item>
@@ -53,6 +55,12 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>Selects the player cap.</summary>
         public const string MaxPlayersArg = "-maxplayers";
+
+        /// <summary>Sets the server's name.</summary>
+        public const string NameArg = "-name";
+
+        /// <summary>Sets the server password.</summary>
+        public const string PasswordArg = "-password";
 
         /// <summary>Selects the join-code provider: auto, none, relay or rendezvous.</summary>
         public const string JoinCodesArg = "-joincodes";
@@ -237,6 +245,14 @@ namespace MindAttic.Unity.Multiplayer.Core
                 {
                     config.RendezvousSecret = value;
                 }
+                else if (Is(name, NameArg))
+                {
+                    config.ServerName = value;
+                }
+                else if (Is(name, PasswordArg))
+                {
+                    config.Password = value;
+                }
                 else if (Is(name, PublicAddressArg))
                 {
                     config.PublicAddress = value;
@@ -410,7 +426,7 @@ namespace MindAttic.Unity.Multiplayer.Core
             return Is(name, ModeArg) || Is(name, AddressArg) || Is(name, IpArg) || Is(name, PortArg)
                 || Is(name, TransportArg) || Is(name, TickRateArg) || Is(name, MaxPlayersArg)
                 || Is(name, JoinCodesArg) || Is(name, RendezvousArg) || Is(name, RendezvousSecretArg)
-                || Is(name, PublicAddressArg) || Is(name, PublicPortArg)
+                || Is(name, PublicAddressArg) || Is(name, PublicPortArg) || Is(name, NameArg) || Is(name, PasswordArg)
                 || Is(name, NetSimArg) || Is(name, LatencyArg) || Is(name, JitterArg) || Is(name, LossArg);
         }
 

@@ -22,6 +22,9 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>The connection data is missing, malformed or carries invalid fields.</summary>
         BadPayload = 5,
+
+        /// <summary>The server has a password and the client gave none or a different one.</summary>
+        WrongPassword = 6,
     }
 
     /// <summary>

@@ -110,7 +110,7 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         public void NewerFormatFromNewerGame_IsVersionMismatchNotBadPayload()
         {
             byte[] bytes = Encode(ConnectionPayloadCodecTests.Sample(version: "2.0.0"));
-            bytes[2] = 2;
+            bytes[2] = 3;
 
             ApprovalDecision decision = Server().Validate(bytes, 0);
 
@@ -122,7 +122,7 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         public void NewerFormatWithSameGameVersion_IsBadPayload()
         {
             byte[] bytes = Encode(ConnectionPayloadCodecTests.Sample(version: "1.2.0"));
-            bytes[2] = 2;
+            bytes[2] = 3;
             Assert.That(Server().Validate(bytes, 0).Rejection, Is.EqualTo(ApprovalRejection.BadPayload));
         }
 

@@ -24,6 +24,9 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <summary>Longest accepted <see cref="DisplayName"/>, in characters.</summary>
         public const int MaxDisplayNameLength = 32;
 
+        /// <summary>Longest accepted <see cref="Password"/>, in characters.</summary>
+        public const int MaxPasswordLength = 64;
+
         /// <summary>Builds a payload; call <see cref="Validate"/> to check it.</summary>
         /// <param name="gameVersion">The client's game version; must equal the server's.</param>
         /// <param name="protocolHash">The client's protocol hash; must equal the server's.</param>
@@ -34,12 +37,25 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <param name="displayName">The name other players see.</param>
         /// <param name="color">The colour the player picked.</param>
         public ConnectionPayload(string gameVersion, ProtocolHash protocolHash, string playerToken, string displayName, PlayerColor color)
+            : this(gameVersion, protocolHash, playerToken, displayName, color, null)
+        {
+        }
+
+        /// <summary>Builds a payload carrying the server password the player gave; call <see cref="Validate"/> to check it.</summary>
+        /// <param name="gameVersion">The client's game version; must equal the server's.</param>
+        /// <param name="protocolHash">The client's protocol hash; must equal the server's.</param>
+        /// <param name="playerToken">The opaque, stable identifier for this player.</param>
+        /// <param name="displayName">The name other players see.</param>
+        /// <param name="color">The colour the player picked.</param>
+        /// <param name="password">The server password, or null / empty for none (<see cref="NetConfig.Password"/>).</param>
+        public ConnectionPayload(string gameVersion, ProtocolHash protocolHash, string playerToken, string displayName, PlayerColor color, string password)
         {
             GameVersion = gameVersion ?? string.Empty;
             ProtocolHash = protocolHash;
             PlayerToken = playerToken ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
             Color = color;
+            Password = password ?? string.Empty;
         }
 
         /// <summary>The client's game version.</summary>
@@ -56,6 +72,9 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>The colour the player picked.</summary>
         public PlayerColor Color { get; }
+
+        /// <summary>The server password the player gave; empty for none. Never included in <see cref="ToString"/>.</summary>
+        public string Password { get; }
 
         /// <summary>Lists every problem with this payload; an empty list means it is valid.</summary>
         public IReadOnlyList<string> Validate()
@@ -103,6 +122,15 @@ namespace MindAttic.Unity.Multiplayer.Core
             else if (DisplayName.Trim().Length != DisplayName.Length)
             {
                 errors.Add("DisplayName must not start or end with whitespace.");
+            }
+
+            if (Password.Length > MaxPasswordLength)
+            {
+                errors.Add("Password must be at most " + MaxPasswordLength + " characters; got " + Password.Length + ".");
+            }
+            else if (HasControlCharacter(Password))
+            {
+                errors.Add("Password must not contain control characters.");
             }
 
             return errors;

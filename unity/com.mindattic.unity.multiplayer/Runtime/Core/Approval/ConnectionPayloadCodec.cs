@@ -86,16 +86,18 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// The versioned binary form of a <see cref="ConnectionPayload"/>, carried in the transport's connection data.
     /// </summary>
     /// <remarks>
-    /// <para>Format version 1, all integers little-endian, every string a one-byte length then that many UTF-8 bytes:</para>
+    /// <para>Format version 2, all integers little-endian, every string a one-byte length then that many UTF-8 bytes:</para>
     /// <code>
     /// offset 0   2 bytes  magic 'M' 'A' (0x4D 0x41)
-    ///        2   1 byte   format version (1)
+    ///        2   1 byte   format version (2)
     ///        3   string   game version
     ///            8 bytes  protocol hash (ulong)
     ///            string   player token
     ///            string   display name
     ///            4 bytes  colour R, G, B, A
+    ///            string   server password (empty for none)
     /// </code>
+    /// <para>Format version 1 is the same without the password; it still decodes, as a payload with no password.</para>
     /// <para>
     /// Rule for every future format version: the magic, the version byte and the game-version string keep their
     /// place and encoding. A server can then tell an out-of-date client "wrong game version" even when it cannot
@@ -105,7 +107,10 @@ namespace MindAttic.Unity.Multiplayer.Core
     public static class ConnectionPayloadCodec
     {
         /// <summary>The format version <see cref="Encode"/> writes.</summary>
-        public const byte CurrentFormatVersion = 1;
+        public const byte CurrentFormatVersion = 2;
+
+        /// <summary>The oldest format version <see cref="TryDecode"/> reads (it has no password field).</summary>
+        public const byte OldestFormatVersion = 1;
 
         /// <summary>The first magic byte, <c>'M'</c>.</summary>
         public const byte Magic0 = 0x4D;
@@ -150,6 +155,7 @@ namespace MindAttic.Unity.Multiplayer.Core
             bytes.Add(payload.Color.G);
             bytes.Add(payload.Color.B);
             bytes.Add(payload.Color.A);
+            WriteString(bytes, payload.Password, "Password");
             return bytes.ToArray();
         }
 
@@ -185,11 +191,12 @@ namespace MindAttic.Unity.Multiplayer.Core
             string gameVersion;
             PayloadDecodeError error = ReadString(data, ref offset, out gameVersion);
 
-            if (formatVersion != CurrentFormatVersion)
+            if (formatVersion < OldestFormatVersion || formatVersion > CurrentFormatVersion)
             {
                 return PayloadDecodeResult.Fail(PayloadDecodeError.UnsupportedFormatVersion, formatVersion,
                     error == PayloadDecodeError.None ? gameVersion : null,
-                    "The connection request uses payload format " + formatVersion + "; this build reads format " + CurrentFormatVersion + ".");
+                    "The connection request uses payload format " + formatVersion + "; this build reads formats "
+                    + OldestFormatVersion + " to " + CurrentFormatVersion + ".");
             }
 
             if (error != PayloadDecodeError.None)
@@ -232,13 +239,23 @@ namespace MindAttic.Unity.Multiplayer.Core
             var color = new PlayerColor(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
             offset += 4;
 
+            string password = null;
+            if (formatVersion >= 2)
+            {
+                error = ReadString(data, ref offset, out password);
+                if (error != PayloadDecodeError.None)
+                {
+                    return FieldFailure(error, formatVersion, gameVersion, "Password");
+                }
+            }
+
             if (offset != data.Length)
             {
                 return PayloadDecodeResult.Fail(PayloadDecodeError.TrailingBytes, formatVersion, gameVersion,
                     (data.Length - offset) + " unexpected bytes follow the last field.");
             }
 
-            var payload = new ConnectionPayload(gameVersion, new ProtocolHash(hash), playerToken, displayName, color);
+            var payload = new ConnectionPayload(gameVersion, new ProtocolHash(hash), playerToken, displayName, color, password);
             IReadOnlyList<string> problems = payload.Validate();
             if (problems.Count > 0)
             {

@@ -1485,7 +1485,7 @@ namespace MindAttic.Unity.Multiplayer
         /// <summary>The payload this process sends as a player (Client, or a Host's own player).</summary>
         private ConnectionPayload LocalPayload(NetConfig config)
         {
-            return _identity.ToPayload(config.GameVersion, ProtocolHash);
+            return _identity.ToPayload(config.GameVersion, ProtocolHash, config.Password);
         }
 
         /// <summary>NGO's approval callback (Host or Server): admit or refuse, and seat the admitted.</summary>

@@ -16,6 +16,10 @@ namespace MindAttic.Unity.Multiplayer
     /// when <see cref="serveWhenHeadless"/> is on; otherwise the session starts only when <see cref="autoStart"/> is on,
     /// and UI calls <see cref="StartHost"/>, <see cref="StartServer"/>, <see cref="JoinByAddress"/> and <see cref="Leave"/>.</para>
     /// <para>A headless process is also paced to the tick rate (<see cref="HeadlessBootstrap.Apply"/>).</para>
+    /// <para>A dedicated server in a player build runs as a server package (<see cref="runServerPackage"/>): its settings
+    /// come from <c>server.json</c> beside the executable, then the environment, then the command line, and a
+    /// <see cref="ServerHost"/> writes <c>Logs/</c>, serves the health endpoint, reads admin commands and shuts down
+    /// cleanly on SIGTERM / SIGINT.</para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkManager))]
@@ -41,6 +45,9 @@ namespace MindAttic.Unity.Multiplayer
 
         [Tooltip("Most players at once, the host's own player included.")]
         [SerializeField, Range(1, NetConfig.MaxMaxPlayers)] private int maxPlayers = NetConfig.DefaultMaxPlayers;
+
+        [Tooltip("Server: the name it shows players (health endpoint, server list). server.json \"name\" or -name override it.")]
+        [SerializeField] private string serverName = string.Empty;
 
         [Tooltip("Version clients must match. Empty uses Application.version.")]
         [SerializeField] private string gameVersion = string.Empty;
@@ -96,17 +103,29 @@ namespace MindAttic.Unity.Multiplayer
         [Tooltip("A headless process (-batchmode, -nographics, a Dedicated Server build) starts as a dedicated server.")]
         [SerializeField] private bool serveWhenHeadless = true;
 
-        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers -joincodes -rendezvous -publicaddress -publicport -netsim -latency -jitter -loss from the command line, and MINDATTIC_RENDEZVOUS_URL / _SECRET / MINDATTIC_PUBLIC_ADDRESS from the environment.")]
+        [Tooltip("Read -mode -address -port -transport -tickrate -maxplayers -name -password -joincodes -rendezvous -publicaddress -publicport -netsim -latency -jitter -loss from the command line, and MINDATTIC_RENDEZVOUS_URL / _SECRET / MINDATTIC_PUBLIC_ADDRESS / MINDATTIC_SERVER_PASSWORD from the environment.")]
         [SerializeField] private bool readCommandLine = true;
 
         [Tooltip("In a headless process: vsync off, targetFrameRate = tick rate, run in background.")]
         [SerializeField] private bool applyHeadlessSettings = true;
+
+        [Header("Server package")]
+        [Tooltip("A dedicated server in a player build reads server.json beside its executable (then the environment and command line), "
+            + "logs to Logs/, serves the health endpoint, reads admin commands when asked and shuts down cleanly on SIGTERM / SIGINT. "
+            + "Bad settings stop it with exit code 1.")]
+        [SerializeField] private bool runServerPackage = true;
 
         /// <summary>Command-line argument that sets the player token (for several clients on one machine, or bots).</summary>
         public const string PlayerTokenArg = "-playertoken";
 
         /// <summary>PlayerPrefs key prefix the remembered player token is stored under (suffixed per install folder).</summary>
         public const string PlayerTokenPrefsKey = "MindAttic.Multiplayer.PlayerToken";
+
+        /// <summary>
+        /// The server password: a client sends it when joining, a host requires it. Never serialized; a dedicated server
+        /// takes its password from server.json, <c>MINDATTIC_SERVER_PASSWORD</c> or <c>-password</c>, which override this.
+        /// </summary>
+        public string Password { get; set; }
 
         /// <summary>The first enabled NetBootstrap in the loaded scenes, for game code that has no reference to it.</summary>
         public static NetBootstrap Instance { get; private set; }
@@ -128,6 +147,8 @@ namespace MindAttic.Unity.Multiplayer
                 Transport = transport,
                 TickRate = tickRate,
                 MaxPlayers = maxPlayers,
+                ServerName = string.IsNullOrWhiteSpace(serverName) ? null : serverName.Trim(),
+                Password = string.IsNullOrEmpty(Password) ? null : Password,
                 GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? Application.version : gameVersion,
                 ReconnectGraceSeconds = Mathf.Max(0f, reconnectGraceSeconds),
                 JoinCodes = joinCodes,
@@ -166,6 +187,8 @@ namespace MindAttic.Unity.Multiplayer
             tickRate = config.TickRate;
             maxPlayers = config.MaxPlayers;
             gameVersion = config.GameVersion;
+            serverName = config.ServerName ?? string.Empty;
+            Password = config.Password;
             reconnectGraceSeconds = (float)config.ReconnectGraceSeconds;
             joinCodes = config.JoinCodes;
             rendezvousUrl = config.RendezvousUrl ?? string.Empty;
@@ -317,16 +340,29 @@ namespace MindAttic.Unity.Multiplayer
         {
             NetConfig config = BuildConfig();
             bool headless = HeadlessBootstrap.IsHeadless;
+            NetCommandLineResult commandLine = readCommandLine
+                ? NetCommandLine.Apply(new NetConfig(), System.Environment.GetCommandLineArgs())
+                : new NetCommandLineResult(false, false, null);
+
+            bool start = NetLaunch.ShouldStart(config, commandLine, headless, autoStart, serveWhenHeadless);
+            ServerStartupResult package = null;
+            if (start && config.Topology == Topology.Server && runServerPackage && readCommandLine && !Application.isEditor)
+            {
+                package = ServerHost.Load(config);
+                if (!package.IsValid)
+                {
+                    Debug.LogError("[MindAttic.Multiplayer] Not starting: fix the server settings above (" + ServerConfigFile.FileName + ", environment, command line).");
+                    Application.Quit(1);
+                    return;
+                }
+            }
+
             if (headless && applyHeadlessSettings)
             {
                 HeadlessBootstrap.Apply(config.TickRate);
             }
 
-            NetCommandLineResult commandLine = readCommandLine
-                ? NetCommandLine.Apply(new NetConfig(), System.Environment.GetCommandLineArgs())
-                : new NetCommandLineResult(false, false, null);
-
-            if (NetLaunch.ShouldStart(config, commandLine, headless, autoStart, serveWhenHeadless))
+            if (start)
             {
                 Debug.Log("[MindAttic.Multiplayer] Starting " + config);
                 if (config.Topology == Topology.Host && config.JoinCodes == JoinCodeProvider.Relay)
@@ -334,10 +370,18 @@ namespace MindAttic.Unity.Multiplayer
                     // An explicit Relay host needs its allocation before it starts.
                     _ = Session.HostWithCode(config);
                 }
-                else
+                else if (Session.Start(config))
                 {
                     // A dedicated server with a rendezvous URL registers itself once it is running.
-                    Session.Start(config);
+                    if (package != null)
+                    {
+                        ServerHost.Attach(gameObject, Session, config, package);
+                    }
+                }
+                else if (package != null)
+                {
+                    Debug.LogError("[MindAttic.Multiplayer] The dedicated server could not start; exiting.");
+                    Application.Quit(1);
                 }
             }
         }

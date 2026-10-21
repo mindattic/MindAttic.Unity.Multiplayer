@@ -135,7 +135,7 @@ namespace MindAttic.Unity.Multiplayer.Core
             }
         }
 
-        private static void WriteString(StringBuilder json, string s)
+        internal static void WriteString(StringBuilder json, string s)
         {
             json.Append('"');
             foreach (char c in s ?? string.Empty)

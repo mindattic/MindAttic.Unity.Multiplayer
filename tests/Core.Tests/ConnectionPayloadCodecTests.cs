@@ -31,18 +31,19 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         }
 
         [Test]
-        public void Encode_WritesTheDocumentedV1Layout()
+        public void Encode_WritesTheDocumentedV2Layout()
         {
-            var payload = new ConnectionPayload("1", new ProtocolHash(0x0102030405060708UL), "t", "N", new PlayerColor(0xAA, 0xBB, 0xCC, 0xDD));
+            var payload = new ConnectionPayload("1", new ProtocolHash(0x0102030405060708UL), "t", "N", new PlayerColor(0xAA, 0xBB, 0xCC, 0xDD), "p");
 
             byte[] expected =
             {
-                0x4D, 0x41, 0x01,                               // magic "MA", format 1
+                0x4D, 0x41, 0x02,                               // magic "MA", format 2
                 0x01, (byte)'1',                                // game version
                 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, // protocol hash, little-endian
                 0x01, (byte)'t',                                // player token
                 0x01, (byte)'N',                                // display name
                 0xAA, 0xBB, 0xCC, 0xDD,                         // colour RGBA
+                0x01, (byte)'p',                                // server password
             };
 
             Assert.That(ConnectionPayloadCodec.Encode(payload), Is.EqualTo(expected));
@@ -98,12 +99,12 @@ namespace MindAttic.Unity.Multiplayer.Core.Tests
         public void TryDecode_NewerFormat_IsUnsupportedButStillReportsGameVersion()
         {
             byte[] bytes = ConnectionPayloadCodec.Encode(Sample(version: "2.0.0"));
-            bytes[2] = 2;
+            bytes[2] = 3;
 
             PayloadDecodeResult result = ConnectionPayloadCodec.TryDecode(bytes);
 
             Assert.That(result.Error, Is.EqualTo(PayloadDecodeError.UnsupportedFormatVersion));
-            Assert.That(result.FormatVersion, Is.EqualTo(2));
+            Assert.That(result.FormatVersion, Is.EqualTo(3));
             Assert.That(result.GameVersion, Is.EqualTo("2.0.0"));
         }
 

@@ -13,6 +13,7 @@ namespace MindAttic.Unity.Multiplayer.Core
     /// (except an unreadable newer format whose game version differs, which is a version mismatch).</description></item>
     /// <item><description><see cref="ApprovalRejection.VersionMismatch"/>: game versions differ (ordinal, ignoring surrounding whitespace).</description></item>
     /// <item><description><see cref="ApprovalRejection.ProtocolMismatch"/>: protocol hashes differ.</description></item>
+    /// <item><description><see cref="ApprovalRejection.WrongPassword"/>: the server has a <see cref="Password"/> and the client's differs.</description></item>
     /// <item><description><see cref="ApprovalRejection.Banned"/>: the player token is banned.</description></item>
     /// <item><description><see cref="ApprovalRejection.Full"/>: no seat is free.</description></item>
     /// </list>
@@ -52,8 +53,17 @@ namespace MindAttic.Unity.Multiplayer.Core
                 throw new ArgumentNullException(nameof(config));
             }
 
-            return new ConnectionApprovalValidator(config.GameVersion, protocolHash, config.MaxPlayers, banList);
+            return new ConnectionApprovalValidator(config.GameVersion, protocolHash, config.MaxPlayers, banList)
+            {
+                Password = config.Password,
+            };
         }
+
+        /// <summary>
+        /// The password a client must send (<see cref="ConnectionPayload.Password"/>, compared exactly); null or empty
+        /// lets anyone in. Set from <see cref="NetConfig.Password"/> by <see cref="FromConfig"/>.
+        /// </summary>
+        public string Password { get; set; }
 
         /// <summary>The server's game version, trimmed.</summary>
         public string GameVersion { get; }
@@ -117,6 +127,12 @@ namespace MindAttic.Unity.Multiplayer.Core
                     + ProtocolHash + "). Both need the same build of version " + GameVersion + ".", payload);
             }
 
+            if (!string.IsNullOrEmpty(Password) && !PasswordMatches(payload.Password))
+            {
+                return ApprovalDecision.Reject(ApprovalRejection.WrongPassword,
+                    payload.Password.Length == 0 ? "This server needs a password." : "Wrong server password.", payload);
+            }
+
             if (BanList != null && BanList.IsBanned(payload.PlayerToken))
             {
                 return ApprovalDecision.Reject(ApprovalRejection.Banned, "You are banned from this server.", payload);
@@ -129,6 +145,19 @@ namespace MindAttic.Unity.Multiplayer.Core
             }
 
             return ApprovalDecision.Approve(payload);
+        }
+
+        private bool PasswordMatches(string given)
+        {
+            // Every character is compared whatever the first difference, so the time taken does not tell how much was right.
+            string expected = Password;
+            int difference = expected.Length ^ given.Length;
+            for (int i = 0; i < expected.Length; i++)
+            {
+                difference |= expected[i] ^ (i < given.Length ? given[i] : 0);
+            }
+
+            return difference == 0;
         }
 
         private bool VersionMatches(string clientVersion)

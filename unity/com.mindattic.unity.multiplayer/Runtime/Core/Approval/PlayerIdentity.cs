@@ -78,6 +78,15 @@ namespace MindAttic.Unity.Multiplayer.Core
             return new ConnectionPayload(gameVersion, protocolHash, PlayerToken, DisplayName, Color);
         }
 
+        /// <summary>This identity as the connection payload a client sends, with the server password it was given.</summary>
+        /// <param name="gameVersion">The client's game version.</param>
+        /// <param name="protocolHash">The client's protocol hash.</param>
+        /// <param name="password">The server password; null or empty for none.</param>
+        public ConnectionPayload ToPayload(string gameVersion, ProtocolHash protocolHash, string password)
+        {
+            return new ConnectionPayload(gameVersion, protocolHash, PlayerToken, DisplayName, Color, password);
+        }
+
         /// <inheritdoc />
         public override string ToString()
         {

@@ -104,7 +104,7 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>
         /// When <see cref="Reason"/> is <see cref="DisconnectReason.Rejected"/> and the server said why in the
-        /// MindAttic wire format: version, protocol, full, banned or bad payload. Otherwise <see cref="ApprovalRejection.None"/>.
+        /// MindAttic wire format: version, protocol, password, full, banned or bad payload. Otherwise <see cref="ApprovalRejection.None"/>.
         /// </summary>
         public ApprovalRejection Rejection { get; }
 

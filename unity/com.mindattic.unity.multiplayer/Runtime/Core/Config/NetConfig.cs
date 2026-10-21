@@ -32,6 +32,9 @@ namespace MindAttic.Unity.Multiplayer.Core
         /// <summary>Highest tick rate accepted by <see cref="Validate"/>.</summary>
         public const int MaxTickRate = 128;
 
+        /// <summary>Longest accepted <see cref="ServerName"/>, in characters.</summary>
+        public const int MaxServerNameLength = 64;
+
         /// <summary>Highest player count accepted by <see cref="Validate"/>.</summary>
         public const int MaxMaxPlayers = 1024;
 
@@ -61,6 +64,19 @@ namespace MindAttic.Unity.Multiplayer.Core
 
         /// <summary>Maximum connected players, the host's own player included.</summary>
         public int MaxPlayers { get; set; } = DefaultMaxPlayers;
+
+        /// <summary>
+        /// The name a server shows players (its health endpoint and server list). Empty for none. Set by
+        /// <c>server.json</c> <c>"name"</c> or <c>-name</c>.
+        /// </summary>
+        public string ServerName { get; set; }
+
+        /// <summary>
+        /// Server: the password every client must send to be let in (empty lets anyone in). Client: the password it sends.
+        /// Set by <c>server.json</c> <c>"password"</c>, <c>-password</c> or <c>MINDATTIC_SERVER_PASSWORD</c>. Never included
+        /// in <see cref="ToString"/>.
+        /// </summary>
+        public string Password { get; set; }
 
         /// <summary>The game's version string. Connection approval rejects a client whose version differs.</summary>
         public string GameVersion { get; set; } = "0";
@@ -239,6 +255,16 @@ namespace MindAttic.Unity.Multiplayer.Core
                 errors.AddRange(EffectiveConditions.Validate());
             }
 
+            if (!string.IsNullOrEmpty(ServerName) && (ServerName.Length > MaxServerNameLength || HasControlCharacter(ServerName)))
+            {
+                errors.Add("ServerName must be at most " + MaxServerNameLength + " characters with no control characters.");
+            }
+
+            if (!string.IsNullOrEmpty(Password) && (Password.Length > ConnectionPayload.MaxPasswordLength || HasControlCharacter(Password)))
+            {
+                errors.Add("Password must be at most " + ConnectionPayload.MaxPasswordLength + " characters with no control characters.");
+            }
+
             string address = EffectiveAddress;
             if (address.IndexOf(' ') >= 0)
             {
@@ -269,11 +295,26 @@ namespace MindAttic.Unity.Multiplayer.Core
             }
         }
 
+        private static bool HasControlCharacter(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (char.IsControl(text[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <inheritdoc />
         public override string ToString()
         {
-            return Topology + " " + EffectiveAddress + ":" + Port + " over " + Transport
+            return (string.IsNullOrWhiteSpace(ServerName) ? string.Empty : "'" + ServerName.Trim() + "' ")
+                + Topology + " " + EffectiveAddress + ":" + Port + " over " + Transport
                 + " at " + TickRate + " Hz, max " + MaxPlayers + " players, version " + GameVersion
+                + (string.IsNullOrEmpty(Password) ? string.Empty : ", password set")
                 + (Conditions == NetConditionsProfile.None ? string.Empty : ", simulating " + Conditions + " (" + EffectiveConditions + ")");
         }
     }

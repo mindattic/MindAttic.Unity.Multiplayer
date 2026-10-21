@@ -55,7 +55,7 @@ Add a `NetBootstrap` to the NetworkManager's GameObject. A headless launch serve
 Game.x86_64 -batchmode -nographics -port 7777 -transport udp
 ```
 
-`-mode host|server|client`, `-address`, `-tickrate` and `-maxplayers` are read too.
+`-mode host|server|client`, `-address`, `-tickrate`, `-maxplayers`, `-name` and `-password` are read too.
 
 **MindAttic > Multiplayer > Build Dedicated Server (Linux)** makes that build. You need the editor's *Linux Dedicated
 Server Build Support* module. It validates the prefabs first and stops on errors. Then it builds the enabled Build
@@ -72,6 +72,32 @@ docker run --rm -p 7777:7777/udp -e MINDATTIC_RENDEZVOUS_SECRET=<secret> game-se
 Arguments after the image name are added to the server's command line. CI builds the same way with
 `Unity -batchmode -quit -projectPath <game> -executeMethod MindAttic.Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine`
 and the optional `-serverOutput <dir> -port <n> -transport udp|websocket -serverBackend mono|il2cpp -serverDevelopment`.
+
+## Build a server package for a host
+**MindAttic > Multiplayer > Build Server Package > GenericVps (default)** or **> RunPod** builds the same Linux server
+plus everything a host needs, into `Builds/ServerPackage/<profile>/`. The hosting provider is still undecided, so every
+host gets the same package and only the profile's extra files differ:
+
+| In the package | What |
+|---|---|
+| `<Game>.x86_64`, `<Game>_Data/`, `UnityPlayer.so` | The self-contained Linux x86_64 Dedicated Server build |
+| `server.json` | The settings (`name`, `password`, `port`, `maxPlayers`, `transport`, `healthPort`, `adminCommands`, `logsDirectory`, `savesDirectory`, ...) |
+| `start.sh` | Starts the server; arguments override `server.json`: `./start.sh -port 7778 -maxPlayers 4 -name "Friday game" -password hunter2` |
+| `server-package.json` | The manifest a deploy tool reads: profile, executable, declared ports, health path, stop signal |
+| `Logs/`, `Saves/` | One log file per run (the newest 10 kept), and the game's persistent data (`ServerHost.Current.Paths.SavesDirectory`) |
+| GenericVps: `Dockerfile`, `docker-compose.yml`, `HOSTING.txt` | The server image plus the rendezvous service on any UDP-capable VPS |
+| RunPod: `Dockerfile`, `HOSTING.txt` | WebSocket transport on a mapped TCP port (RunPod passes TCP/HTTP only) |
+
+Settings layer as `server.json`, then the environment (`MINDATTIC_SERVER_PASSWORD`, `MINDATTIC_RENDEZVOUS_URL` / `_SECRET`,
+`MINDATTIC_PUBLIC_ADDRESS`), then the command line. Bad settings stop the server with exit code 1. The running server
+answers `GET /healthz` on its health port (default 8081: 200 while running, 503 while starting or stopping). With
+`adminCommands` on it reads `help`, `status`, `players`, `kick <clientId> [reason]` and `stop` from standard input. On
+SIGTERM or SIGINT it shuts down cleanly: `ServerHost.ShuttingDown` fires (save there), the session closes, and the
+process exits. A server password is checked at connection approval; clients set `NetBootstrap.Password` or
+`NetConfig.Password`. CI builds a package with
+`-executeMethod MindAttic.Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverProfile GenericVps`.
+More profiles (G-Portal's Private Server program, Nitrado, Edgegap, GameLift) can be added later as `IHostingProfile`s
+without changing games.
 
 ## Test on a bad connection
 `NetConfig.Conditions` (or the Net Bootstrap's *Network conditions* fields, or `-netsim`) makes this peer's link

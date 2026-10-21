@@ -53,30 +53,30 @@ namespace MindAttic.Unity.Multiplayer.Tests
             yield return null;
         }
 
-        private static NetConfig Config(string version = Version, int maxPlayers = 4, double grace = 60)
+        private static NetConfig Config(string version = Version, int maxPlayers = 4, double grace = 60, string password = null)
         {
-            return new NetConfig { Port = Port, GameVersion = version, MaxPlayers = maxPlayers, ReconnectGraceSeconds = grace };
+            return new NetConfig { Port = Port, GameVersion = version, MaxPlayers = maxPlayers, ReconnectGraceSeconds = grace, Password = password };
         }
 
-        private IEnumerator StartHost(int maxPlayers = 4, double grace = 60)
+        private IEnumerator StartHost(int maxPlayers = 4, double grace = 60, string password = null)
         {
-            Assert.That(_host.StartHost(Config(maxPlayers: maxPlayers, grace: grace)), Is.True, "StartHost");
+            Assert.That(_host.StartHost(Config(maxPlayers: maxPlayers, grace: grace, password: password)), Is.True, "StartHost");
             yield return WaitForConditionOrTimeOut(() => _host.State == SessionState.Running);
             AssertOnTimeout("the host never reached Running (state " + _host.State + ")");
             Assert.That(_host.Seats.Count, Is.EqualTo(1), "the host's own player takes a seat");
             Assert.That(_host.Seats[0].PlayerToken, Is.EqualTo("host-token"));
         }
 
-        private IEnumerator Join(NetSession client, string version = Version)
+        private IEnumerator Join(NetSession client, string version = Version, string password = null)
         {
-            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version)), Is.True, "JoinByAddress");
+            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version, password: password)), Is.True, "JoinByAddress");
             yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Connected);
             AssertOnTimeout("the client never connected (state " + client.State + ", " + client.LastDisconnect + ")");
         }
 
-        private IEnumerator ExpectRejected(NetSession client, ApprovalRejection rejection, string version = Version)
+        private IEnumerator ExpectRejected(NetSession client, ApprovalRejection rejection, string version = Version, string password = null)
         {
-            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version)), Is.True, "JoinByAddress");
+            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version, password: password)), Is.True, "JoinByAddress");
             yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Disconnected);
             AssertOnTimeout("the client was never turned away (state " + client.State + ")");
             Assert.That(client.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Rejected), client.LastDisconnect.ToString());
@@ -118,6 +118,21 @@ namespace MindAttic.Unity.Multiplayer.Tests
 
             Assert.That(_b.LastDisconnect.Message, Does.Contain("full"));
             Assert.That(_a.State, Is.EqualTo(SessionState.Connected), "the seated player is unaffected");
+        }
+
+        [UnityTest]
+        public IEnumerator PasswordServer_TurnsAwayAWrongPassword_AndLetsTheRightOneIn()
+        {
+            yield return StartHost(password: "hunter2");
+
+            yield return ExpectRejected(_a, ApprovalRejection.WrongPassword, password: "nope");
+            Assert.That(_a.LastDisconnect.Message, Does.Contain("Wrong server password"));
+
+            yield return ExpectRejected(_b, ApprovalRejection.WrongPassword);
+            Assert.That(_b.LastDisconnect.Message, Does.Contain("needs a password"));
+
+            yield return Join(_a, password: "hunter2");
+            Assert.That(_host.Seats.Count, Is.EqualTo(2), "the host and the player with the password");
         }
 
         [UnityTest]
