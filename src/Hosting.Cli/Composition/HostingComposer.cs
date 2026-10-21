@@ -48,12 +48,35 @@ public sealed class HostingComposer
     /// <summary>The image tool: real docker CLI, or a dry-run echo.</summary>
     public IContainerImageTool BuildImageTool(IDeployLog log) => _dryRun ? new DryRunImageTool() : new DockerCliImageTool(new ProcessRunner());
 
-    /// <summary>GHCR credentials from the vault. Required for every deploy/update (even dry-run, so the printed login line is accurate) except when explicitly running with placeholder creds in tests.</summary>
-    /// <exception cref="InvalidOperationException">No GHCR credential is stored.</exception>
-    public HostingCredentialStore.GhcrCreds RequireGhcrCreds() =>
-        _credentials.GetGhcrCreds() ?? throw new InvalidOperationException(
-            "No GHCR credential in the Hosting vault. Store one first (HostingCredentialStore.SetGhcrCreds), " +
+    /// <summary>
+    /// The label every dry-run placeholder credential carries, so nothing printed from one can be
+    /// mistaken for (or pasted as) a real value (UM-T49).
+    /// </summary>
+    public const string PlaceholderPrefix = "<dry-run placeholder ";
+
+    private static string Placeholder(string what) => PlaceholderPrefix + what + ">";
+
+    /// <summary>
+    /// GHCR credentials from the vault. Required for every real deploy/update. A dry run touches
+    /// nothing, so with no GHCR credential stored it warns and uses clearly-labelled placeholders
+    /// instead of refusing (UM-T49): <c>deploy.ps1 -DryRun</c> works on a fresh machine.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No GHCR credential is stored and this is not a dry run.</exception>
+    public HostingCredentialStore.GhcrCreds RequireGhcrCreds(IDeployLog log)
+    {
+        ArgumentNullException.ThrowIfNull(log);
+        var stored = _credentials.GetGhcrCreds();
+        if (stored is not null) return stored;
+        if (_dryRun)
+        {
+            log.Warn("Dry run: no GHCR credential in the Hosting vault; using placeholder GHCR credentials. A real run needs 'mp-host credentials set-ghcr'.");
+            return new HostingCredentialStore.GhcrCreds(Placeholder("ghcr-username"), Placeholder("ghcr-token"));
+        }
+
+        throw new InvalidOperationException(
+            "No GHCR credential in the Hosting vault. Store one first ('mp-host credentials set-ghcr' or HostingCredentialStore.SetGhcrCreds), " +
             "or set MINDATTIC_HOSTING_CREDENTIALS to a directory that has one.");
+    }
 
     /// <summary>Every hosting profile id <see cref="BuildProvisioner"/> and <see cref="BuildConnection"/> know about, for error messages.</summary>
     private static readonly string[] KnownProfiles =
@@ -163,9 +186,67 @@ public sealed class HostingComposer
 
     private static DryRunCloudVpsApiClient DryRunCloudVps(string providerId, string apiBaseUrl, IDeployLog log) => new(log, providerId, apiBaseUrl);
 
-    /// <summary>The connection info a provisioner needs for <paramref name="serverName"/>, resolved from the vault.</summary>
-    /// <exception cref="InvalidOperationException">The profile needs a stored credential/target that isn't there.</exception>
-    public ProviderConnection BuildConnection(string profileId, string serverName)
+    /// <summary>
+    /// The connection info a provisioner needs for <paramref name="serverName"/>, resolved from the
+    /// vault. A dry run whose profile has no stored SSH target or provider credential warns and uses
+    /// clearly-labelled placeholders (<see cref="PlaceholderConnection"/>) instead of refusing
+    /// (UM-T49); a big-cloud profile's launch options are configuration naming real local files
+    /// (<c>sshPublicKeyPath</c>, AMI ids, subnets), not credentials, so those are still required.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The profile needs a stored credential/target that isn't there (and this is not a dry run, or no placeholder can stand in).</exception>
+    public ProviderConnection BuildConnection(string profileId, string serverName, IDeployLog log)
+    {
+        ArgumentNullException.ThrowIfNull(log);
+        try
+        {
+            return BuildStoredConnection(profileId, serverName);
+        }
+        catch (InvalidOperationException) when (_dryRun)
+        {
+            ProviderConnection? placeholder = PlaceholderConnection(profileId, serverName);
+            if (placeholder is null) throw;
+            log.Warn($"Dry run: no stored '{profileId}' credential/SSH target for '{serverName}' in the Hosting vault; using placeholder values. "
+                + "A real run needs them stored with 'mp-host credentials'.");
+            return placeholder;
+        }
+    }
+
+    /// <summary>
+    /// The dry-run stand-in for a missing stored connection, every value labelled with
+    /// <see cref="PlaceholderPrefix"/>; null for a profile whose connection needs real local
+    /// configuration no placeholder can stand in for (the big-cloud launch options, OCI).
+    /// </summary>
+    internal static ProviderConnection? PlaceholderConnection(string profileId, string serverName)
+    {
+        if (string.Equals(profileId, GenericVpsProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ProviderConnection(serverName, new Dictionary<string, string>
+            {
+                ["sshHost"] = Placeholder("ssh-host"),
+                ["sshPort"] = "22",
+                ["sshUser"] = Placeholder("ssh-user"),
+                ["sshKeyPath"] = Placeholder("ssh-key-path"),
+            }, new Dictionary<string, string>());
+        }
+
+        if (string.Equals(profileId, HetznerProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(profileId, VultrProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(profileId, DigitalOceanProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(profileId, LinodeProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(profileId, OvhProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return CloudVpsConnection(serverName, Placeholder("ssh-user"), Placeholder("ssh-key-path"), Placeholder("ssh-public-key"));
+        }
+
+        if (string.Equals(profileId, FlyProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ProviderConnection(serverName, new Dictionary<string, string> { ["orgSlug"] = Placeholder("fly-org") }, new Dictionary<string, string>());
+        }
+
+        return null;
+    }
+
+    private ProviderConnection BuildStoredConnection(string profileId, string serverName)
     {
         if (string.Equals(profileId, GenericVpsProvisioner.Id, StringComparison.OrdinalIgnoreCase))
         {

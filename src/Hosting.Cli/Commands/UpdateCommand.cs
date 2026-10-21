@@ -24,10 +24,10 @@ public static class UpdateCommand
         string serverId = args.Require("server-id");
 
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
-        var ghcr = composer.RequireGhcrCreds();
+        var ghcr = composer.RequireGhcrCreds(log);
         string imageReference = DeployArguments.BuildImageReference(args, composer.GhcrRegistry);
         var environment = DeployArguments.BuildEnvironment(args, rawArgs);
-        var connection = composer.BuildConnection(profile, serverName);
+        var connection = composer.BuildConnection(profile, serverName, log);
 
         IServerPackageBuilder packageBuilder = composer.BuildPackageBuilder();
         IContainerImageTool imageTool = composer.BuildImageTool(log);

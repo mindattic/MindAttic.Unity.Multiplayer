@@ -18,7 +18,7 @@ public static class LogsCommand
 
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
         IProvisioner provisioner = composer.BuildProvisioner(profile, log);
-        ProviderConnection connection = composer.BuildConnection(profile, serverName);
+        ProviderConnection connection = composer.BuildConnection(profile, serverName, log);
 
         string logs = await provisioner.GetLogsAsync(serverId, tail, connection, log, ct);
         log.Info(logs);

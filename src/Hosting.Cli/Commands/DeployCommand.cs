@@ -23,10 +23,10 @@ public static class DeployCommand
         string serverName = args.Require("name");
 
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
-        var ghcr = composer.RequireGhcrCreds();
+        var ghcr = composer.RequireGhcrCreds(log);
         string imageReference = DeployArguments.BuildImageReference(args, composer.GhcrRegistry);
         var environment = DeployArguments.BuildEnvironment(args, rawArgs);
-        var connection = composer.BuildConnection(profile, serverName);
+        var connection = composer.BuildConnection(profile, serverName, log);
 
         var pipeline = new DeployPipeline(composer.BuildPackageBuilder(), composer.BuildImageTool(log), composer.BuildProvisioner(profile, log));
         DeployOutcome outcome = await pipeline.RunAsync(

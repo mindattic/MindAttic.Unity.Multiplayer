@@ -158,7 +158,10 @@ and `mp-host deploy`/`update`/`destroy` read it back by name:
 
 `--dry-run` (every `mp-host` command accepts it) prints the exact API call, SSH command or compose
 file it would send, so you can check a deploy before it touches a credential-backed resource or
-spends provider credit.
+spends provider credit. A dry run needs no stored GHCR credential or SSH target: when one is
+missing it warns and prints `<dry-run placeholder ...>` values in its place, so a game's
+`deploy.ps1 -DryRun` works on a fresh machine (the big-cloud launch options above still have to be
+stored, since they name real local key files).
 
 ## TLS
 

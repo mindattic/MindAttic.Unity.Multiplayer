@@ -27,7 +27,7 @@ public static class DestroyCommand
 
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
         IProvisioner provisioner = composer.BuildProvisioner(profile, log);
-        ProviderConnection connection = composer.BuildConnection(profile, serverName);
+        ProviderConnection connection = composer.BuildConnection(profile, serverName, log);
 
         await provisioner.DestroyAsync(serverId, connection, log, ct);
         log.Info($"{serverId} destroyed.");

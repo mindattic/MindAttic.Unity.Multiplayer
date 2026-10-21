@@ -17,7 +17,7 @@ public static class StatusCommand
 
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
         IProvisioner provisioner = composer.BuildProvisioner(profile, log);
-        ProviderConnection connection = composer.BuildConnection(profile, serverName);
+        ProviderConnection connection = composer.BuildConnection(profile, serverName, log);
 
         ServerStatus status = await provisioner.GetStatusAsync(serverId, connection, log, ct);
         log.Info($"{status.ServerId}: {status.State} ({status.PublicAddress}) -- {status.Detail}");
