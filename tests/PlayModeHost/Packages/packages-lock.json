@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.mindattic.components.unity": {
+      "version": "file:../../../../MindAttic.Components/unity/com.mindattic.components.unity",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.ugui": "2.0.0"
+      }
+    },
     "com.mindattic.unity.multiplayer": {
       "version": "file:../../../unity/com.mindattic.unity.multiplayer",
       "depth": 0,
@@ -8,6 +16,12 @@
         "com.unity.netcode.gameobjects": "2.11.0",
         "com.unity.transport": "2.7.2"
       }
+    },
+    "com.mindattic.unity.shared": {
+      "version": "file:../../../../Unity.Shared/unity/com.mindattic.unity.shared",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
     },
     "com.unity.burst": {
       "version": "1.8.29",
@@ -117,6 +131,15 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.ugui": {
+      "version": "2.0.0",
+      "depth": 1,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.modules.ui": "1.0.0",
+        "com.unity.modules.imgui": "1.0.0"
+      }
+    },
     "com.unity.modules.animation": {
       "version": "1.0.0",
       "depth": 0,
@@ -144,6 +167,12 @@
     "com.unity.modules.physics2d": {
       "version": "1.0.0",
       "depth": 0,
+      "source": "builtin",
+      "dependencies": {}
+    },
+    "com.unity.modules.ui": {
+      "version": "1.0.0",
+      "depth": 2,
       "source": "builtin",
       "dependencies": {}
     }

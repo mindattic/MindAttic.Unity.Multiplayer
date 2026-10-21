@@ -4,9 +4,9 @@
 
 .DESCRIPTION
   Uses the same bare Unity 6000.4.3f1 host project as run-playmode.ps1 (tests/PlayModeHost, the package listed in
-  "testables"). Covers the editor tooling: the Set Up Scene wizard, the prefab validator and the Build Dedicated
-  Server (Linux) menu, including one real headless Linux build (Mono) with its Dockerfile, which needs the Linux
-  Dedicated Server build support module (the test is ignored without it). Results land in tests/PlayModeHost/logs/
+  "testables"). Covers the editor tooling: the Set Up Scene wizard, the Add Front End step, the prefab validator and
+  the Build Dedicated Server (Linux) menu, including one real headless Linux build (Mono) with its Dockerfile, which
+  needs the Linux Dedicated Server build support module (the test is ignored without it). Results land in tests/PlayModeHost/logs/
   (git-ignored). Exits non-zero when any test fails.
 
 .PARAMETER Unity
@@ -27,6 +27,8 @@ $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot 'PlayModeHost'
 $logs = Join-Path $project 'logs'
 New-Item -ItemType Directory -Force $logs | Out-Null
+& (Join-Path $PSScriptRoot 'prepare-host.ps1') -Unity $Unity
+if ($LASTEXITCODE -ne 0) { exit 1 }
 $results = Join-Path $logs 'editmode-results.xml'
 Remove-Item $results -ErrorAction SilentlyContinue
 

@@ -22,12 +22,15 @@ public static class MinimalSampleHost
     public const string SampleName = "Minimal";
     private const string SampleNamespace = "Unity.Multiplayer.Samples.Minimal.";
 
-    /// <summary>Imports the Minimal sample through Package Manager's sample API and writes its folder to logs/sample-path.txt.</summary>
+    /// <summary>
+    /// Imports a sample through Package Manager's sample API and writes its folder to logs/sample-path.txt: the Minimal
+    /// sample, or the one named by <c>-sampleName</c> on the command line (run-sample.ps1 -Sample).
+    /// </summary>
     public static void Import()
     {
         try
         {
-            Sample sample = Find();
+            Sample sample = Find(CommandLineSampleName());
             bool ok = sample.Import(Sample.ImportOptions.OverridePreviousImports | Sample.ImportOptions.HideImportWindow);
             string assetsPath = ToAssetsPath(sample.importPath);
             Debug.Log("[MinimalSampleHost] Import " + (ok ? "succeeded" : "FAILED") + " into " + assetsPath);
@@ -56,7 +59,7 @@ public static class MinimalSampleHost
     {
         try
         {
-            string folder = ToAssetsPath(Find().importPath);
+            string folder = ToAssetsPath(Find(SampleName).importPath);
             Type playerType = SampleType("MinimalPlayer");
             Type menuType = SampleType("MinimalMenu");
 
@@ -108,12 +111,13 @@ public static class MinimalSampleHost
         }
     }
 
-    private static Sample Find()
+    /// <summary>The package's sample whose display name is <paramref name="name"/>.</summary>
+    internal static Sample Find(string name)
     {
-        var samples = Sample.FindByPackage(PackageName, null).Where(s => s.displayName == SampleName).ToList();
+        var samples = Sample.FindByPackage(PackageName, null).Where(s => s.displayName == name).ToList();
         if (samples.Count == 0)
         {
-            throw new InvalidOperationException("Package Manager lists no \"" + SampleName + "\" sample for " + PackageName + ".");
+            throw new InvalidOperationException("Package Manager lists no \"" + name + "\" sample for " + PackageName + ".");
         }
 
         return samples[0];
@@ -132,7 +136,23 @@ public static class MinimalSampleHost
         return type;
     }
 
-    private static string ToAssetsPath(string path)
+    /// <summary>The value of <c>-sampleName</c> on the command line, else <see cref="SampleName"/>.</summary>
+    private static string CommandLineSampleName()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i + 1 < args.Length; i++)
+        {
+            if (args[i] == "-sampleName")
+            {
+                return args[i + 1];
+            }
+        }
+
+        return SampleName;
+    }
+
+    /// <summary><paramref name="path"/> as an Assets/... path when it is inside the project.</summary>
+    internal static string ToAssetsPath(string path)
     {
         string full = Path.GetFullPath(path).Replace('\\', '/');
         string root = Path.GetFullPath(Application.dataPath).Replace('\\', '/');

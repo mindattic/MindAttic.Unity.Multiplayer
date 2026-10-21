@@ -1,0 +1,30 @@
+{
+    "name": "Unity.Multiplayer.Samples.FrontEnd.Tests",
+    "rootNamespace": "Unity.Multiplayer.Samples.FrontEnd.Tests",
+    "references": [
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.UI",
+        "MindAttic.Components.Unity",
+        "MindAttic.Components.Unity.Core",
+        "Unity.Multiplayer.Samples.FrontEnd",
+        "Unity.Netcode.Runtime",
+        "Unity.Collections",
+        "Unity.Netcode.Runtime.Tests",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -18,6 +18,20 @@ carries the package's own version.
   in a fresh batch editor). `mp-host` packs as the `MindAttic.Unity.Multiplayer.Hosting.Cli` .NET tool
   (`tools/install-mp-host.ps1`). `mp-host local up --dry-run` no longer launches Unity, and every profile builds the
   Unity package profile it runs (`GenericVps` for the VPS/cloud providers and Local).
+- **Drop-in front end** (UM-T48) — `NetFrontEnd`, in the new optional `Unity.Multiplayer.UI` assembly (compiled only
+  when `com.mindattic.components.unity` is installed), gives any game its multiplayer menus from one component:
+  a main menu (Host, Join by IP, Join by code, Settings with name and colour, Quit), a host lobby with the grouped
+  join code, a Copy button and a live roster with colour swatches and remove, a cancellable connecting dialog, a
+  plain-words dialog for every disconnect reason, an automatic reconnect to the same seat with progress, and an
+  in-game Esc menu (Resume, Invite players, Settings, Leave). The player's name and colour come from an
+  `IPlayerIdentitySource` (the MindAttic profile through `com.mindattic.unity.shared`, else PlayerPrefs) and go in
+  the connection approval payload. Hooks: `SessionStarted`, `GameStarted`, `Left`, `Reconnected`, `StateChanged`,
+  `AddScreen`, `AddMainMenuItems`, `AddPauseMenuItems`, `AddSettingsItems`, `MenusVisible`; every button is also a
+  method. A headless or `-mode` launch never creates UI. Optional `NetFrontEndSettings` asset. **MindAttic ▸
+  Multiplayer ▸ Add Front End** networks the scene and adds it, or names the exact manifest lines that are missing.
+  Core gains `DisconnectText`, `ReconnectPolicy`, `HostAddress` and `NetLaunch.ShowsMenus`. New **Front End**
+  sample; see [Drop-in front end](docs/articles/front-end.md).
+
 - **`NetBootstrap.Configure`** (UM-T33) — sets the bootstrap's default `NetConfig` in code (topology, address,
   port, transport, tick rate, max players, game version, join codes, conditions, …) before the session starts,
   instead of reflecting into its private serialized fields. `Configure(NetConfig)` copies and validates the

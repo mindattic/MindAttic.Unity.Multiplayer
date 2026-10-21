@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "com.mindattic.components.unity": "file:../../../../MindAttic.Components/unity/com.mindattic.components.unity",
     "com.mindattic.unity.multiplayer": "file:../../../unity/com.mindattic.unity.multiplayer",
+    "com.mindattic.unity.shared": "file:../../../../Unity.Shared/unity/com.mindattic.unity.shared",
     "com.unity.netcode.gameobjects": "2.11.0",
     "com.unity.sdk.linux-x86_64": "1.1.0",
     "com.unity.test-framework": "1.6.0",

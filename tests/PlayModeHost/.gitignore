@@ -7,3 +7,6 @@ Builds/
 *.csproj
 *.sln
 logs/
+# TextMesh Pro Essential Resources: imported by MindAttic Components' editor (prepare-host.ps1 runs it first).
+Assets/TextMesh Pro/
+Assets/TextMesh Pro.meta

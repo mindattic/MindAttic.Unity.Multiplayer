@@ -26,13 +26,15 @@ public partial class MinimalPlayer : NetEntity
 }
 ```
 
-That is the whole networked surface of the [Minimal sample](articles/getting-started.md): one client-to-server
+That is the whole networked surface of the Minimal sample: one client-to-server
 call, one server-to-everyone call and one server-owned field. The package's source generator writes the rest.
 
 ## Start here
 
-- **[Getting started in 10 minutes](articles/getting-started.md)** — import the Minimal sample, host, join and
-  read the code.
+- **[Getting started in 10 minutes](articles/getting-started.md)** — network your own scene, add the menus with one
+  click, write a player, host and join.
+- **[Drop-in front end](articles/front-end.md)** — `NetFrontEnd`: main menu, lobby with join code, connection
+  dialogs, reconnect and an in-game Esc menu from one component, with hooks for the game's own options.
 - **[Topologies](articles/topologies.md)** — listen server vs. dedicated server, and how the same game code runs
   as either.
 - **[Attributes reference](articles/attributes.md)** — `[ToServer]`, `[ToClients]`, `[ToOwner]`, `[ToClient]`,

@@ -56,6 +56,11 @@ hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.g
 - **Join codes and reconnect** — Unity Relay or a self-hosted rendezvous service behind one interface, and
   seats that survive a drop. See [Join codes](https://mindattic.github.io/Unity.Multiplayer/articles/join-codes.html)
   and [Reconnect and seats](https://mindattic.github.io/Unity.Multiplayer/articles/reconnect-seats.html).
+- **Drop-in front end** — one `NetFrontEnd` component (**MindAttic ▸ Multiplayer ▸ Add Front End**) gives any
+  game a main menu (Host, Join by IP, Join by code, Settings), a lobby with the join code and roster, connection
+  dialogs in plain words, automatic reconnect to the same seat and an in-game Esc menu, built from MindAttic
+  Components and optional. See
+  [Drop-in front end](https://mindattic.github.io/Unity.Multiplayer/articles/front-end.html).
 - **Editor tooling** — one-click scene setup, a prefab validator, and a Linux Dedicated Server build, all from
   the **MindAttic ▸ Multiplayer** menu.
 - **A hosting pipeline** — the same server package deploys to any GenericVps-shaped host, RunPod, or a
@@ -85,7 +90,12 @@ through one `[ToServer]` call, one `[ToClients]` call and one `[Synced]` field �
 docs site's [Getting started in 10 minutes](https://mindattic.github.io/Unity.Multiplayer/articles/getting-started.html)
 covers the same ground with more detail.
 
-For your own scene: run **MindAttic ▸ Multiplayer ▸ Set Up Scene**, give your player prefab a `NetworkObject`
+For your own scene with menus in two minutes: add MindAttic Components (and optionally Unity.Shared, for the
+player's profile name and colour) to the manifest, run **MindAttic ▸ Multiplayer ▸ Add Front End** and press Play —
+the **Front End** sample is that, done. See
+[Drop-in front end](https://mindattic.github.io/Unity.Multiplayer/articles/front-end.html).
+
+Without the menus: run **MindAttic ▸ Multiplayer ▸ Set Up Scene**, give your player prefab a `NetworkObject`
 and a `partial class` deriving from `NetEntity`, mark methods and fields with the attributes above, and run
 **MindAttic ▸ Multiplayer ▸ Validate Prefabs** before you ship. See
 [Porting a game](https://mindattic.github.io/Unity.Multiplayer/articles/porting.html) for moving an existing
@@ -96,11 +106,13 @@ project onto the package.
 | Path | What |
 |---|---|
 | `unity/com.mindattic.unity.multiplayer/` | The Unity package (`package.json`, Runtime, Editor, Tests); `Runtime/Generators/` holds the built generator DLL |
+| `unity/com.mindattic.unity.multiplayer/Runtime/UI/` | The optional drop-in front end (`Unity.Multiplayer.UI`, compiled only when MindAttic Components is installed) |
 | `unity/com.mindattic.unity.multiplayer/Samples~/Minimal/` | The Minimal sample Package Manager imports (scene, player prefab, menu, line-by-line README) |
+| `unity/com.mindattic.unity.multiplayer/Samples~/FrontEnd/` | The Front End sample: the same arena with the drop-in front end and its game hooks |
 | `src/Generators/` | The source generator, analyzers and suppressor (netstandard2.0, Roslyn 4.3.1) |
 | `src/Hosting.Cli/` | `mp-host`: builds a server package and deploys it to any hosting profile |
 | `server/Rendezvous/` | The rendezvous service (ASP.NET Core .NET 10 minimal API + Dockerfile): join code to a dedicated server's IP:port |
-| `tests/` | `Core.Tests`, `Generators.Tests`, `Rendezvous.Tests`, `Hosting.Cli.Tests` (plain `dotnet test`); `Core.Build` compiles Core the way Unity does; `PlayModeHost` and `MinimalSample` run the Unity PlayMode/EditMode suites |
+| `tests/` | `Core.Tests`, `Generators.Tests`, `Rendezvous.Tests`, `Hosting.Cli.Tests` (plain `dotnet test`); `Core.Build` compiles Core the way Unity does; `PlayModeHost`, `MinimalSample` and `FrontEndSample` run the Unity PlayMode/EditMode suites |
 | `smoke/` | The nightly Docker Compose smoke test: rendezvous, a dedicated server and two headless bot clients joining by code |
 | `docs/` | DocFX site (`docfx.json`, `articles/`), BIBLE, RFCs, user stories |
 
@@ -152,6 +164,7 @@ dotnet test tests/Hosting.Cli.Tests
 powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1 batch mode
 powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
 powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager and runs its PlayMode tests (-Author rebuilds its scene and prefabs)
+powershell -File tests/run-sample.ps1 -Sample FrontEnd   # the same for the Front End sample (needs the sibling MindAttic.Components and Unity.Shared repos)
 powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Linux player (server + 2 bots, same build, role picked by MINDATTIC_ROLE)
 ```
 

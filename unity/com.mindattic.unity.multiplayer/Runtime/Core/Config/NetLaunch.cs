@@ -46,5 +46,21 @@ namespace Unity.Multiplayer.Core
 
             return autoStart;
         }
+
+        /// <summary>
+        /// True when a player-facing front end (menus, dialogs) may be created: never in a headless process (a
+        /// dedicated server, a CI run), and never when <c>-mode</c> launched the process into a role by itself (a server,
+        /// or a bot client), since nobody is there to click.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="commandLine"/> is null.</exception>
+        public static bool ShowsMenus(NetCommandLineResult commandLine, bool headless)
+        {
+            if (commandLine == null)
+            {
+                throw new ArgumentNullException(nameof(commandLine));
+            }
+
+            return !headless && !commandLine.TopologySpecified;
+        }
     }
 }

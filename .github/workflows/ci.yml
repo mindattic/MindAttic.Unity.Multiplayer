@@ -47,16 +47,31 @@ jobs:
           - testMode: editmode
             assemblyNames: Unity.Multiplayer.Editor.Tests
           - testMode: playmode
-            assemblyNames: Unity.Multiplayer.Tests
+            assemblyNames: Unity.Multiplayer.Tests;Unity.Multiplayer.UI.Tests
     steps:
+      # tests/PlayModeHost references MindAttic Components and Unity.Shared by file: path as sibling repos (the
+      # optional front end, UM-T48), so this repo and those two are checked out side by side under the workspace,
+      # which is all GameCI's container mounts.
       - uses: actions/checkout@v4
+        with:
+          path: Unity.Multiplayer
+
+      - uses: actions/checkout@v4
+        with:
+          repository: mindattic/MindAttic.Components
+          path: MindAttic.Components
+
+      - uses: actions/checkout@v4
+        with:
+          repository: mindattic/Unity.Shared
+          path: Unity.Shared
 
       - uses: actions/cache@v4
         with:
-          path: tests/PlayModeHost/Library
+          path: Unity.Multiplayer/tests/PlayModeHost/Library
           key: >-
             Library-PlayModeHost-${{ matrix.testMode }}-${{
-            hashFiles('unity/com.mindattic.unity.multiplayer/**', 'tests/PlayModeHost/Packages/**') }}
+            hashFiles('Unity.Multiplayer/unity/com.mindattic.unity.multiplayer/**', 'Unity.Multiplayer/tests/PlayModeHost/Packages/**') }}
           restore-keys: |
             Library-PlayModeHost-${{ matrix.testMode }}-
             Library-PlayModeHost-
@@ -71,7 +86,7 @@ jobs:
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
-          projectPath: tests/PlayModeHost
+          projectPath: Unity.Multiplayer/tests/PlayModeHost
           unityVersion: 6000.4.3f1
           testMode: ${{ matrix.testMode }}
           customParameters: >-

@@ -88,10 +88,13 @@ old code ran logic on the value changing (an animator trigger, a UI refresh).
 
 Run **MindAttic ▸ Multiplayer ▸ Set Up Scene** once per scene that needs networking: it adds a NetworkManager
 with Unity Transport and a `NetBootstrap`, and assigns a `NetPrefabList` of the scene's NetworkObject prefabs.
-Point the game's existing menu/lobby UI at the `NetBootstrap` instance instead of whatever custom
-connect/host code it had — see [Getting started](getting-started.md#6-read-the-code-3-minutes) for the exact
-calls (`StartHost`, `JoinByAddress`, `HostWithCode`, `JoinByCode`, `Leave`) and the events to show connection
-state and errors (`Ended`, `JoinCodeFailed`).
+Then either replace the game's multiplayer menus with the [drop-in front end](front-end.md) (**MindAttic ▸
+Multiplayer ▸ Add Front End**: host, join by IP or code, lobby, connection dialogs, reconnect and an Esc menu, with
+the game's own options added through its hooks), or point the game's existing menu/lobby UI at the `NetBootstrap`
+instance instead of whatever custom connect/host code it had — see
+[Getting started](getting-started.md#drive-it-from-your-own-ui) for the exact calls (`StartHost`, `JoinByAddress`,
+`HostWithCode`, `JoinByCode`, `Leave`) and the events to show connection state and errors (`Ended`,
+`JoinCodeFailed`, and `DisconnectText` for the words).
 
 If the game changes scenes while a session is live, turn on **Enable Scene Management** on the NetworkManager
 and drive it through `NetSession.Scenes` (`Load`/`Unload`), not Unity's own `SceneManager` — only the server

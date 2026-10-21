@@ -2,7 +2,7 @@
   "name": "com.mindattic.unity.multiplayer",
   "version": "1.0.0",
   "displayName": "MindAttic Multiplayer",
-  "description": "Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS); AWS GameLift's server lifecycle lights up when its Server SDK package is installed (MINDATTIC_GAMELIFT).",
+  "description": "Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS); AWS GameLift's server lifecycle lights up when its Server SDK package is installed (MINDATTIC_GAMELIFT). A drop-in multiplayer front end (NetFrontEnd: main menu, lobby with join code, connection dialogs, reconnect, in-game menu) lights up when com.mindattic.components.unity is installed (MINDATTIC_COMPONENTS), with the player's name and colour from com.mindattic.unity.shared when that is too; package.json cannot list those file: packages, so add them to the game's manifest (docs/articles/front-end.md).",
   "unity": "6000.0",
   "author": { "name": "MindAttic" },
   "license": "MIT",
@@ -16,6 +16,11 @@
       "displayName": "Minimal",
       "description": "The 10-minute start: host, join by IP or join by code from a small menu, and squares moved by the server through one [ToServer] call, one [ToClients] call and one [Synced] field. Open Minimal.unity and press Play; README.md walks through every line.",
       "path": "Samples~/Minimal"
+    },
+    {
+      "displayName": "Front End",
+      "description": "The Minimal arena with the drop-in front end instead of a hand-made menu: Host, Join by IP or code, a lobby with the join code and roster, connection dialogs, reconnect and an Esc menu from one NetFrontEnd component, each square in its player's own name and colour, and the game's hooks in FrontEndGame.cs. Needs com.mindattic.components.unity (and optionally com.mindattic.unity.shared) in the manifest; see its README.md.",
+      "path": "Samples~/FrontEnd"
     }
   ]
 }

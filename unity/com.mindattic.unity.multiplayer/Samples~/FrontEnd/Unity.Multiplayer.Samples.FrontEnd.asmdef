@@ -1,0 +1,36 @@
+{
+    "name": "Unity.Multiplayer.Samples.FrontEnd",
+    "rootNamespace": "Unity.Multiplayer.Samples.FrontEnd",
+    "references": [
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.UI",
+        "MindAttic.Components.Unity",
+        "MindAttic.Components.Unity.Core",
+        "Unity.Netcode.Runtime",
+        "Unity.Collections",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MINDATTIC_COMPONENTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.mindattic.components.unity",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_COMPONENTS"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_SAMPLE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

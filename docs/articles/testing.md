@@ -47,14 +47,18 @@ create — run those only with real credentials loaded (`mp-host credentials set
 powershell -File tests/run-playmode.ps1     # PlayMode: NetcodeIntegrationTest over real Unity Transport, loopback
 powershell -File tests/run-editmode.ps1     # EditMode: editor tooling, one real Linux server build (-SkipBuild to leave it out)
 powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager, runs its PlayMode tests
+powershell -File tests/run-sample.ps1 -Sample FrontEnd   # the same for the Front End sample
 powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Linux player
 ```
 
 These need Unity 6000.4.3f1 installed locally (`tests/PlayModeHost` is the bare project both suites run
-against). PlayMode suites cover what only means something with real networking: hosting and joining over UDP
+against). The host also references MindAttic Components and Unity.Shared by `file:` path, as sibling repos of this one,
+so the optional front end compiles and its PlayMode suite (`Unity.Multiplayer.UI.Tests`) runs beside the main one;
+`tests/prepare-host.ps1`, called by both scripts, imports TextMesh Pro's Essential Resources on a clean checkout first. PlayMode suites cover what only means something with real networking: hosting and joining over UDP
 and WebSocket, reconnect taking back the same seat, a killed client's restart taking over a stale connection,
 scene flow and late joiners, every RPC direction and rate limiting, and the whole flow again under
-[simulated latency and loss](topologies.md#testing-a-bad-connection) (`LossyNetworkTests`). EditMode covers the
+[simulated latency and loss](topologies.md#testing-a-bad-connection) (`LossyNetworkTests`), and the
+[drop-in front end](front-end.md#where-it-is-tested) driven through its menus. EditMode covers the
 setup wizard, the prefab validator and the dedicated-server build — including a real Mono Linux build inside
 the suite, skipped only in CI (GameCI's editor image has no Linux Dedicated Server build-support module) and
 still run by `run-editmode.ps1` locally, per HOUSE-LAW-8 (done is verified, not asserted).
