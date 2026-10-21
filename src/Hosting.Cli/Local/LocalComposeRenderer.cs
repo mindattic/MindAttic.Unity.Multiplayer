@@ -12,7 +12,9 @@ namespace Unity.Multiplayer.Hosting.Cli.Local;
 /// <c>ghcr.io/...</c> image, since there is nothing to push to for a box that never leaves the LAN.
 /// Ports follow <see cref="CloudInitRenderer.RenderCompose"/>'s binding rule (every declared port
 /// open on every interface -- which is what makes LAN join by IP work -- except the health port,
-/// bound to localhost only). The rendezvous service is included only when the operator asked for
+/// bound to localhost only), and the saves/logs volumes mount where
+/// <see cref="CloudInitRenderer.ContainerPath"/> says, under the package Dockerfile's
+/// <c>WORKDIR</c> (UM-T51). The rendezvous service is included only when the operator asked for
 /// one (a local dedicated server reachable beyond the LAN still needs join codes); a plain listen
 /// server run for LAN-only play has no use for it.
 /// </summary>
@@ -56,8 +58,8 @@ public static class LocalComposeRenderer
         }
 
         text.Append("    volumes:\n");
-        text.Append("      - ").Append(SanitizeVolumeName(manifest)).Append("-saves:/app/").Append(manifest.Saves).Append('\n');
-        text.Append("      - ").Append(SanitizeVolumeName(manifest)).Append("-logs:/app/").Append(manifest.Logs).Append('\n');
+        text.Append("      - ").Append(SanitizeVolumeName(manifest)).Append("-saves:").Append(CloudInitRenderer.ContainerPath(manifest.Saves)).Append('\n');
+        text.Append("      - ").Append(SanitizeVolumeName(manifest)).Append("-logs:").Append(CloudInitRenderer.ContainerPath(manifest.Logs)).Append('\n');
         if (rendezvousImage is not null)
         {
             text.Append("    depends_on:\n");

@@ -42,6 +42,18 @@ public class LocalComposeRendererTests
     }
 
     [Test]
+    public void Render_mounts_saves_and_logs_under_the_package_images_workdir()
+    {
+        // UM-T51: the package's own Dockerfile sets WORKDIR /srv/game, so volumes mounted under
+        // /app/ left the game writing Saves/Logs into the throwaway container layer, lost on every
+        // 'local down/up'. The mount paths come from the same rule as the cloud compose (UM-T38).
+        string yaml = LocalComposeRenderer.Render(TestManifests.WithHealthPort(), "/pkg", Env, null);
+        Assert.That(yaml, Does.Contain("-saves:/srv/game/Saves\n"));
+        Assert.That(yaml, Does.Contain("-logs:/srv/game/Logs\n"));
+        Assert.That(yaml, Does.Not.Contain("/app/"));
+    }
+
+    [Test]
     public void Render_throws_on_a_null_manifest()
     {
         Assert.Throws<ArgumentNullException>(() => LocalComposeRenderer.Render(null!, "/pkg", Env, null));

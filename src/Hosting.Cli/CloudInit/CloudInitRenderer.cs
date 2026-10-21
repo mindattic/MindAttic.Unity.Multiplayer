@@ -220,8 +220,13 @@ public static class CloudInitRenderer
     private static string YamlQuote(string value) =>
         "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "$$") + "\"";
 
-    /// <summary>A package-relative directory's path inside the container: absolute paths as given, relative ones under <see cref="ContainerWorkDir"/>.</summary>
-    private static string ContainerPath(string directory)
+    /// <summary>
+    /// A package-relative directory's path inside the container: absolute paths as given, relative
+    /// ones under <see cref="ContainerWorkDir"/>. The one home for that rule in Hosting.Cli: both this
+    /// renderer's compose file and <see cref="Local.LocalComposeRenderer"/>'s mount their volumes
+    /// through it (UM-T38, UM-T51).
+    /// </summary>
+    public static string ContainerPath(string directory)
     {
         string dir = string.IsNullOrWhiteSpace(directory) ? "." : directory.Trim().Replace('\\', '/').TrimEnd('/');
         return dir.StartsWith("/", StringComparison.Ordinal) ? dir : ContainerWorkDir + "/" + dir;
