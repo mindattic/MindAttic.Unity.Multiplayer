@@ -10,5 +10,12 @@
   "dependencies": {
     "com.unity.netcode.gameobjects": "2.11.0",
     "com.unity.transport": "2.7.2"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Minimal",
+      "description": "The 10-minute start: host, join by IP or join by code from a small menu, and squares moved by the server through one [ToServer] call, one [ToClients] call and one [Synced] field. Open Minimal.unity and press Play; README.md walks through every line.",
+      "path": "Samples~/Minimal"
+    }
+  ]
 }

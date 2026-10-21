@@ -4,3 +4,4 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("MindAttic.Unity.Multiplayer.Editor")]
 [assembly: InternalsVisibleTo("MindAttic.Unity.Multiplayer.Tests")]
+[assembly: InternalsVisibleTo("MindAttic.Unity.Multiplayer.Samples.Minimal.Tests")] // tests/MinimalSample, run against the imported sample

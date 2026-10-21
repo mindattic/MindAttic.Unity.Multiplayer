@@ -1,0 +1,25 @@
+{
+    "name": "MindAttic.Unity.Multiplayer.Samples.Minimal",
+    "rootNamespace": "MindAttic.Unity.Multiplayer.Samples.Minimal",
+    "references": [
+        "MindAttic.Unity.Multiplayer.Core",
+        "MindAttic.Unity.Multiplayer",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_SAMPLE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

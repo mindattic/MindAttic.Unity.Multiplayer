@@ -2,3 +2,6 @@
 bin/
 obj/
 TestResults/
+
+# Minimal sample test host, built by tests/run-sample.ps1
+tests/SampleHost/

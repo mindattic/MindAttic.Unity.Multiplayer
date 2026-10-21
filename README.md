@@ -26,16 +26,25 @@ with the project's prefabs that have a NetworkObject. You can run it again; it a
 **MindAttic > Multiplayer > Validate Prefabs** checks every network prefab under Assets. Each needs a NetworkObject on
 its root and a prefab list that registers it, and no `NetEntity` on it may be generic or derive from a generic class.
 
+## Try the Minimal sample
+In **Window > Package Manager**, select MindAttic Multiplayer, open **Samples** and import **Minimal**. Open its
+`Minimal.unity`, press Play and click **Host**; a second copy (Multiplayer Play Mode or a build) clicks **Join by IP**
+or **Join by code**. Each player's square is moved by the server through one `[ToServer]` call, one `[ToClients]` call
+and one `[Synced]` field. The sample's
+[README](unity/com.mindattic.unity.multiplayer/Samples~/Minimal/README.md) is the 10-minute walkthrough of every line.
+
 ## Layout
 | Path | What |
 |---|---|
 | `unity/com.mindattic.unity.multiplayer/` | The Unity package (`package.json`, Runtime, Editor, Tests); `Runtime/Generators/` holds the built generator DLL |
+| `unity/com.mindattic.unity.multiplayer/Samples~/Minimal/` | The Minimal sample Package Manager imports (scene, player prefab, menu, line-by-line README) |
 | `src/Generators/` | The source generator, analyzers and suppressor (netstandard2.0, Roslyn 4.3.1) |
 | `server/Rendezvous/` | The rendezvous service (ASP.NET Core .NET 10 minimal API + Dockerfile): join code to a dedicated server's IP:port |
 | `tests/Rendezvous.Tests/` | NUnit tests that host the service in-process with `WebApplicationFactory` |
 | `tests/Generators.Tests/` | Snapshot and diagnostic tests for the generator |
 | `tests/Core.Tests/` | NUnit tests for the engine-free Core, compiled straight from `Runtime/Core` |
 | `tests/Core.Build/` | Compiles `Runtime/Core` as netstandard2.1 / C# 9, the way Unity does |
+| `tests/MinimalSample/` | The batch-mode importer and PlayMode tests `run-sample.ps1` runs against the imported Minimal sample |
 | `tests/PlayModeHost/` | A bare Unity 6000.4.3f1 project that lists the package in `testables`, for the PlayMode and EditMode suites |
 | `docs/` | BIBLE, RFCs, user stories |
 
@@ -97,6 +106,7 @@ dotnet test tests/Rendezvous.Tests
 dotnet test tests/Generators.Tests          # UPDATE_SNAPSHOTS=1 rewrites Snapshots/ after an intended change
 powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1 batch mode
 powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
+powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager and runs its PlayMode tests (-Author rebuilds its scene and prefabs)
 ```
 
 After changing `src/Generators`, run `dotnet build src/Generators -c Release`. It copies the DLL into
