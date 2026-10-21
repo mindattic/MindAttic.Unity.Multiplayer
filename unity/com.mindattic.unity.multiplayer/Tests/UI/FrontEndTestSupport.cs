@@ -40,19 +40,6 @@ namespace Unity.Multiplayer.UI.Tests
 
     internal static class FrontEndTestSupport
     {
-        /// <summary>
-        /// A UDP port nothing is bound to right now (the OS picks it), so these suites never collide with each other or with
-        /// another Unity run on the same machine.
-        /// </summary>
-        public static ushort FreeUdpPort()
-        {
-            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
-            {
-                socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-                return (ushort)((IPEndPoint)socket.LocalEndPoint).Port;
-            }
-        }
-
         /// <summary>The visible button labelled <paramref name="label"/> under <paramref name="root"/>, clicked as a player would.</summary>
         public static void Click(Component root, string label)
         {

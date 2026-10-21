@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
+using Unity.Multiplayer.Testing;
 using Unity.Netcode.TestHelpers.Runtime;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -16,10 +17,8 @@ namespace Unity.Multiplayer.Tests
     /// avatar's plumbing is the source generator's output (UM-T11), which replaced UM-T10's hand-written stand-in with
     /// these tests unchanged.
     /// </summary>
-    public class EntityRpcTests : NetcodeIntegrationTest
+    public class EntityRpcTests : NetSessionTest
     {
-        private const ushort Port = 47861;
-
         private NetSession _host;
         private NetSession _a;
         private NetSession _b;
@@ -31,20 +30,21 @@ namespace Unity.Multiplayer.Tests
         private TestAvatar _onA;
         private TestAvatar _onB;
 
-        public EntityRpcTests() : base(HostOrServer.Host)
+        public EntityRpcTests() : base(Topology.Host, clients: 2)
         {
         }
 
-        protected override int NumberOfClients => 2;
+        protected override string GameVersion => "1";
 
-        protected override bool CanStartServerAndClients() => false;
-
-        protected override void OnServerAndClientsCreated()
+        protected override void OnSessionsCreated()
         {
-            NetSessionTestSupport.PrepareManagers(m_NetworkManagers);
-            _host = new NetSession(m_ServerNetworkManager) { ProtocolHash = new ProtocolHash(0x10), Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White) };
-            _a = new NetSession(m_ClientNetworkManagers[0]) { ProtocolHash = new ProtocolHash(0x10), Identity = new PlayerIdentity("ann-token", "Ann", PlayerColor.White) };
-            _b = new NetSession(m_ClientNetworkManagers[1]) { ProtocolHash = new ProtocolHash(0x10), Identity = new PlayerIdentity("bob-token", "Bob", PlayerColor.White) };
+            _host = Server;
+            _a = Clients[0];
+            _b = Clients[1];
+            _host.ProtocolHash = _a.ProtocolHash = _b.ProtocolHash = new ProtocolHash(0x10);
+            _host.Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White);
+            _a.Identity = new PlayerIdentity("ann-token", "Ann", PlayerColor.White);
+            _b.Identity = new PlayerIdentity("bob-token", "Bob", PlayerColor.White);
             _host.RpcRejected += r => _hostRejections.Add(r);
             _a.RpcRejected += r => _aRejections.Add(r);
 
@@ -58,39 +58,21 @@ namespace Unity.Multiplayer.Tests
             Assert.That(_b.Prefabs.Register(_prefab), Is.True);
             Assert.That(_host.Prefabs.Register(_prefab), Is.False, "registering twice is harmless");
             Assert.That(_host.Prefabs.Contains(_prefab), Is.True);
-
-            base.OnServerAndClientsCreated();
         }
 
-        protected override IEnumerator OnTearDown()
+        protected override IEnumerator OnSessionsTearDown()
         {
-            _a?.Dispose();
-            _b?.Dispose();
-            _host?.Dispose();
             _a = _b = _host = null;
             _hostRejections.Clear();
             _aRejections.Clear();
             yield return null;
         }
 
-        private static NetConfig Config()
-        {
-            return new NetConfig { Port = Port, GameVersion = "1" };
-        }
-
-        private IEnumerator Join(NetSession client)
-        {
-            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config()), Is.True, "JoinByAddress");
-            yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Connected);
-            AssertOnTimeout("the client never connected (" + client.State + ", " + client.LastDisconnect + ")");
-        }
-
         /// <summary>Host up, Ann and (unless told otherwise) Bob joined, one avatar owned by Ann seen everywhere.</summary>
         private IEnumerator StartWithAvatar(bool joinBob = true)
         {
             Assert.That(_host.StartHost(Config()), Is.True, "StartHost");
-            yield return WaitForConditionOrTimeOut(() => _host.State == SessionState.Running);
-            AssertOnTimeout("the host never reached Running");
+            yield return WaitUntil(() => _host.State == SessionState.Running, "the host never reached Running");
             yield return Join(_a);
             if (joinBob)
             {
@@ -100,8 +82,7 @@ namespace Unity.Multiplayer.Tests
             GameObject spawned = SpawnObject(_prefab, m_ClientNetworkManagers[0]);
             _onHost = spawned.GetComponent<TestAvatar>();
             ulong id = _onHost.NetworkObjectId;
-            yield return WaitForConditionOrTimeOut(() => SeenBy(m_ClientNetworkManagers[0], id) && (!joinBob || SeenBy(m_ClientNetworkManagers[1], id)));
-            AssertOnTimeout("the clients never saw the avatar");
+            yield return WaitUntil(() => SeenBy(m_ClientNetworkManagers[0], id) && (!joinBob || SeenBy(m_ClientNetworkManagers[1], id)), "the clients never saw the avatar");
             _onA = Copy(m_ClientNetworkManagers[0], id);
             _onB = joinBob ? Copy(m_ClientNetworkManagers[1], id) : null;
             Assert.That(_onA.IsOwner, Is.True, "Ann owns the avatar");
@@ -138,8 +119,7 @@ namespace Unity.Multiplayer.Tests
 
             _onA.Move(new Vector2(3, 4));
 
-            yield return WaitForConditionOrTimeOut(() => _onHost.Moves.Count == 1);
-            AssertOnTimeout("Move never reached the server");
+            yield return WaitUntil(() => _onHost.Moves.Count == 1, "Move never reached the server");
             NetSender sender = _onHost.Moves[0].Value;
             Assert.That(_onHost.Moves[0].Key, Is.EqualTo(new Vector2(3, 4)));
             Assert.That(sender.ClientId, Is.EqualTo(_a.LocalClientId));
@@ -162,8 +142,7 @@ namespace Unity.Multiplayer.Tests
 
             _onB.Move(new Vector2(9, 9));
 
-            yield return WaitForConditionOrTimeOut(() => _hostRejections.Count == 1);
-            AssertOnTimeout("the server never refused Bob's Move");
+            yield return WaitUntil(() => _hostRejections.Count == 1, "the server never refused Bob's Move");
             Assert.That(_hostRejections[0].Verdict, Is.EqualTo(RpcVerdict.NotOwner));
             Assert.That(_hostRejections[0].SenderClientId, Is.EqualTo(_b.LocalClientId));
             Assert.That(_hostRejections[0].Rpc, Does.EndWith("TestAvatar.Move"));
@@ -171,8 +150,7 @@ namespace Unity.Multiplayer.Tests
             Assert.That(_onHost.Moves, Is.Empty, "a refused call's handler never runs");
 
             _onA.Move(new Vector2(1, 1));
-            yield return WaitForConditionOrTimeOut(() => _onHost.Moves.Count == 1);
-            AssertOnTimeout("the owner's Move was not accepted after a non-owner's was refused");
+            yield return WaitUntil(() => _onHost.Moves.Count == 1, "the owner's Move was not accepted after a non-owner's was refused");
         }
 
         [UnityTest]
@@ -183,8 +161,7 @@ namespace Unity.Multiplayer.Tests
             _onB.Vote(2);
             _onHost.Vote(1);
 
-            yield return WaitForConditionOrTimeOut(() => _onHost.Votes.Count == 2);
-            AssertOnTimeout("both votes should reach the server (got " + _onHost.Votes.Count + ")");
+            yield return WaitUntil(() => _onHost.Votes.Count == 2, () => "both votes should reach the server (got " + _onHost.Votes.Count + ")");
             NetSender bob = _onHost.Votes.Single(v => v.Key == 2).Value;
             NetSender host = _onHost.Votes.Single(v => v.Key == 1).Value;
             Assert.That(bob.ClientId, Is.EqualTo(_b.LocalClientId));
@@ -232,14 +209,12 @@ namespace Unity.Multiplayer.Tests
                 _onB.Ping(i);
             }
 
-            yield return WaitForConditionOrTimeOut(() => _hostRejections.Count > 0);
-            AssertOnTimeout("Bob was never throttled");
+            yield return WaitUntil(() => _hostRejections.Count > 0, "Bob was never throttled");
             Assert.That(_host.Gate.Limiter.RejectedCount(_b.LocalClientId), Is.GreaterThan(0));
             ulong bobId = _b.LocalClientId;
 
             _b.Leave();
-            yield return WaitForConditionOrTimeOut(() => _host.ConnectedClientIds.Count == 2);
-            AssertOnTimeout("the host never saw Bob leave");
+            yield return WaitUntil(() => _host.ConnectedClientIds.Count == 2, "the host never saw Bob leave");
             Assert.That(_host.Gate.Limiter.RejectedCount(bobId), Is.EqualTo(0), "a departed sender's buckets are dropped");
         }
 
@@ -255,8 +230,7 @@ namespace Unity.Multiplayer.Tests
 
             _onHost.Whistle(red);
 
-            yield return WaitForConditionOrTimeOut(() => _onHost.Whistles.Count == 1 && _onA.Whistles.Count == 1 && _onB.Whistles.Count == 1);
-            AssertOnTimeout("Whistle did not reach every peer (host " + _onHost.Whistles.Count + ", Ann " + _onA.Whistles.Count + ", Bob " + _onB.Whistles.Count + ")");
+            yield return WaitUntil(() => _onHost.Whistles.Count == 1 && _onA.Whistles.Count == 1 && _onB.Whistles.Count == 1, () => "Whistle did not reach every peer (host " + _onHost.Whistles.Count + ", Ann " + _onA.Whistles.Count + ", Bob " + _onB.Whistles.Count + ")");
             Assert.That(_onB.Whistles[0], Is.EqualTo(red));
             yield return Settle();
             Assert.That(_onA.Whistles.Count, Is.EqualTo(1), "exactly once each");
@@ -286,8 +260,7 @@ namespace Unity.Multiplayer.Tests
 
             _onHost.Hint(42);
 
-            yield return WaitForConditionOrTimeOut(() => _onA.Hints.Count == 1);
-            AssertOnTimeout("Hint never reached the owner");
+            yield return WaitUntil(() => _onA.Hints.Count == 1, "Hint never reached the owner");
             Assert.That(_onA.Hints[0], Is.EqualTo(42));
             yield return Settle();
             Assert.That(_onB.Hints, Is.Empty, "Bob does not own it");
@@ -302,8 +275,7 @@ namespace Unity.Multiplayer.Tests
             _onHost.Tell(_b.LocalClientId, 7);
             _onHost.Tell(NetSender.ServerClientId, 8);
 
-            yield return WaitForConditionOrTimeOut(() => _onB.Tells.Count == 1 && _onHost.Tells.Count == 1);
-            AssertOnTimeout("Tell did not reach its targets (Bob " + _onB.Tells.Count + ", host " + _onHost.Tells.Count + ")");
+            yield return WaitUntil(() => _onB.Tells.Count == 1 && _onHost.Tells.Count == 1, () => "Tell did not reach its targets (Bob " + _onB.Tells.Count + ", host " + _onHost.Tells.Count + ")");
             Assert.That(_onB.Tells[0], Is.EqualTo(7));
             Assert.That(_onHost.Tells[0], Is.EqualTo(8), "the host's own player can be a target");
             yield return Settle();
@@ -317,8 +289,7 @@ namespace Unity.Multiplayer.Tests
 
             _onB.Vote(3); // OnVote answers with Tell(sender, 103)
 
-            yield return WaitForConditionOrTimeOut(() => _onB.Tells.Count == 1);
-            AssertOnTimeout("the server's answer never reached Bob");
+            yield return WaitUntil(() => _onB.Tells.Count == 1, "the server's answer never reached Bob");
             Assert.That(_onB.Tells[0], Is.EqualTo(103));
             yield return Settle();
             Assert.That(_onA.Tells, Is.Empty);
@@ -335,10 +306,8 @@ namespace Unity.Multiplayer.Tests
 
             _onHost.Mass = 2.5f;
 
-            yield return WaitForConditionOrTimeOut(() => Mathf.Approximately(_onA.Mass, 2.5f) && Mathf.Approximately(_onB.Mass, 2.5f));
-            AssertOnTimeout("Mass never replicated (Ann " + _onA.Mass + ", Bob " + _onB.Mass + ")");
-            yield return WaitForConditionOrTimeOut(() => _onA.MassChanges.Count == 1 && _onB.MassChanges.Count == 1);
-            AssertOnTimeout("OnChanged did not run on the clients");
+            yield return WaitUntil(() => Mathf.Approximately(_onA.Mass, 2.5f) && Mathf.Approximately(_onB.Mass, 2.5f), () => "Mass never replicated (Ann " + _onA.Mass + ", Bob " + _onB.Mass + ")");
+            yield return WaitUntil(() => _onA.MassChanges.Count == 1 && _onB.MassChanges.Count == 1, "OnChanged did not run on the clients");
             Assert.That(_onHost.MassChanges, Is.EqualTo(new[] { new Vector2(0, 2.5f) }), "OnChanged runs on the server too");
             Assert.That(_onA.MassChanges[0], Is.EqualTo(new Vector2(0, 2.5f)), "previous and current value");
         }
@@ -348,8 +317,7 @@ namespace Unity.Multiplayer.Tests
         {
             yield return StartWithAvatar();
             _onHost.Score = 3;
-            yield return WaitForConditionOrTimeOut(() => _onA.Score == 3);
-            AssertOnTimeout("Score never replicated");
+            yield return WaitUntil(() => _onA.Score == 3, "Score never replicated");
 
             Assert.Throws<System.InvalidOperationException>(() => _onA.Score = 99);
 
@@ -367,8 +335,7 @@ namespace Unity.Multiplayer.Tests
 
             yield return Join(_b);
             ulong id = _onHost.NetworkObjectId;
-            yield return WaitForConditionOrTimeOut(() => SeenBy(m_ClientNetworkManagers[1], id));
-            AssertOnTimeout("Bob never saw the avatar");
+            yield return WaitUntil(() => SeenBy(m_ClientNetworkManagers[1], id), "Bob never saw the avatar");
             TestAvatar onB = Copy(m_ClientNetworkManagers[1], id);
 
             Assert.That(onB.Score, Is.EqualTo(42));
@@ -381,8 +348,7 @@ namespace Unity.Multiplayer.Tests
         {
             yield return StartWithAvatar();
             _onHost.NetworkObject.Despawn(false);
-            yield return WaitForConditionOrTimeOut(() => _onA.Despawns == 1 && _onB.Despawns == 1);
-            AssertOnTimeout("OnDespawned did not run on the clients");
+            yield return WaitUntil(() => _onA.Despawns == 1 && _onB.Despawns == 1, "OnDespawned did not run on the clients");
             Assert.That(_onHost.Despawns, Is.EqualTo(1));
             Object.Destroy(_onHost.gameObject);
         }

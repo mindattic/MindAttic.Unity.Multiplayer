@@ -36,7 +36,8 @@ MindAttic.Unity.Multiplayer          Runtime        the NGO adapter: the only ru
         ▲
 MindAttic.Unity.Multiplayer.UI       Runtime/UI     optional drop-in front end (only with MindAttic Components); NetBootstrap/NetSession only, no Unity.Netcode
 MindAttic.Unity.Multiplayer.Editor   Editor         editor tooling
-MindAttic.Unity.Multiplayer.Tests    Tests/Runtime  PlayMode NetcodeIntegrationTest suites
+MindAttic.Unity.Multiplayer.Testing  Testing        the test kit games reference from their PlayMode tests (Editor and test builds only)
+MindAttic.Unity.Multiplayer.Tests    Tests/Runtime  PlayMode suites, on the test kit's NetSessionTest
 MindAttic.Unity.Multiplayer.UI.Tests Tests/UI       PlayMode suites for the front end
 MindAttic.Unity.Multiplayer.Editor.Tests  Tests/Editor  EditMode suites for the editor tooling
 game code                            (consumer)     talks to NetSession / NetEntity / attributes only
@@ -53,7 +54,7 @@ Project-specific laws:
 Every piece of shared game state is written only on the server. Clients send intent (`[ToServer]` calls); the server validates it, applies it and replicates the result (`[Synced]` fields, `[ToClients]` / `[ToOwner]` / `[ToClient]` calls). A client never asserts an authoritative value, and the generator and analyzers reject client writes to `[Synced]` state.
 
 ### UM-LAW-2 — Nothing above the NGO adapter imports Unity.Netcode {#UM-LAW-2}
-`Unity.Netcode` (and `Unity.Networking.Transport`) are referenced only by the adapter assembly `MindAttic.Unity.Multiplayer` and its Editor and Tests companions. `MindAttic.Unity.Multiplayer.Core` is engine-free (`noEngineReferences`), and game code sees only MindAttic types (`NetSession`, `NetEntity`, `NetSender`, the attributes). Generated code is the one sanctioned exception: it is emitted into the game's assembly by the generator and is not hand-written there. Swapping the backend means rewriting the adapter, nothing else.
+`Unity.Netcode` (and `Unity.Networking.Transport`) are referenced only by the adapter assembly `MindAttic.Unity.Multiplayer` and its Editor, Tests and Testing (test kit) companions. `MindAttic.Unity.Multiplayer.Core` is engine-free (`noEngineReferences`), and game code sees only MindAttic types (`NetSession`, `NetEntity`, `NetSender`, the attributes). Generated code is the one sanctioned exception: it is emitted into the game's assembly by the generator and is not hand-written there. Swapping the backend means rewriting the adapter, nothing else.
 
 ### UM-LAW-3 — Generator output is C# 9 {#UM-LAW-3}
 The source generator emits only C# 9 constructs (extended partial methods, no file-scoped namespaces, no record structs, no `required`, no raw string literals), so its output compiles on every Unity 6 compiler. It targets netstandard2.0 against Microsoft.CodeAnalysis.CSharp 4.3.x.

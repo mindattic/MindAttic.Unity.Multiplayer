@@ -5,5 +5,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unity.Multiplayer.Editor")]
 [assembly: InternalsVisibleTo("Unity.Multiplayer.Tests")]
 [assembly: InternalsVisibleTo("Unity.Multiplayer.UI.Tests")] // the front end's PlayMode suite drives NetSessions over harness managers
+[assembly: InternalsVisibleTo("Unity.Multiplayer.Testing")] // the test kit: TestSessions.Create wraps a harness NetworkManager
 [assembly: InternalsVisibleTo("Unity.Multiplayer.Samples.Minimal.Tests")] // tests/MinimalSample, run against the imported sample
 [assembly: InternalsVisibleTo("Unity.Multiplayer.Samples.FrontEnd.Tests")] // tests/FrontEndSample, likewise

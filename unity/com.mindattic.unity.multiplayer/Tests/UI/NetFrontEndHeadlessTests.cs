@@ -2,6 +2,7 @@ using System.Collections;
 using MindAttic.Components.Unity;
 using NUnit.Framework;
 using Unity.Multiplayer.Core;
+using Unity.Multiplayer.Testing;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -56,7 +57,7 @@ namespace Unity.Multiplayer.UI.Tests
 
             manager.NetworkConfig.EnableSceneManagement = false;
             NetBootstrap bootstrap = _go.AddComponent<NetBootstrap>();
-            bootstrap.Configure(new NetConfig { Topology = Topology.Host, Port = FreeUdpPort(), GameVersion = "test", JoinCodes = JoinCodeProvider.None });
+            bootstrap.Configure(new NetConfig { Topology = Topology.Host, Port = FreePort.Udp(), GameVersion = "test", JoinCodes = JoinCodeProvider.None });
             NetFrontEnd frontEnd = _go.AddComponent<NetFrontEnd>();
             int gameStarts = 0;
             frontEnd.GameStarted += () => gameStarts++;

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MindAttic.Components.Unity;
 using NUnit.Framework;
 using Unity.Multiplayer.Core;
+using Unity.Multiplayer.Testing;
 using Unity.Multiplayer.Tests;
 using Unity.Netcode;
 using Unity.Netcode.TestHelpers.Runtime;
@@ -53,16 +54,21 @@ namespace Unity.Multiplayer.UI.Tests
 
         protected override void OnServerAndClientsCreated()
         {
-            NetSessionTestSupport.PrepareManagers(m_NetworkManagers);
-            _port = FreeUdpPort();
+            foreach (NetworkManager manager in m_NetworkManagers)
+            {
+                manager.NetworkConfig.EnableSceneManagement = false; // the sessions start NGO, so no scene sync to connect
+            }
+
+            _port = FreePort.Udp();
             _hostVersion = "test";
             _clientVersion = "test";
             _codes = false;
             _clientLeft.Clear();
             _clientReconnects = 0;
             _hostGameStarts = 0;
-            _hostSession = new NetSession(m_ServerNetworkManager) { EnvironmentReader = _ => null };
-            _clientSession = new NetSession(m_ClientNetworkManagers[0]);
+            _hostSession = TestSessions.Create(m_ServerNetworkManager);
+            _hostSession.EnvironmentReader = _ => null;
+            _clientSession = TestSessions.Create(m_ClientNetworkManagers[0]);
             NetFrontEnd.MenusOverride = true;
             base.OnServerAndClientsCreated();
         }
@@ -98,7 +104,7 @@ namespace Unity.Multiplayer.UI.Tests
             {
                 config.JoinCodes = JoinCodeProvider.Rendezvous;
                 config.RendezvousUrl = _rendezvous.Url;
-                config.RendezvousSecret = InProcessRendezvousServer.Secret;
+                config.RendezvousSecret = _rendezvous.Secret;
             }
 
             return config;

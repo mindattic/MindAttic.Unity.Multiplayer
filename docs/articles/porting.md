@@ -120,8 +120,8 @@ old code had can be deleted in favor of the package's own (see
 
 ## 8. Test as you go, then package for hosting
 
-Write a small `NetcodeIntegrationTest` PlayMode suite against the game's own entities the same way
-`tests/MinimalSample/Tests` does against `MinimalPlayer` — see [Testing](testing.md#adding-your-own-tests). Once
+Write a small PlayMode suite against the game's own entities on the package's test kit (`NetSessionTest`), the
+same way `tests/MinimalSample/Tests` does against `MinimalPlayer` — see [Testing](testing.md#the-test-kit). Once
 the game plays correctly in a listen server, **MindAttic ▸ Multiplayer ▸ Build Dedicated Server (Linux)** and
 **Build Server Package** get it onto a real host; see [Topologies](topologies.md) and [Hosting](hosting.md).
 

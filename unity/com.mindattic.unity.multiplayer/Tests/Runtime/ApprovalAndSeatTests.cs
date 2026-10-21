@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
+using Unity.Multiplayer.Testing;
 using Unity.Netcode.TestHelpers.Runtime;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -16,9 +17,8 @@ namespace Unity.Multiplayer.Tests
     /// and a player who drops (or whose old process died unnoticed) gets the same seat and the same player
     /// object back when it reconnects within the grace window.
     /// </summary>
-    public class ApprovalAndSeatTests : NetcodeIntegrationTest
+    public class ApprovalAndSeatTests : NetSessionTest
     {
-        private const ushort Port = 47831;
         private const string Version = "1.0";
 
         private NetSession _host;
@@ -26,34 +26,29 @@ namespace Unity.Multiplayer.Tests
         private NetSession _b;
         private SeatProbe _seats;
 
-        public ApprovalAndSeatTests() : base(HostOrServer.Host)
+        public ApprovalAndSeatTests() : base(Topology.Host, clients: 2)
         {
         }
 
-        protected override int NumberOfClients => 2;
-
-        protected override bool CanStartServerAndClients() => false;
-
-        protected override void OnServerAndClientsCreated()
+        protected override void OnSessionsCreated()
         {
-            NetSessionTestSupport.PrepareManagers(m_NetworkManagers);
-            _host = new NetSession(m_ServerNetworkManager) { ProtocolHash = new ProtocolHash(0x1111), Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White) };
-            _a = new NetSession(m_ClientNetworkManagers[0]) { ProtocolHash = new ProtocolHash(0x1111), Identity = new PlayerIdentity("player-a", "Ann", new PlayerColor(200, 10, 10)) };
-            _b = new NetSession(m_ClientNetworkManagers[1]) { ProtocolHash = new ProtocolHash(0x1111), Identity = new PlayerIdentity("player-b", "Bob", new PlayerColor(10, 10, 200)) };
+            _host = Server;
+            _a = Clients[0];
+            _b = Clients[1];
+            _host.ProtocolHash = _a.ProtocolHash = _b.ProtocolHash = new ProtocolHash(0x1111);
+            _host.Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White);
+            _a.Identity = new PlayerIdentity("player-a", "Ann", new PlayerColor(200, 10, 10));
+            _b.Identity = new PlayerIdentity("player-b", "Bob", new PlayerColor(10, 10, 200));
             _seats = new SeatProbe(_host);
-            base.OnServerAndClientsCreated();
         }
 
-        protected override IEnumerator OnTearDown()
+        protected override IEnumerator OnSessionsTearDown()
         {
-            _a?.Dispose();
-            _b?.Dispose();
-            _host?.Dispose();
             _a = _b = _host = null;
             yield return null;
         }
 
-        private static NetConfig Config(string version = Version, int maxPlayers = 4, double grace = 60, string password = null)
+        private NetConfig Config(string version = Version, int maxPlayers = 4, double grace = 60, string password = null)
         {
             return new NetConfig { Port = Port, GameVersion = version, MaxPlayers = maxPlayers, ReconnectGraceSeconds = grace, Password = password };
         }
@@ -61,8 +56,7 @@ namespace Unity.Multiplayer.Tests
         private IEnumerator StartHost(int maxPlayers = 4, double grace = 60, string password = null)
         {
             Assert.That(_host.StartHost(Config(maxPlayers: maxPlayers, grace: grace, password: password)), Is.True, "StartHost");
-            yield return WaitForConditionOrTimeOut(() => _host.State == SessionState.Running);
-            AssertOnTimeout("the host never reached Running (state " + _host.State + ")");
+            yield return WaitUntil(() => _host.State == SessionState.Running, () => "the host never reached Running (state " + _host.State + ")");
             Assert.That(_host.Seats.Count, Is.EqualTo(1), "the host's own player takes a seat");
             Assert.That(_host.Seats[0].PlayerToken, Is.EqualTo("host-token"));
         }
@@ -70,15 +64,13 @@ namespace Unity.Multiplayer.Tests
         private IEnumerator Join(NetSession client, string version = Version, string password = null)
         {
             Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version, password: password)), Is.True, "JoinByAddress");
-            yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Connected);
-            AssertOnTimeout("the client never connected (state " + client.State + ", " + client.LastDisconnect + ")");
+            yield return WaitUntil(() => client.State == SessionState.Connected, () => "the client never connected (state " + client.State + ", " + client.LastDisconnect + ")");
         }
 
         private IEnumerator ExpectRejected(NetSession client, ApprovalRejection rejection, string version = Version, string password = null)
         {
             Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config(version, password: password)), Is.True, "JoinByAddress");
-            yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Disconnected);
-            AssertOnTimeout("the client was never turned away (state " + client.State + ")");
+            yield return WaitUntil(() => client.State == SessionState.Disconnected, () => "the client was never turned away (state " + client.State + ")");
             Assert.That(client.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Rejected), client.LastDisconnect.ToString());
             Assert.That(client.LastDisconnect.Rejection, Is.EqualTo(rejection), client.LastDisconnect.ToString());
             Assert.That(client.LastDisconnect.Message, Does.Not.Contain("|"), "the client shows the sentence, not the wire format");
@@ -152,8 +144,7 @@ namespace Unity.Multiplayer.Tests
 
             // The player drops.
             _a.Leave();
-            yield return WaitForConditionOrTimeOut(() => _seats.Held.Count == 1 && _a.CanStart);
-            AssertOnTimeout("the host never held the dropped player's seat");
+            yield return WaitUntil(() => _seats.Held.Count == 1 && _a.CanStart, "the host never held the dropped player's seat");
             Assert.That(_seats.Held[0].Index, Is.EqualTo(seat.Index));
             Assert.That(_seats.Disconnects.Single().ClientId, Is.EqualTo(firstId));
             Assert.That(_seats.Disconnects.Single().Why.Reason, Is.EqualTo(DisconnectReason.ClientLeft), _seats.Disconnects.Single().ToString());
@@ -165,8 +156,7 @@ namespace Unity.Multiplayer.Tests
             yield return Join(_a);
             ulong secondId = _a.LocalClientId;
             Assert.That(secondId, Is.Not.EqualTo(firstId), "a new connection");
-            yield return WaitForConditionOrTimeOut(() => _seats.Reclaimed.Count == 1);
-            AssertOnTimeout("the host never gave the seat back");
+            yield return WaitUntil(() => _seats.Reclaimed.Count == 1, "the host never gave the seat back");
             Assert.That(_seats.Reclaimed[0].Index, Is.EqualTo(seat.Index), "same seat");
             Assert.That(_host.TryGetSeat(secondId, out Seat back), Is.True);
             Assert.That(back.Index, Is.EqualTo(seat.Index));
@@ -181,8 +171,7 @@ namespace Unity.Multiplayer.Tests
 
             // The client sees it as its own player object.
             NetworkManager client = m_ClientNetworkManagers[0];
-            yield return WaitForConditionOrTimeOut(() => client.SpawnManager.SpawnedObjects.ContainsKey(serverObject.NetworkObjectId));
-            AssertOnTimeout("the client never saw its player object again");
+            yield return WaitUntil(() => client.SpawnManager.SpawnedObjects.ContainsKey(serverObject.NetworkObjectId), "the client never saw its player object again");
             NetworkObject clientView = client.SpawnManager.SpawnedObjects[serverObject.NetworkObjectId];
             Assert.That(clientView.IsOwner && clientView.IsPlayerObject, Is.True);
         }
@@ -203,8 +192,7 @@ namespace Unity.Multiplayer.Tests
             yield return Join(_b);
             ulong newId = _b.LocalClientId;
 
-            yield return WaitForConditionOrTimeOut(() => _seats.Reclaimed.Count == 1 && _a.State == SessionState.Disconnected);
-            AssertOnTimeout("the new connection never took the seat over (old " + _a.State + ")");
+            yield return WaitUntil(() => _seats.Reclaimed.Count == 1 && _a.State == SessionState.Disconnected, () => "the new connection never took the seat over (old " + _a.State + ")");
             Assert.That(_seats.Reclaimed[0].Index, Is.EqualTo(seat.Index), "same seat");
             Assert.That(_seats.Reclaimed[0].ClientId, Is.EqualTo(newId));
             Assert.That(_host.GetSeatPlayerObject(seat.Index), Is.SameAs(playerObject), "same player object");
@@ -214,8 +202,7 @@ namespace Unity.Multiplayer.Tests
             // The stale connection is told why, and its end does not touch the seat.
             Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked), _a.LastDisconnect.ToString());
             Assert.That(_a.LastDisconnect.Message, Is.EqualTo(NetSession.ReplacedMessage));
-            yield return WaitForConditionOrTimeOut(() => _seats.Disconnects.Any(d => d.ClientId == deadId));
-            AssertOnTimeout("the host never reported the stale connection");
+            yield return WaitUntil(() => _seats.Disconnects.Any(d => d.ClientId == deadId), "the host never reported the stale connection");
             PlayerDisconnect stale = _seats.Disconnects.Single(d => d.ClientId == deadId);
             Assert.That(stale.Why.Reason, Is.EqualTo(DisconnectReason.Kicked));
             Assert.That(stale.Seat, Is.Null, "the seat had already moved to the new connection");
@@ -244,8 +231,7 @@ namespace Unity.Multiplayer.Tests
 
             yield return WaitForConditionOrTimeOut(() => _a.CanStart);
             yield return Join(_a);
-            yield return WaitForConditionOrTimeOut(() => _seats.Taken.Count == 3);
-            AssertOnTimeout("the returning player was not seated as new");
+            yield return WaitUntil(() => _seats.Taken.Count == 3, "the returning player was not seated as new");
             Assert.That(_seats.Reclaimed, Is.Empty, "too late to reclaim");
             Assert.That(_host.GetSeatPlayerObject(seat.Index), Is.Not.Null.And.Not.SameAs(playerObject), "a fresh player object");
         }
@@ -259,14 +245,12 @@ namespace Unity.Multiplayer.Tests
 
             Assert.That(_host.Kick(id, "Be nice."), Is.True);
 
-            yield return WaitForConditionOrTimeOut(() => _a.State == SessionState.Disconnected);
-            AssertOnTimeout("the kicked client never left");
+            yield return WaitUntil(() => _a.State == SessionState.Disconnected, "the kicked client never left");
             Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked));
             Assert.That(_a.LastDisconnect.Message, Is.EqualTo("Be nice."));
             Assert.That(_seats.Released.Single().PlayerToken, Is.EqualTo("player-a"));
             Assert.That(_host.Seats.Count, Is.EqualTo(1), "no grace for a kick");
-            yield return WaitForConditionOrTimeOut(() => _seats.Disconnects.Count == 1);
-            AssertOnTimeout("the host never reported the kick");
+            yield return WaitUntil(() => _seats.Disconnects.Count == 1, "the host never reported the kick");
             Assert.That(_seats.Disconnects[0].Why.Reason, Is.EqualTo(DisconnectReason.Kicked));
             Assert.That(_host.Kick(id), Is.False, "already gone");
         }

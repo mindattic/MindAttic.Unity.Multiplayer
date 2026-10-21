@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
+using Unity.Multiplayer.Testing;
 using Unity.Netcode.TestHelpers.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,24 +18,22 @@ namespace Unity.Multiplayer.Tests
     /// integration-test scene handler, registered by hand because NetSession, not the harness, starts the managers.
     /// </summary>
     /// <remarks>Needs <see cref="ArenaScene"/> in the build's scene list (tests/PlayModeHost has it); skipped otherwise.</remarks>
-    public class SceneFlowTests : NetcodeIntegrationTest
+    public class SceneFlowTests : NetSessionTest
     {
         /// <summary>A scene in tests/PlayModeHost's build list holding one GameObject, <c>NetFlowArenaMarker</c>.</summary>
         public const string ArenaScene = "NetFlowArena";
-
-        private const ushort Port = 47881;
 
         private NetSession _host;
         private NetSession _a;
         private NetSession _b;
 
-        public SceneFlowTests() : base(HostOrServer.Host)
+        public SceneFlowTests() : base(Topology.Host, clients: 2)
         {
         }
 
-        protected override int NumberOfClients => 2;
+        protected override bool SceneManagement => true;
 
-        protected override bool CanStartServerAndClients() => false;
+        protected override string GameVersion => "1";
 
         protected override IEnumerator OnSetup()
         {
@@ -46,47 +45,32 @@ namespace Unity.Multiplayer.Tests
             yield return null;
         }
 
-        protected override void OnServerAndClientsCreated()
+        protected override void OnSessionsCreated()
         {
-            foreach (NetworkManager manager in m_NetworkManagers)
-            {
-                manager.NetworkConfig.EnableSceneManagement = true;
-            }
-
-            _host = new NetSession(m_ServerNetworkManager) { ProtocolHash = new ProtocolHash(0x20) };
-            _a = new NetSession(m_ClientNetworkManagers[0]) { ProtocolHash = new ProtocolHash(0x20) };
-            _b = new NetSession(m_ClientNetworkManagers[1]) { ProtocolHash = new ProtocolHash(0x20) };
-            base.OnServerAndClientsCreated();
+            _host = Server;
+            _a = Clients[0];
+            _b = Clients[1];
+            _host.ProtocolHash = _a.ProtocolHash = _b.ProtocolHash = new ProtocolHash(0x20);
         }
 
-        protected override IEnumerator OnTearDown()
+        protected override IEnumerator OnSessionsTearDown()
         {
-            _a?.Dispose();
-            _b?.Dispose();
-            _host?.Dispose();
             _a = _b = _host = null;
             yield return null;
-        }
-
-        private static NetConfig Config()
-        {
-            return new NetConfig { Port = Port, GameVersion = "1" };
         }
 
         private IEnumerator StartHost()
         {
             Assert.That(_host.StartHost(Config()), Is.True, "StartHost");
             NetcodeIntegrationTestHelpers.RegisterHandlers(m_ServerNetworkManager, true);
-            yield return WaitForConditionOrTimeOut(() => _host.State == SessionState.Running);
-            AssertOnTimeout("the host never reached Running");
+            yield return WaitUntil(() => _host.State == SessionState.Running, "the host never reached Running");
         }
 
         private IEnumerator Join(NetSession client, NetworkManager manager)
         {
             Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, Config()), Is.True, "JoinByAddress");
             NetcodeIntegrationTestHelpers.RegisterHandlers(manager);
-            yield return WaitForConditionOrTimeOut(() => client.State == SessionState.Connected);
-            AssertOnTimeout("the client never connected (" + client.State + ", " + client.LastDisconnect + ")");
+            yield return WaitUntil(() => client.State == SessionState.Connected, () => "the client never connected (" + client.State + ", " + client.LastDisconnect + ")");
         }
 
         private static int ArenaCopies()
@@ -130,8 +114,7 @@ namespace Unity.Multiplayer.Tests
             Assert.That(_host.Scenes.PendingScene, Is.EqualTo(ArenaScene));
             Assert.That(_host.Scenes.Load(ArenaScene, NetSceneMode.Additive), Is.EqualTo(SceneRequestResult.Busy), "one change at a time");
 
-            yield return WaitForConditionOrTimeOut(() => hostLoaded.Count == 1 && aLoaded.Count == 1);
-            AssertOnTimeout("the load never completed everywhere (host " + hostLoaded.Count + ", Ann " + aLoaded.Count + ")");
+            yield return WaitUntil(() => hostLoaded.Count == 1 && aLoaded.Count == 1, () => "the load never completed everywhere (host " + hostLoaded.Count + ", Ann " + aLoaded.Count + ")");
             SceneTransition done = hostLoaded[0];
             Assert.That(done.SceneName, Is.EqualTo(ArenaScene));
             Assert.That(done.Mode, Is.EqualTo(NetSceneMode.Additive));
@@ -145,12 +128,10 @@ namespace Unity.Multiplayer.Tests
             Assert.That(GameObject.Find("NetFlowArenaMarker"), Is.Not.Null, "the scene's contents are there");
 
             Assert.That(_host.Scenes.Unload(ArenaScene), Is.EqualTo(SceneRequestResult.Started));
-            yield return WaitForConditionOrTimeOut(() => hostUnloaded.Count == 1 && bUnloaded.Count == 1);
-            AssertOnTimeout("the unload never completed everywhere");
+            yield return WaitUntil(() => hostUnloaded.Count == 1 && bUnloaded.Count == 1, "the unload never completed everywhere");
             Assert.That(hostUnloaded[0].SceneName, Is.EqualTo(ArenaScene));
             Assert.That(_host.Scenes.IsBusy, Is.False);
-            yield return WaitForConditionOrTimeOut(() => ArenaCopies() == 0);
-            AssertOnTimeout("a copy of the scene is still loaded");
+            yield return WaitUntil(() => ArenaCopies() == 0, "a copy of the scene is still loaded");
             Assert.That(_host.Scenes.Unload(ArenaScene), Is.EqualTo(SceneRequestResult.NotLoaded));
         }
 
@@ -162,15 +143,13 @@ namespace Unity.Multiplayer.Tests
             var loaded = new List<SceneTransition>();
             _host.Scenes.Loaded += t => loaded.Add(t);
             Assert.That(_host.Scenes.Load(ArenaScene, NetSceneMode.Additive), Is.EqualTo(SceneRequestResult.Started));
-            yield return WaitForConditionOrTimeOut(() => loaded.Count == 1);
-            AssertOnTimeout("the load never completed");
+            yield return WaitUntil(() => loaded.Count == 1, "the load never completed");
 
             var synchronized = new List<ulong>();
             _host.Scenes.ClientSynchronized += id => synchronized.Add(id);
             yield return Join(_b, m_ClientNetworkManagers[1]);
 
-            yield return WaitForConditionOrTimeOut(() => synchronized.Contains(_b.LocalClientId));
-            AssertOnTimeout("Bob was never synchronised to the server's scenes");
+            yield return WaitUntil(() => synchronized.Contains(_b.LocalClientId), "Bob was never synchronised to the server's scenes");
             Assert.That(synchronized, Has.No.Member(_a.LocalClientId), "Ann was already in sync");
         }
 
@@ -199,8 +178,7 @@ namespace Unity.Multiplayer.Tests
             }
 
             Assert.That(_host.StartHost(Config()), Is.True);
-            yield return WaitForConditionOrTimeOut(() => _host.State == SessionState.Running);
-            AssertOnTimeout("the host never reached Running");
+            yield return WaitUntil(() => _host.State == SessionState.Running, "the host never reached Running");
 
             Assert.That(_host.Scenes.IsEnabled, Is.False);
             Assert.That(_host.Scenes.Load(ArenaScene), Is.EqualTo(SceneRequestResult.SceneManagementDisabled));

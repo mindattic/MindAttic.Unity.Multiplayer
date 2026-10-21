@@ -4,6 +4,7 @@
     "references": [
         "Unity.Multiplayer.Core",
         "Unity.Multiplayer",
+        "Unity.Multiplayer.Testing",
         "Unity.Multiplayer.Samples.Minimal",
         "Unity.Netcode.Runtime",
         "Unity.Netcode.Runtime.Tests",

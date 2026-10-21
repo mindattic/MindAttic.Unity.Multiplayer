@@ -6,6 +6,7 @@
         "Unity.Multiplayer",
         "Unity.Multiplayer.UI",
         "Unity.Multiplayer.Tests",
+        "Unity.Multiplayer.Testing",
         "MindAttic.Components.Unity",
         "MindAttic.Components.Unity.Core",
         "Unity.Shared",

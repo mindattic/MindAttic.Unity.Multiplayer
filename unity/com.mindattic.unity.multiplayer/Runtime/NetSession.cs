@@ -194,6 +194,12 @@ namespace Unity.Multiplayer
             get { return _prefabs; }
         }
 
+        /// <summary>The NetworkManager this session drives (the test kit reads spawned objects and the transport through it).</summary>
+        internal NetworkManager Manager
+        {
+            get { return _manager; }
+        }
+
         /// <summary>The checks generated RPC stubs run (ownership, per-sender rate); cleared with each session.</summary>
         internal RpcGate Gate
         {

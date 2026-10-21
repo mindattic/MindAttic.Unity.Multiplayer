@@ -4,7 +4,7 @@ using System.Linq;
 using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
-using Unity.Netcode.TestHelpers.Runtime;
+using Unity.Multiplayer.Testing;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
@@ -20,13 +20,8 @@ namespace Unity.Multiplayer.Tests
     /// synced fields and reconnecting to a held seat all still work: reliable traffic arrives, exactly once and in
     /// order, only later.
     /// </summary>
-    public class LossyNetworkTests : NetcodeIntegrationTest
+    public class LossyNetworkTests : NetSessionTest
     {
-        private const ushort Port = 47901;
-
-        /// <summary>Many round trips at 300+ ms with resends: give every wait far more than the harness's 8 s default.</summary>
-        private const float LossyTimeoutSeconds = 30f;
-
         private static readonly NetConditions Lossy = NetConditions.For(NetConditionsProfile.Lossy);
 
         private NetSession _host;
@@ -40,77 +35,58 @@ namespace Unity.Multiplayer.Tests
         private TestAvatar _onA;
         private TestAvatar _onB;
 
-        public LossyNetworkTests() : base(HostOrServer.Host)
+        public LossyNetworkTests() : base(Topology.Host, clients: 2)
         {
         }
 
-        protected override int NumberOfClients => 2;
+        /// <summary>Many round trips at 300+ ms with resends: give every wait far more than the usual 10 s.</summary>
+        protected override float TimeoutSeconds => 30f;
 
-        protected override bool CanStartServerAndClients() => false;
+        protected override string GameVersion => "1";
 
-        protected override void OnServerAndClientsCreated()
+        protected override void OnSessionsCreated()
         {
-            NetSessionTestSupport.PrepareManagers(m_NetworkManagers);
-            _host = new NetSession(m_ServerNetworkManager) { ProtocolHash = new ProtocolHash(0x14), Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White) };
-            _a = new NetSession(m_ClientNetworkManagers[0]) { ProtocolHash = new ProtocolHash(0x14), Identity = new PlayerIdentity("ann-token", "Ann", PlayerColor.White) };
-            _b = new NetSession(m_ClientNetworkManagers[1]) { ProtocolHash = new ProtocolHash(0x14), Identity = new PlayerIdentity("bob-token", "Bob", PlayerColor.White) };
+            _host = Server;
+            _a = Clients[0];
+            _b = Clients[1];
+            _host.ProtocolHash = _a.ProtocolHash = _b.ProtocolHash = new ProtocolHash(0x14);
+            _host.Identity = new PlayerIdentity("host-token", "Host", PlayerColor.White);
+            _a.Identity = new PlayerIdentity("ann-token", "Ann", PlayerColor.White);
+            _b.Identity = new PlayerIdentity("bob-token", "Bob", PlayerColor.White);
             _host.RpcRejected += r => _hostRejections.Add(r);
             _seats = new SeatEvents(_host);
-
-            _prefab = new GameObject("TestAvatar");
-            NetworkObject networkObject = _prefab.AddComponent<NetworkObject>();
-            NetcodeIntegrationTestHelpers.MakeNetworkObjectTestPrefab(networkObject);
-            _prefab.AddComponent<TestAvatar>();
-            _host.Prefabs.Register(_prefab);
-            _a.Prefabs.Register(_prefab);
-            _b.Prefabs.Register(_prefab);
-
-            base.OnServerAndClientsCreated();
+            _prefab = CreatePrefab<TestAvatar>("TestAvatar");
         }
 
-        protected override IEnumerator OnTearDown()
+        protected override IEnumerator OnSessionsTearDown()
         {
-            _a?.Dispose();
-            _b?.Dispose();
-            _host?.Dispose();
             _a = _b = _host = null;
             _hostRejections.Clear();
             yield return null;
         }
 
-        private static NetConfig HostConfig()
+        private NetConfig HostConfig()
         {
-            return new NetConfig { Port = Port, GameVersion = "1", ReconnectGraceSeconds = 60 };
+            NetConfig config = Config();
+            config.ReconnectGraceSeconds = 60;
+            return config;
         }
 
-        private static NetConfig LossyClientConfig()
+        private NetConfig LossyClientConfig()
         {
-            return new NetConfig { Port = Port, GameVersion = "1", Conditions = NetConditionsProfile.Lossy };
-        }
-
-        private static TimeoutHelper Patient()
-        {
-            return new TimeoutHelper(LossyTimeoutSeconds);
-        }
-
-        private IEnumerator Wait(System.Func<bool> condition, string failure)
-        {
-            TimeoutHelper timeout = Patient();
-            yield return WaitForConditionOrTimeOut(condition, timeout);
-            AssertOnTimeout(failure, timeout);
+            NetConfig config = Config();
+            config.Conditions = NetConditionsProfile.Lossy;
+            return config;
         }
 
         private IEnumerator StartHost()
         {
-            Assert.That(_host.StartHost(HostConfig()), Is.True, "StartHost");
-            yield return Wait(() => _host.State == SessionState.Running, "the host never reached Running");
+            yield return StartServer(HostConfig());
         }
 
         private IEnumerator JoinLossy(NetSession client)
         {
-            Assert.That(client.JoinByAddress(NetConfig.LoopbackAddress, Port, LossyClientConfig()), Is.True, "JoinByAddress");
-            yield return Wait(() => client.State == SessionState.Connected,
-                "the client never connected over the lossy link (" + client.State + ", " + client.LastDisconnect + ")");
+            yield return Join(client, LossyClientConfig());
         }
 
         /// <summary>Host up, Ann and Bob joined over the lossy link, one avatar owned by Ann seen everywhere.</summary>
@@ -123,23 +99,17 @@ namespace Unity.Multiplayer.Tests
                 yield return JoinLossy(_b);
             }
 
-            GameObject spawned = SpawnObject(_prefab, m_ClientNetworkManagers[0]);
-            _onHost = spawned.GetComponent<TestAvatar>();
-            ulong id = _onHost.NetworkObjectId;
-            yield return Wait(() => SeenBy(m_ClientNetworkManagers[0], id) && (!joinBob || SeenBy(m_ClientNetworkManagers[1], id)),
-                "the clients never saw the avatar");
-            _onA = Copy(m_ClientNetworkManagers[0], id);
-            _onB = joinBob ? Copy(m_ClientNetworkManagers[1], id) : null;
-        }
-
-        private static bool SeenBy(NetworkManager manager, ulong id)
-        {
-            return manager.SpawnManager != null && manager.SpawnManager.SpawnedObjects.ContainsKey(id);
-        }
-
-        private static TestAvatar Copy(NetworkManager manager, ulong id)
-        {
-            return manager.SpawnManager.SpawnedObjects[id].GetComponent<TestAvatar>();
+            _onHost = Spawn<TestAvatar>(_prefab, owner: _a);
+            Awaiting<TestAvatar> onA = WaitForCopy(_a, _onHost);
+            yield return onA;
+            _onA = onA.Result;
+            _onB = null;
+            if (joinBob)
+            {
+                Awaiting<TestAvatar> onB = WaitForCopy(_b, _onHost);
+                yield return onB;
+                _onB = onB.Result;
+            }
         }
 
         private static SimulatorUtility.Parameters SimulatorOf(NetworkManager manager)
@@ -161,7 +131,7 @@ namespace Unity.Multiplayer.Tests
         private IEnumerator WaitForAnnsRtt(System.Func<ulong, bool> condition, string failure)
         {
             int n = 0;
-            yield return Wait(() =>
+            yield return WaitUntil(() =>
             {
                 _onA.Vote(n++);
                 return condition(RttToServer(m_ClientNetworkManagers[0]));
@@ -215,7 +185,7 @@ namespace Unity.Multiplayer.Tests
                 }
             }
 
-            yield return Wait(() => _onHost.Votes.Count >= 2 * calls, "not every vote arrived (" + _onHost.Votes.Count + " of " + (2 * calls) + ")");
+            yield return WaitUntil(() => _onHost.Votes.Count >= 2 * calls, "not every vote arrived (" + _onHost.Votes.Count + " of " + (2 * calls) + ")");
             int[] fromAnn = _onHost.Votes.Where(v => v.Value.ClientId == _a.LocalClientId).Select(v => v.Key).ToArray();
             int[] fromBob = _onHost.Votes.Where(v => v.Value.ClientId == _b.LocalClientId).Select(v => v.Key).ToArray();
             Assert.That(fromAnn, Is.EqualTo(Enumerable.Range(0, calls).ToArray()), "Ann's votes: each once, in order");
@@ -240,7 +210,7 @@ namespace Unity.Multiplayer.Tests
                 }
             }
 
-            yield return Wait(() => _onA.Whistles.Count >= calls && _onB.Whistles.Count >= calls && _onA.Hints.Count >= calls && _onB.Tells.Count >= calls,
+            yield return WaitUntil(() => _onA.Whistles.Count >= calls && _onB.Whistles.Count >= calls && _onA.Hints.Count >= calls && _onB.Tells.Count >= calls,
                 "not everything arrived (Ann whistles " + _onA.Whistles.Count + ", Bob whistles " + _onB.Whistles.Count
                 + ", hints " + _onA.Hints.Count + ", tells " + _onB.Tells.Count + ")");
 
@@ -260,7 +230,7 @@ namespace Unity.Multiplayer.Tests
 
             _onB.Vote(7); // OnVote answers with Tell(sender, 107)
 
-            yield return Wait(() => _onB.Tells.Count == 1, "the server's answer never came back");
+            yield return WaitUntil(() => _onB.Tells.Count == 1, "the server's answer never came back");
             Assert.That(_onB.Tells[0], Is.EqualTo(107));
         }
 
@@ -281,10 +251,10 @@ namespace Unity.Multiplayer.Tests
 
             _onHost.Mass = 2.5f;
 
-            yield return Wait(() => _onA.Score == 30 && _onB.Score == 30, "Score never settled (Ann " + _onA.Score + ", Bob " + _onB.Score + ")");
-            yield return Wait(() => Mathf.Approximately(_onA.Mass, 2.5f) && Mathf.Approximately(_onB.Mass, 2.5f),
+            yield return WaitUntil(() => _onA.Score == 30 && _onB.Score == 30, "Score never settled (Ann " + _onA.Score + ", Bob " + _onB.Score + ")");
+            yield return WaitUntil(() => Mathf.Approximately(_onA.Mass, 2.5f) && Mathf.Approximately(_onB.Mass, 2.5f),
                 "Mass never replicated (Ann " + _onA.Mass + ", Bob " + _onB.Mass + ")");
-            yield return Wait(() => _onA.MassChanges.Count == 1 && _onB.MassChanges.Count == 1, "OnChanged did not run on the clients");
+            yield return WaitUntil(() => _onA.MassChanges.Count == 1 && _onB.MassChanges.Count == 1, "OnChanged did not run on the clients");
             Assert.That(_onA.MassChanges[0], Is.EqualTo(new Vector2(0, 2.5f)), "previous and current value");
         }
 
@@ -296,9 +266,9 @@ namespace Unity.Multiplayer.Tests
             _onHost.Mass = 1.25f;
 
             yield return JoinLossy(_b);
-            ulong id = _onHost.NetworkObjectId;
-            yield return Wait(() => SeenBy(m_ClientNetworkManagers[1], id), "Bob never saw the avatar");
-            TestAvatar onB = Copy(m_ClientNetworkManagers[1], id);
+            Awaiting<TestAvatar> copy = WaitForCopy(_b, _onHost);
+            yield return copy;
+            TestAvatar onB = copy.Result;
 
             Assert.That(onB.Score, Is.EqualTo(42));
             Assert.That(onB.Mass, Is.EqualTo(1.25f));
@@ -319,21 +289,21 @@ namespace Unity.Multiplayer.Tests
             Assert.That(playerObject, Is.Not.Null);
 
             _a.Leave();
-            yield return Wait(() => _seats.Held.Count == 1 && _a.CanStart, "the host never held the dropped player's seat");
+            yield return WaitUntil(() => _seats.Held.Count == 1 && _a.CanStart, "the host never held the dropped player's seat");
             Assert.That(_seats.Held[0].Index, Is.EqualTo(seat.Index));
 
             yield return JoinLossy(_a);
             ulong secondId = _a.LocalClientId;
             Assert.That(secondId, Is.Not.EqualTo(firstId));
             Assert.That(_a.Conditions, Is.EqualTo(Lossy), "a new start applies the config's conditions to the new driver");
-            yield return Wait(() => _seats.Reclaimed.Count == 1, "the host never gave the seat back");
+            yield return WaitUntil(() => _seats.Reclaimed.Count == 1, "the host never gave the seat back");
             Assert.That(_seats.Reclaimed[0].Index, Is.EqualTo(seat.Index), "same seat");
             Assert.That(_host.GetSeatPlayerObject(seat.Index), Is.SameAs(playerObject), "same player object");
             Assert.That(playerObject.GetComponent<NetworkObject>().OwnerClientId, Is.EqualTo(secondId));
 
             NetworkManager client = m_ClientNetworkManagers[0];
             ulong objectId = playerObject.GetComponent<NetworkObject>().NetworkObjectId;
-            yield return Wait(() => client.SpawnManager.SpawnedObjects.ContainsKey(objectId), "the client never saw its player object again");
+            yield return WaitUntil(() => client.SpawnManager.SpawnedObjects.ContainsKey(objectId), "the client never saw its player object again");
             NetworkObject clientView = client.SpawnManager.SpawnedObjects[objectId];
             Assert.That(clientView.IsOwner && clientView.IsPlayerObject, Is.True);
         }
@@ -352,7 +322,7 @@ namespace Unity.Multiplayer.Tests
             yield return JoinLossy(_b);
             ulong newId = _b.LocalClientId;
 
-            yield return Wait(() => _seats.Reclaimed.Count == 1 && _a.State == SessionState.Disconnected,
+            yield return WaitUntil(() => _seats.Reclaimed.Count == 1 && _a.State == SessionState.Disconnected,
                 "the new connection never took the seat over (old " + _a.State + ")");
             Assert.That(_seats.Reclaimed[0].ClientId, Is.EqualTo(newId));
             Assert.That(_host.GetSeatPlayerObject(seat.Index), Is.SameAs(playerObject), "same player object");
@@ -365,7 +335,7 @@ namespace Unity.Multiplayer.Tests
             Assert.That(playerObject.GetComponent<NetworkObject>().OwnerClientId, Is.EqualTo(newId), "the new connection owns the player object");
 
             // The stale connection's own close reaches the host and leaves the new connection's seat and player object alone.
-            yield return Wait(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(deadId), "the stale connection never closed");
+            yield return WaitUntil(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(deadId), "the stale connection never closed");
             yield return null;
             Assert.That(_b.State, Is.EqualTo(SessionState.Connected), "still connected after the stale connection closed");
             Assert.That(playerObject.GetComponent<NetworkObject>().OwnerClientId, Is.EqualTo(newId), "still owns the player object");
@@ -382,10 +352,10 @@ namespace Unity.Multiplayer.Tests
             Assert.That(_host.Kick(id, "Be nice."), Is.True);
             Assert.That(_host.Kick(id), Is.False, "already being removed");
 
-            yield return Wait(() => _a.State == SessionState.Disconnected, "the kicked client never left");
+            yield return WaitUntil(() => _a.State == SessionState.Disconnected, "the kicked client never left");
             Assert.That(_a.LastDisconnect.Reason, Is.EqualTo(DisconnectReason.Kicked), _a.LastDisconnect.ToString());
             Assert.That(_a.LastDisconnect.Message, Is.EqualTo("Be nice."));
-            yield return Wait(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(id), "the host never saw the kicked client go");
+            yield return WaitUntil(() => !m_ServerNetworkManager.ConnectedClients.ContainsKey(id), "the host never saw the kicked client go");
         }
 
         // ---------------------------------------------------------------------------------------------------------
@@ -399,12 +369,10 @@ namespace Unity.Multiplayer.Tests
             Assert.That(() => _a.SetConditions(new NetConditions(10, 50, 0)), Throws.ArgumentException, "jitter above latency");
 
             yield return StartHost();
-            Assert.That(_a.JoinByAddress(NetConfig.LoopbackAddress, Port, HostConfig()), Is.True);
-            yield return Wait(() => _a.State == SessionState.Connected, "the client never connected");
-            GameObject spawned = SpawnObject(_prefab, m_ClientNetworkManagers[0]);
-            ulong id = spawned.GetComponent<NetworkObject>().NetworkObjectId;
-            yield return Wait(() => SeenBy(m_ClientNetworkManagers[0], id), "Ann never saw the avatar");
-            _onA = Copy(m_ClientNetworkManagers[0], id);
+            yield return Join(_a, HostConfig());
+            Awaiting<TestAvatar> copy = WaitForCopy(_a, Spawn<TestAvatar>(_prefab, owner: _a));
+            yield return copy;
+            _onA = copy.Result;
             Assert.That(_a.Conditions.IsNone, Is.True);
             Assert.That(SimulatorOf(m_ClientNetworkManagers[0]).PacketDelayMs, Is.Zero);
 

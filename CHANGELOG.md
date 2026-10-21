@@ -31,6 +31,20 @@ carries the package's own version.
   Multiplayer ▸ Add Front End** networks the scene and adds it, or names the exact manifest lines that are missing.
   Core gains `DisconnectText`, `ReconnectPolicy`, `HostAddress` and `NetLaunch.ShowsMenus`. New **Front End**
   sample; see [Drop-in front end](docs/articles/front-end.md).
+- **Test kit: the `Unity.Multiplayer.Testing` assembly** (UM-T56) — what a game references from its own PlayMode
+  test assembly to test its networking over a real connection. `NetSessionTest(Topology.Host | Server, clients,
+  transport)` is a fixture (on NGO's `NetcodeIntegrationTest`) with a host or dedicated server and N client
+  `NetSession`s on a free port, `StartServer` / `Join` / `StartAndJoinAll`, `CreatePrefab<T>` / `RegisterPrefab` /
+  `SetPlayerPrefab` / `Spawn<T>`, and waits that fail saying what never happened: `WaitUntil`, `WaitForSpawn<T>`,
+  `WaitForCopy<T>`, `WaitForSynced<T>`, `WaitFor(Task)`. Also usable alone: `FreePort.Udp()` / `Tcp()` / `For()` /
+  `Assign()` (a port free right now, instead of a fixed one that collides with a parallel run),
+  `TestSessions.Create(NetworkManager)` (a `NetSession` without reflecting into its internal constructor), `NetAwait`
+  (the same waits as statics, plus `UntilAsync` / `ForSpawnAsync` / `ForSyncedAsync`), and
+  `InProcessRendezvousServer` (the rendezvous API served in-process for join-by-code tests, now public, with
+  `ForServer` / `ForClient` config helpers and a configurable secret). Its define constraint, `UNITY_EDITOR ||
+  UNITY_INCLUDE_TESTS`, keeps it out of player builds; a game lists NGO, not this package, under `testables`. The package's own PlayMode
+  suites and the Minimal sample's tests now run on it, each on a free port. See
+  [Testing](docs/articles/testing.md#the-test-kit).
 
 - **`NetBootstrap.Configure`** (UM-T33) — sets the bootstrap's default `NetConfig` in code (topology, address,
   port, transport, tick rate, max players, game version, join codes, conditions, …) before the session starts,

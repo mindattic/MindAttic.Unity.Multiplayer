@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Unity.Multiplayer.Core;
 using F = Unity.Multiplayer.Core.RendezvousProtocol.Fields;
 
-namespace Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Testing
 {
     /// <summary>
     /// The rendezvous service's HTTP API (<see cref="RendezvousProtocol"/>), served from this process on a loopback port so
@@ -17,9 +17,15 @@ namespace Unity.Multiplayer.Tests
     /// Behaves like server/Rendezvous: required secret, caller's address when none is given, TTL expiry, heartbeat
     /// renewal, token-checked delete, 400/404 on resolve.
     /// </summary>
-    internal sealed class InProcessRendezvousServer : IDisposable
+    /// <remarks>
+    /// Point a dedicated server at it with <see cref="ForServer"/> (it registers itself once running) and a client with
+    /// <see cref="ForClient"/> (it resolves codes here); <see cref="Find"/>, <see cref="Count"/> and <see cref="Heartbeats"/>
+    /// show what the service saw. Dispose it when the test ends (<see cref="NetSessionTest.StartRendezvous"/> does).
+    /// </remarks>
+    public sealed class InProcessRendezvousServer : IDisposable
     {
-        public const string Secret = "playmode-secret";
+        /// <summary>The registration secret a server needs when none is given to the constructor.</summary>
+        public const string DefaultSecret = "playmode-secret";
 
         private readonly TcpListener _listener;
         private readonly CancellationTokenSource _stop = new CancellationTokenSource();
@@ -27,24 +33,40 @@ namespace Unity.Multiplayer.Tests
         private readonly object _gate = new object();
         private int _heartbeats;
 
-        public InProcessRendezvousServer(int ttlSeconds = 60)
+        /// <summary>Starts serving on a free loopback port.</summary>
+        /// <param name="ttlSeconds">How long a registration lives without a heartbeat (a server heartbeats at a third of it).</param>
+        /// <param name="secret">The registration secret servers must send; <see cref="DefaultSecret"/> when null.</param>
+        public InProcessRendezvousServer(int ttlSeconds = 60, string secret = null)
         {
+            if (ttlSeconds < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ttlSeconds), "A registration has to live at least a second.");
+            }
+
             TtlSeconds = ttlSeconds;
+            Secret = secret ?? DefaultSecret;
             _listener = new TcpListener(IPAddress.Loopback, 0);
             _listener.Start();
             Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
             Task.Run(AcceptLoop);
         }
 
+        /// <summary>The loopback TCP port it serves on.</summary>
         public int Port { get; }
 
+        /// <summary>The registration secret servers must send (<see cref="NetConfig.RendezvousSecret"/>).</summary>
+        public string Secret { get; }
+
+        /// <summary>Its base URL (<see cref="NetConfig.RendezvousUrl"/>).</summary>
         public string Url
         {
             get { return "http://127.0.0.1:" + Port; }
         }
 
+        /// <summary>How long a registration lives without a heartbeat.</summary>
         public int TtlSeconds { get; }
 
+        /// <summary>How many heartbeats it has accepted.</summary>
         public int Heartbeats
         {
             get { return Volatile.Read(ref _heartbeats); }
@@ -74,6 +96,31 @@ namespace Unity.Multiplayer.Tests
             }
         }
 
+        /// <summary>
+        /// <paramref name="config"/> (a new one when null) pointed at this service for a server: its URL and secret. A
+        /// dedicated server registers itself as soon as it is running; a host publishes here from
+        /// <see cref="NetSession.HostWithCode"/> once <see cref="NetConfig.JoinCodes"/> is also
+        /// <see cref="JoinCodeProvider.Rendezvous"/> (its default is Relay).
+        /// </summary>
+        public NetConfig ForServer(NetConfig config = null)
+        {
+            config = config ?? new NetConfig();
+            config.RendezvousUrl = Url;
+            config.RendezvousSecret = Secret;
+            return config;
+        }
+
+        /// <summary>
+        /// <paramref name="config"/> (a new one when null) pointed at this service for a client that joins by a code
+        /// registered here: its URL. The endpoint and transport come from the registration.
+        /// </summary>
+        public NetConfig ForClient(NetConfig config = null)
+        {
+            config = config ?? new NetConfig();
+            config.RendezvousUrl = Url;
+            return config;
+        }
+
         /// <summary>Drops every registration, as a restarted service would.</summary>
         public void ForgetAll()
         {
@@ -83,8 +130,14 @@ namespace Unity.Multiplayer.Tests
             }
         }
 
+        /// <summary>Stops serving. Safe to call more than once.</summary>
         public void Dispose()
         {
+            if (_stop.IsCancellationRequested)
+            {
+                return;
+            }
+
             _stop.Cancel();
             _listener.Stop();
         }
@@ -334,14 +387,26 @@ namespace Unity.Multiplayer.Tests
             }
         }
 
-        internal sealed class Entry
+        /// <summary>One live registration, as the service holds it.</summary>
+        public sealed class Entry
         {
-            public JoinCode Code;
-            public string Token;
-            public string Address;
-            public int Port;
-            public TransportKind Transport;
-            public DateTime ExpiresAt;
+            /// <summary>The code it was given.</summary>
+            public JoinCode Code { get; internal set; }
+
+            /// <summary>The token heartbeats and the delete must carry.</summary>
+            public string Token { get; internal set; }
+
+            /// <summary>The address clients are sent to: the one registered, else the caller's.</summary>
+            public string Address { get; internal set; }
+
+            /// <summary>The port clients are sent to.</summary>
+            public int Port { get; internal set; }
+
+            /// <summary>The transport clients use.</summary>
+            public TransportKind Transport { get; internal set; }
+
+            /// <summary>When it expires without another heartbeat (UTC).</summary>
+            public DateTime ExpiresAt { get; internal set; }
         }
     }
 }
