@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [Core.Tests, Generators.Tests, Rendezvous.Tests]
+        project: [Core.Tests, Generators.Tests, Rendezvous.Tests, Hosting.Cli.Tests]
     steps:
       - uses: actions/checkout@v4
 
