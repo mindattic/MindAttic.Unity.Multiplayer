@@ -1,0 +1,33 @@
+{
+    "name": "Unity.Multiplayer.UI.Testing",
+    "rootNamespace": "Unity.Multiplayer.UI.Testing",
+    "references": [
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.UI",
+        "MindAttic.Components.Unity",
+        "MindAttic.Components.Unity.Core",
+        "UnityEngine.UI",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR || UNITY_INCLUDE_TESTS",
+        "MINDATTIC_COMPONENTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.mindattic.components.unity",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_COMPONENTS"
+        }
+    ],
+    "noEngineReferences": false
+}

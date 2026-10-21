@@ -6,6 +6,7 @@ using MindAttic.Components.Unity;
 using NUnit.Framework;
 using Unity.Multiplayer.Core;
 using Unity.Multiplayer.Testing;
+using Unity.Multiplayer.UI.Testing;
 using Unity.Multiplayer.Tests;
 using Unity.Netcode;
 using Unity.Netcode.TestHelpers.Runtime;
@@ -32,8 +33,8 @@ namespace Unity.Multiplayer.UI.Tests
         private NetSession _clientSession;
         private NetFrontEnd _host;
         private NetFrontEnd _client;
-        private TestIdentity _hostIdentity;
-        private TestIdentity _clientIdentity;
+        private FixedIdentitySource _hostIdentity;
+        private FixedIdentitySource _clientIdentity;
         private InProcessRendezvousServer _rendezvous;
         private UdpLinkProxy _proxy;
         private ushort _port;
@@ -69,7 +70,7 @@ namespace Unity.Multiplayer.UI.Tests
             _hostSession = TestSessions.Create(m_ServerNetworkManager);
             _hostSession.EnvironmentReader = _ => null;
             _clientSession = TestSessions.Create(m_ClientNetworkManagers[0]);
-            NetFrontEnd.MenusOverride = true;
+            FrontEndTesting.ForceMenus = true;
             base.OnServerAndClientsCreated();
         }
 
@@ -92,7 +93,7 @@ namespace Unity.Multiplayer.UI.Tests
             _clientSession = null;
             _hostSession = null;
             _rendezvous = null;
-            NetFrontEnd.MenusOverride = null;
+            FrontEndTesting.ForceMenus = null;
             CleanUpUi();
             yield return null;
         }
@@ -125,15 +126,15 @@ namespace Unity.Multiplayer.UI.Tests
         /// <summary>Both front ends, built (their Start has run) with their menus up.</summary>
         private IEnumerator CreateFrontEnds()
         {
-            _hostIdentity = new TestIdentity("Ann", Red);
-            _clientIdentity = new TestIdentity("Bob", Blue);
+            _hostIdentity = new FixedIdentitySource("Ann", Red);
+            _clientIdentity = new FixedIdentitySource("Bob", Blue);
             _host = NewFrontEnd("Host front end", _hostSession, HostConfig, _hostIdentity);
             _client = NewFrontEnd("Client front end", _clientSession, ClientConfig, _clientIdentity);
             _host.GameStarted += () => _hostGameStarts++;
             _client.Left += _clientLeft.Add;
             _client.Reconnected += () => _clientReconnects++;
             yield return null;
-            Assert.That(_host.HasMenus && _client.HasMenus, Is.True, "MenusOverride builds the menus in batch mode");
+            Assert.That(_host.HasMenus && _client.HasMenus, Is.True, "FrontEndTesting.ForceMenus builds the menus in batch mode");
             Assert.That(_host.State, Is.EqualTo(FrontEndState.Menu));
         }
 
@@ -142,7 +143,7 @@ namespace Unity.Multiplayer.UI.Tests
             var go = new GameObject(name);
             go.SetActive(false);
             NetFrontEnd frontEnd = go.AddComponent<NetFrontEnd>();
-            frontEnd.Bind(session, config);
+            FrontEndTesting.Bind(frontEnd, session, config);
             frontEnd.Identity = identity;
             frontEnd.Reconnect = new ReconnectPolicy { MaxAttempts = 5, FirstDelaySeconds = 0.2, MaxDelaySeconds = 1 };
             _objects.Add(go);

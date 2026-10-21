@@ -153,6 +153,27 @@ public class JoinByCodeTests : NetSessionTest
 }
 ```
 
+### Testing your front end
+
+A game that uses the [drop-in front end](front-end.md) tests its menus with `Unity.Multiplayer.UI.Testing` (add it to
+the test assembly's references beside `Unity.Multiplayer.Testing`; it compiles only when MindAttic Components is
+installed). A batch-mode run is headless, so `NetFrontEnd` builds no menus there unless the test asks for them:
+
+```csharp
+[SetUp]    public void SetUp() => FrontEndTesting.ForceMenus = true;   // before the front end's Start
+[TearDown] public void TearDown() { FrontEndTesting.ForceMenus = null; FrontEndTesting.CleanUpUi(); }
+
+frontEnd.Identity = new FixedIdentitySource("Ann", Color.red);     // never touches PlayerPrefs or the real profile
+FrontEndTesting.Click(FrontEndTesting.MainScreen(frontEnd), "Host");
+yield return WaitUntil(() => frontEnd.State == FrontEndState.Lobby, "never reached the lobby");
+string code = FrontEndTesting.LobbyCode(frontEnd).Code;
+```
+
+`FrontEndTesting` also has `Bind(frontEnd, session, config)` (drive a `TestSessions.Create` session instead of a
+NetBootstrap's), `LobbyScreen`, `LobbyRoster`, `BusyDialog`, `MessageDialog`, `Buttons(root)` and `HasButton`. A front
+end beside a real `NetBootstrap` needs no `Bind`: switch the bootstrap off before its Start (so a headless editor does
+not serve by itself) and the front end still drives its session.
+
 ### A bad connection
 
 Give the clients `NetConfig.Conditions` (latency, jitter, loss through Unity Transport's simulator) in the config you

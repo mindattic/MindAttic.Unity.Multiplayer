@@ -192,6 +192,11 @@ fire, and messages go to the log. The same scene therefore runs as the player's 
 Minimal sample's arena with the front end instead of a hand-made menu. Each square is in its owner's chosen colour,
 with their name, and `FrontEndGame.cs` shows the hooks above. Its README lists every file.
 
+## Testing your game's menus
+
+`Unity.Multiplayer.UI.Testing` drives a game's own front end from its PlayMode tests, menus included in a batch-mode
+run (`FrontEndTesting.ForceMenus`). See [Testing your front end](testing.md#testing-your-front-end).
+
 ## Where it is tested
 
 - `dotnet test tests/Core.Tests`: `DisconnectText` for every reason and rejection, `ReconnectPolicy`, `HostAddress`

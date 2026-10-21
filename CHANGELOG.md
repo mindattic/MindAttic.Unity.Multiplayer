@@ -9,6 +9,11 @@ carries the package's own version.
 
 ### Added
 
+- **Front-end test kit** (UM-T62) — `Unity.Multiplayer.UI.Testing` (editor and test builds only, and only with
+  MindAttic Components) lets a game's own PlayMode tests drive its `NetFrontEnd`: `FrontEndTesting.ForceMenus` builds
+  the menus in a batch-mode run, `Bind`, `MainScreen`/`LobbyScreen`/`LobbyCode`/`LobbyRoster`/`BusyDialog`/
+  `MessageDialog`, `Click`/`Buttons`/`HasButton`, `CleanUpUi`, and `FixedIdentitySource` (an in-memory name and colour).
+  Before it, the menus override and `Bind` were internal to the package's own tests, so a game got no menus to test.
 - **`mp-host game`** (UM-T58) — deploy any Unity.Multiplayer game with no per-game script:
   `mp-host game local|down|deploy|update|status|logs|destroy [--project <dir>] [--profile <p>] [--scene <path>] [--dry-run]`
   finds the editor from `ProjectVersion.txt` (Unity Hub's folders, editor list and install path, or `--unity` /

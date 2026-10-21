@@ -4,3 +4,6 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Unity.Multiplayer.UI.Tests")]
+
+// The public front-end test kit (UM-T62): FrontEndTesting exposes the menus override and Bind to a game's own tests.
+[assembly: InternalsVisibleTo("Unity.Multiplayer.UI.Testing")]
