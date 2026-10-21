@@ -111,6 +111,12 @@ carries the package's own version.
   in-game menu (each game entered, each join code published) on the same screen, so a `Shown` handler they hooked
   piled up one more each time. The in-game menu is now built once: each callback runs exactly once, its items stay,
   and only the built-in parts (subtitle, Invite players for a host, End game / Leave game) follow the session.
+- **A server shutting down is reported as one, even with sends in flight** (UM-T65) — over WebSocket, a client still
+  sending when the server stopped saw `TransportFailure` instead of `ServerShutdown`: the server closed the TCP
+  connection with the client's data unread, which resets it, and the client lost NGO's shutdown reason with it. A Host
+  or Server now tells every remote client first (`ShutdownNotice`, reliable); the client ends with `ServerShutdown` and
+  closes its own connection, and the server shuts NGO down once they have gone (at most 2 s later). The roster's first
+  round-trip probe, delayed 1 s after joining to keep a test green, now goes out at once.
 
 ## [1.0.0] — 2026-10-21
 

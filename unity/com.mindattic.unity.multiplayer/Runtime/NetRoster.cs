@@ -229,8 +229,8 @@ namespace Unity.Multiplayer
         }
 
         /// <summary>
-        /// Server: every tick; probes each client's round trip once per <see cref="PingIntervalSeconds"/>, the first time one
-        /// interval after it got the roster (a client that only just connected is left alone while it settles).
+        /// Server: every tick; probes each client's round trip once per <see cref="PingIntervalSeconds"/>, the first time as
+        /// soon as it got the roster.
         /// </summary>
         internal void Tick(double now)
         {
@@ -307,7 +307,7 @@ namespace Unity.Multiplayer
                 Send(messaging, UpdateMessage, senderClientId, RosterWire.EncodeUpdate(RosterUpdate.Snapshot(_roster.Players)));
             }
 
-            _probeAt[senderClientId] = Time.realtimeSinceStartupAsDouble + PingIntervalSeconds;
+            _probeAt[senderClientId] = Time.realtimeSinceStartupAsDouble; // the first probe goes out on the next tick
         }
 
         private void OnChangeRequest(ulong senderClientId, FastBufferReader reader)

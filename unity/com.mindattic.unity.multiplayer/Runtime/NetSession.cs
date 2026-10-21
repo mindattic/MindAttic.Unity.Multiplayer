@@ -75,6 +75,20 @@ namespace Unity.Multiplayer
         /// </summary>
         internal const double LeaveGraceSeconds = 5.0;
 
+        /// <summary>
+        /// The named message a stopping Host or Server tells every remote client it is shutting down with (UM-T65), carrying
+        /// the reason. The client ends its session with <see cref="DisconnectReason.ServerShutdown"/> on receipt and closes
+        /// its own connection, so the server never closes one with the client's sends still arriving: over WebSocket that
+        /// resets the TCP connection, the client loses NGO's own shutdown reason with it and saw a transport failure.
+        /// </summary>
+        internal const string ShutdownNoticeMessage = "MindAttic.Multiplayer.ShutdownNotice";
+
+        /// <summary>
+        /// How long a stopping Host or Server waits, after sending <see cref="ShutdownNoticeMessage"/>, for its clients to
+        /// close their own connections before NGO shuts down and closes what is left.
+        /// </summary>
+        internal const double ShutdownGraceSeconds = 2.0;
+
         private readonly NetworkManager _manager;
         private readonly SessionStateMachine _machine = new SessionStateMachine();
         private NetConfig _config;
@@ -103,6 +117,8 @@ namespace Unity.Multiplayer
         private IJoinCodeService _publishedBy;
         private int _publishGeneration;
         private NetConditions _conditions;
+        private NetworkTickSystem _shutdownTicks;
+        private double _shutdownDeadline;
 
         /// <summary>Every live session by the NetworkManager it drives, so a <see cref="NetEntity"/> can find its own.</summary>
         private static readonly Dictionary<NetworkManager, NetSession> s_ByManager = new Dictionary<NetworkManager, NetSession>();
@@ -663,6 +679,7 @@ namespace Unity.Multiplayer
             {
                 // NGO makes a new messaging manager with every start, so the handler is registered with every join.
                 _manager.CustomMessagingManager.RegisterNamedMessageHandler(DisconnectNoticeMessage, OnDisconnectNotice);
+                _manager.CustomMessagingManager.RegisterNamedMessageHandler(ShutdownNoticeMessage, OnShutdownNotice);
             }
 
             _roster.Attach(copy.Topology);
@@ -672,7 +689,9 @@ namespace Unity.Multiplayer
 
         /// <summary>
         /// Leaves the session. A Client is Disconnected at once with <see cref="DisconnectReason.LocalLeave"/>;
-        /// a Host or Server goes to Stopping and reaches Idle when NGO has shut down (normally by the next frame).
+        /// a Host or Server goes to Stopping and reaches Idle when NGO has shut down: at once with no remote clients,
+        /// otherwise once every client, told first with <see cref="ShutdownNoticeMessage"/>, has closed its own connection
+        /// (normally one round trip; at most <see cref="ShutdownGraceSeconds"/>).
         /// </summary>
         /// <returns>False when there was nothing to leave.</returns>
         public bool Leave()
@@ -684,7 +703,10 @@ namespace Unity.Multiplayer
 
             if (_manager.IsListening)
             {
-                _manager.Shutdown();
+                if (!AnnounceShutdown())
+                {
+                    _manager.Shutdown();
+                }
             }
             else
             {
@@ -704,6 +726,7 @@ namespace Unity.Multiplayer
             }
 
             Leave();
+            FinishShutdown(); // no waiting for clients to go: nothing would be listening to finish it
 
             // NGO finishes the shutdown by itself at the end of the frame, but this session stops listening
             // now, so it closes its own books: a disposed session always ends Idle (or Disconnected).
@@ -1414,6 +1437,7 @@ namespace Unity.Multiplayer
 
         private void OnServerStopped(bool wasHost)
         {
+            StopShutdownTicks();
             if (_machine.State == SessionState.Stopping)
             {
                 _machine.NotifyStopped();
@@ -1769,6 +1793,124 @@ namespace Unity.Multiplayer
             }
 
             _machine.NotifyDisconnected(DisconnectReason.Kicked, string.IsNullOrEmpty(message) ? "You were removed from the server." : message);
+            if (_manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
+            }
+        }
+
+        /// <summary>
+        /// Host or Server, leaving: tells every remote client the server is shutting down (<see cref="ShutdownNoticeMessage"/>)
+        /// and waits for them to close their own connections; <see cref="OnShutdownTick"/> shuts NGO down once they have, or
+        /// after <see cref="ShutdownGraceSeconds"/>. False when there is no one to tell (or no way to), and NGO should shut
+        /// down at once.
+        /// </summary>
+        private bool AnnounceShutdown()
+        {
+            CustomMessagingManager messaging = _manager.CustomMessagingManager;
+            NetworkTickSystem ticks = _manager.NetworkTickSystem;
+            if (!_manager.IsServer || _manager.ShutdownInProgress || messaging == null || ticks == null)
+            {
+                return false;
+            }
+
+            var remote = new List<ulong>();
+            foreach (ulong clientId in _manager.ConnectedClientsIds)
+            {
+                if (clientId != NetworkManager.ServerClientId)
+                {
+                    remote.Add(clientId);
+                }
+            }
+
+            if (remote.Count == 0)
+            {
+                return false;
+            }
+
+            // NGO's own wording, so a client reads the same reason whichever way it hears of the shutdown.
+            string message = "Disconnected due to " + (_manager.IsHost ? "host" : "server") + " shutting down.";
+            try
+            {
+                using (FastBufferWriter writer = new FastBufferWriter(FastBufferWriter.GetWriteSize(message), Allocator.Temp))
+                {
+                    writer.WriteValueSafe(message);
+                    messaging.SendNamedMessage(ShutdownNoticeMessage, remote, writer, NetworkDelivery.ReliableSequenced);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                return false;
+            }
+
+            for (int i = 0; i < remote.Count; i++)
+            {
+                _dropReasons[remote[i]] = new Disconnection(DisconnectReason.ServerShutdown, message);
+            }
+
+            _shutdownDeadline = Now + ShutdownGraceSeconds;
+            _shutdownTicks = ticks;
+            _shutdownTicks.Tick += OnShutdownTick;
+            return true;
+        }
+
+        /// <summary>Host or Server, stopping: shuts NGO down once every remote client has gone, or the grace is over.</summary>
+        private void OnShutdownTick()
+        {
+            if (Now >= _shutdownDeadline || _manager.ConnectedClientsIds.Count <= (_manager.IsHost ? 1 : 0))
+            {
+                FinishShutdown();
+            }
+        }
+
+        /// <summary>Ends the wait <see cref="AnnounceShutdown"/> started (if any) and shuts NGO down.</summary>
+        private void FinishShutdown()
+        {
+            if (_shutdownTicks == null)
+            {
+                return;
+            }
+
+            StopShutdownTicks();
+            if (_manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
+            }
+        }
+
+        private void StopShutdownTicks()
+        {
+            if (_shutdownTicks != null)
+            {
+                _shutdownTicks.Tick -= OnShutdownTick;
+                _shutdownTicks = null;
+            }
+        }
+
+        /// <summary>
+        /// Client: the server is shutting down (<see cref="ShutdownNoticeMessage"/>). The session ends now with
+        /// <see cref="DisconnectReason.ServerShutdown"/>, and this end closes the connection.
+        /// </summary>
+        private void OnShutdownNotice(ulong senderClientId, FastBufferReader reader)
+        {
+            if (_manager.IsServer || senderClientId != NetworkManager.ServerClientId || !_machine.IsActive)
+            {
+                return;
+            }
+
+            string message;
+            try
+            {
+                reader.ReadValueSafe(out message);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                message = null;
+            }
+
+            _machine.NotifyDisconnected(DisconnectReason.ServerShutdown, string.IsNullOrEmpty(message) ? "The server shut down." : message);
             if (_manager.IsListening && !_manager.ShutdownInProgress)
             {
                 _manager.Shutdown();
