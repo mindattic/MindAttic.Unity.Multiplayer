@@ -18,6 +18,19 @@ public class CloudInitRendererTests
     }
 
     [Test]
+    public void RenderCompose_mounts_saves_and_logs_under_the_packages_own_container_workdir()
+    {
+        // The pulled image is built straight from a server package whose own Dockerfile (written by
+        // the Unity Editor's Build Server Package step) sets WORKDIR /srv/game, so a volume mounted
+        // anywhere else leaves the game writing into the container's throwaway layer instead.
+        string compose = CloudInitRenderer.RenderCompose(
+            TestManifests.WithHealthPort(), "img", "rzv", new Dictionary<string, string>());
+        Assert.That(compose, Does.Contain("saves:/srv/game/Saves"));
+        Assert.That(compose, Does.Contain("logs:/srv/game/Logs"));
+        Assert.That(compose, Does.Not.Contain("/app/"));
+    }
+
+    [Test]
     public void RenderCompose_binds_the_health_port_to_localhost_only()
     {
         string compose = CloudInitRenderer.RenderCompose(

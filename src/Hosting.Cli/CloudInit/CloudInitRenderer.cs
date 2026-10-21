@@ -23,6 +23,17 @@ public static class CloudInitRenderer
     public const string GhcrTokenPath = "/tmp/mp-host-ghcr-token";
 
     /// <summary>
+    /// The package's working directory inside the image -- must match
+    /// <c>Unity.Multiplayer.Core.ServerPackageDockerfile.WorkDir</c> (Hosting.Cli does not reference
+    /// Core, so this is a deliberate, documented second copy: UM-LAW-4). <see cref="RenderCompose"/>'s
+    /// pulled image is always built from a package whose own Dockerfile (written by the Unity Editor's
+    /// Build Server Package step) sets this as <c>WORKDIR</c>, so <c>manifest.Logs</c>/<c>manifest.Saves</c>
+    /// (relative directory names) resolve under it -- mounting a volume anywhere else leaves the game
+    /// writing into the container's throwaway layer instead.
+    /// </summary>
+    private const string ContainerWorkDir = "/srv/game";
+
+    /// <summary>
     /// A <c>docker-compose.yml</c> that runs the pushed image (by reference, never built on the
     /// host) beside the rendezvous service, shaped like
     /// <see cref="Unity.Multiplayer.Core.GenericVpsProfile.ComposeCompose"/> but pulling
@@ -53,8 +64,8 @@ public static class CloudInitRenderer
         }
 
         text.Append("    volumes:\n");
-        text.Append("      - saves:/app/").Append(manifest.Saves).Append('\n');
-        text.Append("      - logs:/app/").Append(manifest.Logs).Append('\n');
+        text.Append("      - saves:").Append(ContainerPath(manifest.Saves)).Append('\n');
+        text.Append("      - logs:").Append(ContainerPath(manifest.Logs)).Append('\n');
         text.Append("    depends_on:\n");
         text.Append("      - rendezvous\n");
         text.Append("  rendezvous:\n");
@@ -202,4 +213,11 @@ public static class CloudInitRenderer
     }
 
     private static string YamlQuote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+
+    /// <summary>A package-relative directory's path inside the container: absolute paths as given, relative ones under <see cref="ContainerWorkDir"/>.</summary>
+    private static string ContainerPath(string directory)
+    {
+        string dir = string.IsNullOrWhiteSpace(directory) ? "." : directory.Trim().Replace('\\', '/').TrimEnd('/');
+        return dir.StartsWith("/", StringComparison.Ordinal) ? dir : ContainerWorkDir + "/" + dir;
+    }
 }
