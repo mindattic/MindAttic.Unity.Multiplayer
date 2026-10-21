@@ -42,8 +42,8 @@ public sealed class HostingComposer
     /// <summary>GHCR registry host; overridable for a self-hosted or mirrored registry.</summary>
     public string GhcrRegistry { get; init; } = "ghcr.io";
 
-    /// <summary>The server-package builder: reads an already-built package, or drives Unity in batch mode.</summary>
-    public IServerPackageBuilder BuildPackageBuilder() => new ServerPackageBuilder(new ProcessRunner());
+    /// <summary>The server-package builder: reads an already-built package, or drives Unity in batch mode (or, dry-run, neither).</summary>
+    public IServerPackageBuilder BuildPackageBuilder() => _dryRun ? new DryRunServerPackageBuilder() : new ServerPackageBuilder(new ProcessRunner());
 
     /// <summary>The image tool: real docker CLI, or a dry-run echo.</summary>
     public IContainerImageTool BuildImageTool(IDeployLog log) => _dryRun ? new DryRunImageTool() : new DockerCliImageTool(new ProcessRunner());
