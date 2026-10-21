@@ -21,6 +21,21 @@ carries the package's own version.
   (`AddKickKind`, `StartKickVote`), and `NetVotes`, the one component that sets it all up beside a `NetBootstrap`. The
   front end gets `VoteOverlay` (question, tally, quorum bar, Yes/No, result toasts), wired by itself when a `NetFrontEnd`
   has menus. See [Votes](docs/articles/votes.md).
+- **Player roster and identity** (UM-T55) — `NetSession.Roster` (`NetRoster`, also `NetRoster.Current`) is who is in
+  the game, on every peer: one `NetPlayer` per seat with `Seat`, `ClientId`, `DisplayName`, `Color`, `IsHost`,
+  `IsConnected` (false while a dropped player's seat is held), `PingMs` and `IsLocal`; `All`, `Local`,
+  `TryGet(clientId)`, `TryGetBySeat(seat)`, and `Joined` / `Left` / `Changed` (`NetPlayerChange` says what changed).
+  The server fills it from the connection approval payload (names cleaned, an unpicked colour resolved to the seat's
+  palette colour), sends each connection the whole roster once it is in (late joiners and reconnects too; a reconnect
+  keeps seat and identity) and then only changes, over named messages, and measures every client's round trip once a
+  second. `NetRoster.RequestChange(name, colour)` changes a player's name or colour at runtime: the server checks it
+  (`PlayerNames.Validate`, `PlayerColors.Validate`, 5 at once then 1 a second) and answers with a
+  `PlayerChangeResult`; an accepted change reaches every peer and is kept with the seat and in `NetSession.Identity`.
+  `NetFrontEnd`'s lobby shows the roster, its Settings screen renames mid-game through the server, and an accepted
+  change of the local player is saved back to its `IPlayerIdentitySource` (the MindAttic profile by default). Core
+  gains `NetPlayer`, `PlayerNames`, `PlayerColors`, `PlayerRoster`, `RosterUpdate`, `RosterWire`,
+  `PlayerChangeRequest` and `SeatRegistry.Rename`; the adapter `PlayerColorExtensions` (`ToColor32`, `ToPlayerColor`,
+  `UnityColor`). See [Players, names and colours](docs/articles/players.md).
 - **Front-end test kit** (UM-T62) — `Unity.Multiplayer.UI.Testing` (editor and test builds only, and only with
   MindAttic Components) lets a game's own PlayMode tests drive its `NetFrontEnd`: `FrontEndTesting.ForceMenus` builds
   the menus in a batch-mode run, `Bind`, `MainScreen`/`LobbyScreen`/`LobbyCode`/`LobbyRoster`/`BusyDialog`/

@@ -92,6 +92,7 @@ namespace Unity.Multiplayer
         private readonly RpcGate _gate = new RpcGate();
         private readonly NetSceneFlow _scenes;
         private readonly NetPrefabRegistry _prefabs;
+        private readonly NetRoster _roster;
         private readonly SynchronizationContext _mainThread;
         private readonly RelayJoinCodeService _relay = new RelayJoinCodeService();
         private RendezvousJoinCodeService _rendezvous;
@@ -118,6 +119,7 @@ namespace Unity.Multiplayer
             _mainThread = SynchronizationContext.Current;
             _scenes = new NetSceneFlow(manager);
             _prefabs = new NetPrefabRegistry(manager);
+            _roster = new NetRoster(this);
             s_ByManager[manager] = this;
             _machine.StateChanged += OnMachineStateChanged;
             _manager.OnServerStarted += OnServerStarted;
@@ -192,6 +194,22 @@ namespace Unity.Multiplayer
         public NetPrefabRegistry Prefabs
         {
             get { return _prefabs; }
+        }
+
+        /// <summary>
+        /// Who is in the game, on every peer: each player's name, colour, seat, round trip and host flag, kept in step by
+        /// the server, with <see cref="NetRoster.Joined"/> / <see cref="NetRoster.Left"/> / <see cref="NetRoster.Changed"/>
+        /// and <see cref="NetRoster.RequestChange"/> for a runtime rename (UM-T55).
+        /// </summary>
+        public NetRoster Roster
+        {
+            get { return _roster; }
+        }
+
+        /// <summary>Server side: the player on <paramref name="clientId"/> now plays as <paramref name="displayName"/> in <paramref name="color"/> (an accepted rename).</summary>
+        internal Seat RenameSeat(ulong clientId, string displayName, PlayerColor color)
+        {
+            return _admission != null ? _admission.Seats.Rename(clientId, displayName, color) : null;
         }
 
         /// <summary>The NetworkManager this session drives (the test kit reads spawned objects and the transport through it).</summary>
@@ -488,6 +506,7 @@ namespace Unity.Multiplayer
                 Raise(SeatReleased, freed);
             }
 
+            _roster.Refresh();
             return true;
         }
 
@@ -585,6 +604,7 @@ namespace Unity.Multiplayer
 
             ForgetPublishedCode();
             JoinedAllocation = null;
+            _roster.Reset();
             _config = copy;
             _transportFailed = false;
             _machine.Start(copy.Topology);
@@ -632,6 +652,7 @@ namespace Unity.Multiplayer
                 _manager.CustomMessagingManager.RegisterNamedMessageHandler(DisconnectNoticeMessage, OnDisconnectNotice);
             }
 
+            _roster.Attach(copy.Topology);
             _scenes.Attach();
             return true;
         }
@@ -1374,6 +1395,7 @@ namespace Unity.Multiplayer
 
         private void OnServerStarted()
         {
+            _roster.Refresh(); // a host's own seat is already taken: its roster is ready when Started is raised
             _machine.NotifyStarted();
         }
 
@@ -1419,12 +1441,14 @@ namespace Unity.Multiplayer
             {
                 SeatConnectedClient(clientId);
                 Raise(ClientConnected, clientId);
+                _roster.Refresh();
                 return;
             }
 
             if (clientId == _manager.LocalClientId)
             {
                 _machine.NotifyConnected();
+                _roster.OnLocalClientConnected();
             }
         }
 
@@ -1523,6 +1547,7 @@ namespace Unity.Multiplayer
             {
                 ResetSeats();
                 _scenes.Detach();
+                _roster.Reset();
             }
 
             if (ended || change.To == SessionState.Stopping)
@@ -1801,6 +1826,13 @@ namespace Unity.Multiplayer
         /// <summary>Server: a remote client's connection ended; hold or free its seat and report why.</summary>
         private void OnRemoteClientDisconnected(ulong clientId)
         {
+            HoldOrFreeSeat(clientId);
+            _roster.OnClientGone(clientId);
+            _roster.Refresh();
+        }
+
+        private void HoldOrFreeSeat(ulong clientId)
+        {
             _reclaimOnConnect.Remove(clientId);
             if (_rejected.Remove(clientId))
             {
@@ -1851,6 +1883,8 @@ namespace Unity.Multiplayer
             {
                 ReleaseExpired(_admission.Seats.Expire(Now));
             }
+
+            _roster.Tick(Now);
         }
 
         private void ReleaseExpired(IReadOnlyList<Seat> expired)
@@ -1859,6 +1893,11 @@ namespace Unity.Multiplayer
             {
                 ReleaseSeatObject(expired[i]);
                 Raise(SeatReleased, expired[i]);
+            }
+
+            if (expired.Count > 0)
+            {
+                _roster.Refresh();
             }
         }
 

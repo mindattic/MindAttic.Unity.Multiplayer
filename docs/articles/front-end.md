@@ -51,7 +51,7 @@ the editor loads, with no pop-up.
 | Join by IP | One field, `192.168.1.20` or `192.168.1.20:7777` (or `[::1]:7777`). The port defaults to the NetBootstrap's, and the last address is remembered. |
 | Join by code | One field. Any case, with or without dashes; a single misread character (`0`/`O`, `1`/`I`) is corrected (see [Join codes](join-codes.md)). |
 | Connecting | A busy dialog ("Joining 192.168.1.20:7777...", "Looking up ABC-DEF-GHJ...") with **Cancel**. |
-| Lobby (host) | The join code, large, with a **Copy** button. If no code could be published, it shows "Players join by IP at *your LAN address*:*port*" instead. Below it is the live roster: each player's name and colour swatch, a **Host** tag on you, "reconnecting..." on a dropped player's held seat, and a remove button with a confirm. Then **Leave** and **Start**. |
+| Lobby (host) | The join code, large, with a **Copy** button. If no code could be published, it shows "Players join by IP at *your LAN address*:*port*" instead. Below it is the live roster (the session's [`NetRoster`](players.md)): each player's name and colour swatch, a **Host** tag on you, "reconnecting..." on a dropped player's held seat, and a remove button with a confirm. Then **Leave** and **Start**. |
 | In game | The menus are gone. **Esc**, or gamepad Start or B, opens the in-game menu: **Resume**, **Invite players** (the host's code and roster again), **Settings**, the game's own items, and **Leave game** (**End game** for the host), with a confirm. |
 | Settings | Name and colour (eight colours that read well on dark and light), plus the game's own settings. It saves when you go back. |
 
@@ -99,9 +99,14 @@ again. The rule is Core's `ReconnectPolicy`, so it is covered by plain `dotnet t
 ## The player's name and colour
 
 The front end reads them from an `IPlayerIdentitySource` just before it hosts or joins. It puts them on the session's
-`Identity`, which goes to the server in the connection approval payload. The server's `Seat` then carries them
-(`seat.DisplayName`, `seat.Color`), and that is what the lobby roster shows. A game reads them the same way. The Front
-End sample's player copies them into two `[Synced]` fields, so every peer draws each square in its owner's colour.
+`Identity`, which goes to the server in the connection approval payload. The server builds the session's
+[roster](players.md) from them, which every peer has (`session.Roster`: each player's name, colour, seat, ping, host
+flag), and that is what the lobby shows. A game reads them the same way, from `NetRoster`.
+
+Changed in Settings during a game, the name and colour are asked of the server at once (`NetRoster.RequestChange`):
+everyone sees the change, a refusal shows as a toast with the server's reason, and an accepted change is saved back to
+the identity source. Any accepted change to the player's own name or colour is saved the same way, including one the
+game asks for itself.
 
 ```csharp
 public interface IPlayerIdentitySource
@@ -120,8 +125,9 @@ its own accounts sets its own:
 frontEnd.Identity = new MyAccountIdentity();
 ```
 
-Names are cleaned the way the server accepts them (`PlayerIdentitySources.CleanName`: trimmed, no control characters,
-at most 32 characters, "Player" when empty). The NetBootstrap's own Display Name and Player Color fields are overridden
+Names are cleaned the way the server accepts them (`PlayerIdentitySources.CleanName`, which is Core's
+`PlayerNames.Clean`: trimmed, no control or invisible characters, single spaces, at most 32 characters, "Player" when
+empty). The NetBootstrap's own Display Name and Player Color fields are overridden
 by the front end.
 
 ## Hooks for the game
@@ -232,7 +238,8 @@ run (`FrontEndTesting.ForceMenus`). See [Testing your front end](testing.md#test
   - a version mismatch and a kick each show their dialog;
   - a lost connection (a UDP relay that cuts the link) reconnects to the same seat; a link that never comes back gives
     up with a message;
-  - Settings saves the name and colour, and the new name reaches the server;
+  - Settings saves the name and colour, and the new name reaches the server; changed mid-game, it reaches the host's
+    lobby at once and is saved once the server accepts it;
   - a headless scene with a real NetBootstrap builds no UI;
   - the profile-backed identity reads and writes the MindAttic profile.
 - `tests/run-editmode.ps1`: Add Front End networks the scene and adds the component, a second run changes nothing,

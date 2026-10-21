@@ -599,10 +599,9 @@ namespace Unity.Multiplayer.UI
             _session.Ended += OnSessionEnded;
             _session.JoinCodePublished += OnJoinCodePublished;
             _session.JoinCodeFailed += OnJoinCodeFailed;
-            _session.SeatTaken += OnSeatsChanged;
-            _session.SeatReclaimed += OnSeatsChanged;
-            _session.SeatHeld += OnSeatsChanged;
-            _session.SeatReleased += OnSeatsChanged;
+            _session.Roster.Joined += OnPlayersChanged;
+            _session.Roster.Left += OnPlayersChanged;
+            _session.Roster.Changed += OnPlayerChanged;
         }
 
         private void Unsubscribe()
@@ -617,10 +616,9 @@ namespace Unity.Multiplayer.UI
             _session.Ended -= OnSessionEnded;
             _session.JoinCodePublished -= OnJoinCodePublished;
             _session.JoinCodeFailed -= OnJoinCodeFailed;
-            _session.SeatTaken -= OnSeatsChanged;
-            _session.SeatReclaimed -= OnSeatsChanged;
-            _session.SeatHeld -= OnSeatsChanged;
-            _session.SeatReleased -= OnSeatsChanged;
+            _session.Roster.Joined -= OnPlayersChanged;
+            _session.Roster.Left -= OnPlayersChanged;
+            _session.Roster.Changed -= OnPlayerChanged;
         }
 
         // ---- Session events ------------------------------------------------------------------------------------------------
@@ -669,7 +667,47 @@ namespace Unity.Multiplayer.UI
             _codeFailure = message;
         }
 
-        private void OnSeatsChanged(Seat seat)
+        /// <summary>
+        /// A player's record changed. The rosters on screen follow (not for a round trip alone), and when it is this
+        /// player's own name or colour that changed (an accepted <see cref="NetRoster.RequestChange"/>, from Settings or
+        /// from game code), it is saved back to <see cref="Identity"/> (the MindAttic profile by default).
+        /// </summary>
+        private void OnPlayerChanged(NetPlayerChange change)
+        {
+            if (change.OnlyPingChanged)
+            {
+                return;
+            }
+
+            OnPlayersChanged(change.Player);
+            if (change.Player.IsLocal && (change.NameChanged || change.ColorChanged))
+            {
+                SaveIdentity(change);
+            }
+        }
+
+        private void SaveIdentity(NetPlayerChange change)
+        {
+            try
+            {
+                IPlayerIdentitySource source = Identity;
+                string name = change.NameChanged ? change.Player.DisplayName : source.DisplayName;
+                Color color = change.ColorChanged ? (Color)change.Player.Color.ToColor32() : source.Color;
+                source.Save(name, color);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning(LogPrefix + "Could not save the player's new name and colour: " + ex.Message);
+            }
+
+            RefreshMainScreen();
+            if (_state == FrontEndState.InGame)
+            {
+                RefreshPauseScreen();
+            }
+        }
+
+        private void OnPlayersChanged(NetPlayer player)
         {
             var stale = new List<MenuScreen>();
             foreach (KeyValuePair<MenuScreen, MaList> roster in _rosters)
@@ -1151,18 +1189,28 @@ namespace Unity.Multiplayer.UI
             s.Subtitle = "Saved to " + storedIn + ".";
             MaTextbox nameBox = s.AddTextbox("Name", PlayerIdentity.DefaultDisplayName).WithCharacterLimit(ConnectionPayload.MaxDisplayNameLength);
             nameBox.Text = name;
-            MaSelect colorSelect = s.AddSelect("Colour", PlayerIdentitySources.PaletteNames, PlayerIdentitySources.NearestPaletteIndex(color));
+            int initialColor = PlayerIdentitySources.NearestPaletteIndex(color);
+            MaSelect colorSelect = s.AddSelect("Colour", PlayerIdentitySources.PaletteNames, initialColor);
             RunItems(_settingsItems, s);
-            if (_session != null && _session.IsActive)
+            bool playing = _session != null && _session.IsLive && _session.IsClient;
+            if (playing)
             {
-                s.AddText("A new name or colour shows the next time you join.", TextStyle.Muted);
+                s.AddText("A new name or colour shows to everyone in the game at once.", TextStyle.Muted);
             }
 
             s.Hidden += () =>
             {
+                Color picked = PlayerIdentitySources.Palette[Mathf.Clamp(colorSelect.Value, 0, PlayerIdentitySources.Palette.Length - 1)];
+                if (playing && _session != null && _session.IsLive)
+                {
+                    // In a game: the server checks the change first; an accepted one is saved when it comes back (OnPlayerChanged).
+                    _ = RequestIdentityChange(nameBox.Text, picked, name, colorSelect.Value != initialColor);
+                    return;
+                }
+
                 try
                 {
-                    source.Save(nameBox.Text, PlayerIdentitySources.Palette[Mathf.Clamp(colorSelect.Value, 0, PlayerIdentitySources.Palette.Length - 1)]);
+                    source.Save(nameBox.Text, picked);
                 }
                 catch (Exception ex)
                 {
@@ -1171,6 +1219,42 @@ namespace Unity.Multiplayer.UI
 
                 RefreshMainScreen();
             };
+        }
+
+        /// <summary>
+        /// Asks the server to change the player's name and colour mid-game (the Settings screen). Only what changed is
+        /// asked for; a refusal is shown as a toast with the server's reason, and nothing is saved.
+        /// </summary>
+        private async Task RequestIdentityChange(string typed, Color picked, string oldName, bool colorChanged)
+        {
+            string name = PlayerIdentitySources.CleanName(typed);
+            PlayerColor color = PlayerIdentitySources.ToPlayerColor(picked);
+            bool nameChanged = name != PlayerIdentitySources.CleanName(oldName);
+            if (!nameChanged && !colorChanged)
+            {
+                return;
+            }
+
+            PlayerChangeResult result;
+            try
+            {
+                result = await _session.Roster.RequestChange(nameChanged ? name : null, colorChanged ? color : (PlayerColor?)null);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex, this);
+                return;
+            }
+
+            if (this == null)
+            {
+                return;
+            }
+
+            if (!result.Accepted)
+            {
+                Toast("Your name and colour were not changed: " + result.Reason, ToastKind.Warning);
+            }
         }
 
         private void ShowLobby()
@@ -1240,24 +1324,22 @@ namespace Unity.Multiplayer.UI
             }
         }
 
+        /// <summary>The players, from the session's <see cref="NetRoster"/> (UM-T55): name, colour, Host tag, "you", "reconnecting...".</summary>
         private void FillRoster(MaList list)
         {
             list.Clear();
-            var seats = new List<Seat>(_session.Seats);
-            seats.Sort((a, b) => a.Index.CompareTo(b.Index));
-            foreach (Seat seat in seats)
+            foreach (NetPlayer player in _session.Roster.All)
             {
-                bool mine = seat.IsOccupied && seat.ClientId == _session.LocalClientId;
-                string detail = seat.Status == SeatStatus.Held ? "reconnecting..." : mine ? "you" : null;
-                MaListRow row = list.AddRow(seat.DisplayName, PlayerIdentitySources.ToUnityColor(seat.Color), detail);
-                if (mine)
+                string detail = !player.IsConnected ? "reconnecting..." : player.IsLocal ? "you" : null;
+                MaListRow row = list.AddRow(player.DisplayName, player.Color.ToColor32(), detail);
+                if (player.IsHost)
                 {
                     row.AddTag("Host", TagTone.Accent);
                 }
-                else if (seat.IsOccupied && _session.IsServer)
+                else if (player.IsConnected && _session.IsServer)
                 {
-                    ulong clientId = seat.ClientId;
-                    string name = seat.DisplayName;
+                    ulong clientId = player.ClientId;
+                    string name = player.DisplayName;
                     row.AddAction(MaIcon.Close, () => ConfirmKick(clientId, name), "Remove " + name);
                 }
             }

@@ -36,23 +36,13 @@ namespace Unity.Multiplayer.UI
     public static class PlayerIdentitySources
     {
         /// <summary>
-        /// Eight colours that stay distinct from one another and readable on dark and light backgrounds (the same
-        /// palette Unity.Shared picks a default from), offered by the Settings screen.
+        /// Eight colours that stay distinct from one another and readable on dark and light backgrounds (Core's
+        /// <see cref="PlayerColors.Palette"/>, the same palette Unity.Shared picks a default from), offered by the Settings screen.
         /// </summary>
-        public static readonly Color32[] Palette =
-        {
-            new Color32(0xE6, 0x4B, 0x3C, 0xFF),
-            new Color32(0x34, 0x98, 0xDB, 0xFF),
-            new Color32(0x2E, 0xCC, 0x71, 0xFF),
-            new Color32(0xF1, 0xC4, 0x0F, 0xFF),
-            new Color32(0x9B, 0x59, 0xB6, 0xFF),
-            new Color32(0xE6, 0x7E, 0x22, 0xFF),
-            new Color32(0x1A, 0xBC, 0x9C, 0xFF),
-            new Color32(0xE8, 0x43, 0x93, 0xFF),
-        };
+        public static readonly Color32[] Palette = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(PlayerColors.Palette, c => c.ToColor32()));
 
-        /// <summary>The names of <see cref="Palette"/>'s colours, in order.</summary>
-        public static readonly string[] PaletteNames = { "Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Teal", "Pink" };
+        /// <summary>The names of <see cref="Palette"/>'s colours, in order (Core's <see cref="PlayerColors.PaletteNames"/>).</summary>
+        public static readonly string[] PaletteNames = System.Linq.Enumerable.ToArray(PlayerColors.PaletteNames);
 
         /// <summary>True when the MindAttic profile (com.mindattic.unity.shared) is compiled in.</summary>
         public static bool ProfilesAvailable
@@ -81,28 +71,13 @@ namespace Unity.Multiplayer.UI
         }
 
         /// <summary>
-        /// <paramref name="name"/> as the server accepts it (<see cref="ConnectionPayload.Validate"/>): trimmed, control
-        /// characters removed, at most <see cref="ConnectionPayload.MaxDisplayNameLength"/> characters, and
-        /// <see cref="PlayerIdentity.DefaultDisplayName"/> when nothing is left.
+        /// <paramref name="name"/> as the server accepts it (Core's <see cref="PlayerNames.Clean"/>, the rule a rename is
+        /// checked against): trimmed, invisible and control characters removed, single spaces, at most
+        /// <see cref="PlayerNames.MaxLength"/> characters, and <see cref="PlayerIdentity.DefaultDisplayName"/> when nothing is left.
         /// </summary>
         public static string CleanName(string name)
         {
-            var kept = new System.Text.StringBuilder();
-            foreach (char c in name ?? string.Empty)
-            {
-                if (!char.IsControl(c))
-                {
-                    kept.Append(c);
-                }
-            }
-
-            string clean = kept.ToString().Trim();
-            if (clean.Length > ConnectionPayload.MaxDisplayNameLength)
-            {
-                clean = clean.Substring(0, ConnectionPayload.MaxDisplayNameLength).TrimEnd();
-            }
-
-            return clean.Length == 0 ? PlayerIdentity.DefaultDisplayName : clean;
+            return PlayerNames.Clean(name);
         }
 
         /// <summary>A palette colour picked from <paramref name="name"/>, the same on every run.</summary>

@@ -193,7 +193,7 @@ namespace Unity.Multiplayer.UI.Tests
             Assert.That(_hostSession.IsHost, Is.True);
             Assert.That(_host.LobbyCode, Is.Null, "no code without a join-code service");
             Assert.That(_host.LobbyScreen.Subtitle, Does.Contain("join by IP").And.Contain(":" + _port));
-            Assert.That(_host.LobbyRoster.Rows.Select(r => r.Text), Is.EqualTo(new[] { "Ann" }));
+            Assert.That(_host.LobbyRoster.Rows.Select(r => r.Text).ToArray(), Is.EqualTo(new[] { "Ann" }));
             Assert.That(_host.BusyDialog, Is.Null, "the busy dialog closed");
 
             yield return JoinByAddressFromMenu("127.0.0.1:" + _port);
@@ -458,6 +458,39 @@ namespace Unity.Multiplayer.UI.Tests
             yield return ClientInGame();
             _client.PauseMenu.Open();
             Assert.That(Buttons(_client.PauseMenu.Current), Is.EqualTo(new[] { "Resume", "Settings", "Leave game" }));
+        }
+
+        [UnityTest]
+        public IEnumerator SettingsMidGame_RenamesThroughTheServer_TheLobbyFollows_AndTheProfileIsSaved()
+        {
+            // UM-T55: the lobby's roster is the session's NetRoster, and a name or colour changed in Settings during a
+            // game is asked of the server, shown to everyone at once, and saved to the player's identity source once accepted.
+            yield return CreateFrontEnds();
+            yield return HostFromMenu();
+            yield return JoinByAddressFromMenu("127.0.0.1:" + _port);
+            yield return ClientInGame();
+            yield return Wait(() => _host.LobbyRoster.Count == 2, 5f, () => "the roster never showed Bob");
+            yield return Wait(() => _clientSession.Roster.Count == 2, 5f, () => "Bob's own roster never arrived");
+            Assert.That(_clientSession.Roster.All.Select(p => p.DisplayName), Is.EqualTo(new[] { "Ann", "Bob" }));
+            Assert.That(_clientSession.Roster.Local.Color, Is.EqualTo(PlayerIdentitySources.ToPlayerColor(Blue)));
+
+            _client.PauseMenu.Open();
+            Click(_client.PauseMenu.Current, "Settings");
+            MenuScreen settings = _client.PauseMenu.Current;
+            Assert.That(settings.Title, Is.EqualTo("Settings"));
+            settings.GetComponentInChildren<MaTextbox>().Text = "Bobby";
+            settings.GetComponentInChildren<MaSelect>().Value = 6; // Teal
+            _client.PauseMenu.Back();
+            Assert.That(_clientIdentity.Saves, Is.Zero, "nothing is saved before the server agrees");
+
+            yield return Wait(() => _host.LobbyRoster.Rows.Any(r => r.Text == "Bobby"), 5f, () => "the host's lobby never showed Bobby");
+            MaListRow row = _host.LobbyRoster.Rows.Single(r => r.Text == "Bobby");
+            Assert.That(((Color32)row.Swatch.Value).Equals(PlayerIdentitySources.Palette[6]), Is.True, "his new colour");
+            yield return Wait(() => _clientIdentity.Saves == 1, 5f, () => "the accepted change was never saved");
+            Assert.That(_clientIdentity.DisplayName, Is.EqualTo("Bobby"));
+            Assert.That((Color32)_clientIdentity.Color, Is.EqualTo(PlayerIdentitySources.Palette[6]));
+            Assert.That(_hostIdentity.Saves, Is.Zero, "the host's own profile is untouched");
+            Assert.That(ClientSeat().DisplayName, Is.EqualTo("Bobby"), "the seat keeps it for a reconnect");
         }
 
         [UnityTest]

@@ -214,6 +214,23 @@ namespace Unity.Multiplayer.Core
             return entry.Snapshot();
         }
 
+        /// <summary>
+        /// The player on connection <paramref name="clientId"/> now plays as <paramref name="displayName"/> in
+        /// <paramref name="color"/> (an accepted rename, UM-T55); the seat keeps them across a reconnect too.
+        /// </summary>
+        /// <returns>The seat after the change, or null when the client has none.</returns>
+        public Seat Rename(ulong clientId, string displayName, PlayerColor color)
+        {
+            Entry entry;
+            if (!_byClient.TryGetValue(clientId, out entry))
+            {
+                return null;
+            }
+
+            entry.SetIdentity(displayName, color);
+            return entry.Snapshot();
+        }
+
         /// <summary>Frees the seat of the connection <paramref name="clientId"/> at once, with no grace window (a kick).</summary>
         /// <returns>The released seat, or null when the client had none.</returns>
         public Seat Free(ulong clientId)
@@ -324,6 +341,12 @@ namespace Unity.Multiplayer.Core
             {
                 DisplayName = payload.DisplayName;
                 Color = payload.Color;
+            }
+
+            public void SetIdentity(string displayName, PlayerColor color)
+            {
+                DisplayName = displayName;
+                Color = color;
             }
 
             public void Occupy(ulong clientId)

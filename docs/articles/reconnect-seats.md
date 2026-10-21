@@ -54,7 +54,9 @@ session.SeatReleased += seat => { /* grace ran out, or the player was kicked */ 
 ```
 
 `session.Seats` lists every current seat; `session.TryGetSeat(clientId, out seat)` and
-`session.GetSeatPlayerObject(seatIndex)` look one up. `session.Kick(clientId, reason)` releases a seat
+`session.GetSeatPlayerObject(seatIndex)` look one up. Seats live on the server only; every peer, clients included,
+sees the players through `session.Roster` ([Players, names and colours](players.md)), where a held seat is a player
+with `IsConnected` false who keeps their record, seat and name when they come back. `session.Kick(clientId, reason)` releases a seat
 immediately and sends the reason before closing the connection.
 
 ### Remembering a player across restarts
