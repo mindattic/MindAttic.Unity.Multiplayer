@@ -13,7 +13,9 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// (shared by <c>AwsEc2</c> and <c>AwsLightsail</c>),
 /// <c>mp-host credentials set-gce --project &lt;id&gt; --access-token &lt;token&gt;</c>,
 /// <c>mp-host credentials set-azure --tenant &lt;id&gt; --client-id &lt;id&gt; --client-secret &lt;secret&gt; --subscription &lt;id&gt;</c>,
-/// <c>mp-host credentials set-cloud-options --profile &lt;AwsEc2|AwsLightsail|Gce|AzureVm&gt; --name &lt;server&gt; --opt KEY=VALUE [--opt KEY=VALUE ...]</c>
+/// <c>mp-host credentials set-fly --token &lt;Fly API token&gt; --org &lt;org slug&gt;</c>,
+/// <c>mp-host credentials set-cloud-options --profile &lt;AwsEc2|AwsLightsail|Gce|AzureVm|Fly&gt; --name &lt;server&gt; --opt KEY=VALUE [--opt KEY=VALUE ...]</c>
+/// (also how a Fly deploy overrides its defaults: <c>--opt rendezvousMode=app</c> or <c>--opt rendezvousImage=...</c>)
 /// (the per-server launch options each UM-T27 provisioner's class doc lists, e.g. <c>sshUser</c>,
 /// <c>sshKeyPath</c>, <c>sshPublicKeyPath</c>, <c>amiId</c>, <c>keyName</c>, <c>resourceGroup</c>,
 /// <c>subnetId</c> -- none of them secret, but none safe to default blindly either).
@@ -30,7 +32,7 @@ public static class CredentialsCommand
     {
         if (rawArgs.Count < 2)
         {
-            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-cloud-options> ...");
+            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-cloud-options> ...");
             return Task.FromResult(1);
         }
 
@@ -97,6 +99,11 @@ public static class CredentialsCommand
                 credentials.SetAzureCreds(new HostingCredentialStore.AzureCreds(
                     args.Require("tenant"), args.Require("client-id"), args.Require("client-secret"), args.Require("subscription")));
                 log.Info("Azure credential stored.");
+                return Task.FromResult(0);
+
+            case "set-fly":
+                credentials.SetFlyCreds(new HostingCredentialStore.FlyCreds(args.Require("token"), args.Require("org")));
+                log.Info("Fly.io credential stored.");
                 return Task.FromResult(0);
 
             case "set-cloud-options":

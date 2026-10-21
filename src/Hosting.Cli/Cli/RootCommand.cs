@@ -10,18 +10,20 @@ public static class RootCommand
         mp-host -- the MindAttic.Unity.Multiplayer hosting deploy CLI (UM-T25)
 
         Usage:
-          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm> --name <server> --image <owner/repo> ...
+          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm|Fly> --name <server> --image <owner/repo> ...
           mp-host status      --profile <p> --name <server> --server-id <id>
           mp-host logs         --profile <p> --name <server> --server-id <id> [--tail <n>]
           mp-host update       --profile <p> --name <server> --server-id <id> --image <owner/repo> ...
           mp-host destroy      --profile <p> --name <server> --server-id <id> --yes
-          mp-host credentials  set-ghcr | set-runpod | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh | set-aws | set-gce | set-azure | set-cloud-options ...
+          mp-host credentials  set-ghcr | set-runpod | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh | set-aws | set-gce | set-azure | set-fly | set-cloud-options ...
 
         Hetzner/Vultr/DigitalOcean/Linode/OvhCloud (UM-T26) and AwsEc2/AwsLightsail/Gce/AzureVm
         (UM-T27) each create their own VM plus a security group/firewall/NSG for the game port and
         rendezvous; see docs/articles/hosting/ for each one's setup and sizing guide, and -- for the
         UM-T27 big-cloud profiles -- the per-player-hour egress cost estimate before using one for a
-        public launch.
+        public launch. Fly (UM-T28) deploys through Fly's Machines API with a dedicated IPv4 for its
+        UDP game port and rendezvous as either a second process group or a second Fly app; see
+        docs/articles/hosting/flyio.md.
 
         Every command accepts --dry-run, which prints every API/SSH/docker call it would make
         instead of making it. Credentials are read from MindAttic.Vault (see 'credentials'); none

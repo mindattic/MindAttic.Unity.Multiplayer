@@ -74,6 +74,9 @@ public sealed class HostingCredentialStore : CredentialStore
     /// <summary>An Entra ID (Azure AD) service principal mp-host uses for ARM's client-credentials flow.</summary>
     public sealed record AzureCreds(string TenantId, string ClientId, string ClientSecret, string SubscriptionId);
 
+    /// <summary>A Fly.io API token plus the org slug mp-host creates apps under (e.g. <c>personal</c>).</summary>
+    public sealed record FlyCreds(string ApiToken, string OrgSlug);
+
     /// <summary>GHCR provider id in this store.</summary>
     public const string GhcrProviderId = "ghcr";
 
@@ -103,6 +106,9 @@ public sealed class HostingCredentialStore : CredentialStore
 
     /// <summary>Azure provider id in this store.</summary>
     public const string AzureProviderId = "azure";
+
+    /// <summary>Fly.io provider id in this store.</summary>
+    public const string FlyProviderId = "fly";
 
     /// <summary>The generic-VPS provider id for a given server name (one SSH target per server).</summary>
     public static string GenericVpsProviderId(string serverName) => "genericvps:" + serverName;
@@ -412,6 +418,37 @@ public sealed class HostingCredentialStore : CredentialStore
             w.WriteString("clientId", creds.ClientId);
             w.WriteString("clientSecret", creds.ClientSecret);
             w.WriteString("subscriptionId", creds.SubscriptionId);
+        }));
+    }
+
+    /// <summary>Reads the Fly.io credential, or null when missing or incomplete.</summary>
+    public FlyCreds? GetFlyCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(FlyProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string apiToken = StringProp(doc, "apiKey");
+            string orgSlug = StringProp(doc, "secret");
+            if (string.IsNullOrWhiteSpace(apiToken) || string.IsNullOrWhiteSpace(orgSlug)) return null;
+            return new FlyCreds(apiToken, orgSlug);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the Fly.io credential.</summary>
+    public void SetFlyCreds(FlyCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(FlyProviderId, Write(w =>
+        {
+            w.WriteString("type", "fly");
+            w.WriteString("apiKey", creds.ApiToken);
+            w.WriteString("secret", creds.OrgSlug);
         }));
     }
 

@@ -202,4 +202,23 @@ public class HostingCredentialStoreTests
     {
         Assert.That(_store.GetCloudVmOptions("AzureVm", "nobody"), Is.Null);
     }
+
+    [Test]
+    public void Fly_creds_round_trip()
+    {
+        Assert.That(_store.GetFlyCreds(), Is.Null);
+
+        _store.SetFlyCreds(new HostingCredentialStore.FlyCreds("fo1_abc123", "personal"));
+        var creds = _store.GetFlyCreds();
+        Assert.That(creds, Is.Not.Null);
+        Assert.That(creds!.ApiToken, Is.EqualTo("fo1_abc123"));
+        Assert.That(creds.OrgSlug, Is.EqualTo("personal"));
+    }
+
+    [Test]
+    public void GetFlyCreds_is_null_when_the_org_slug_is_missing()
+    {
+        _store.SaveRaw("fly", "{\"type\":\"fly\",\"apiKey\":\"fo1_abc123\",\"secret\":\"\"}");
+        Assert.That(_store.GetFlyCreds(), Is.Null);
+    }
 }

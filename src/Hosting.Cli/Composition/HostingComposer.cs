@@ -10,6 +10,7 @@ using Unity.Multiplayer.Hosting.Cli.Provisioning.Aws.Lightsail;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Azure;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.CloudVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.DigitalOcean;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Fly;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Gce;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.GenericVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Hetzner;
@@ -57,7 +58,7 @@ public sealed class HostingComposer
     {
         GenericVpsProvisioner.Id, RunPodProvisioner.Id,
         HetznerProvisioner.Id, VultrProvisioner.Id, DigitalOceanProvisioner.Id, LinodeProvisioner.Id, OvhProvisioner.Id,
-        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id,
+        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id, FlyProvisioner.Id,
     };
 
     /// <summary>The provisioner for <paramref name="profileId"/>, wired to the vault credential (or dry-run) for it.</summary>
@@ -127,6 +128,13 @@ public sealed class HostingComposer
         {
             IAzureVmApiClient api = _dryRun ? new DryRunAzureVmApiClient(log) : BuildRealAzureVmClient();
             return new AzureVmProvisioner(api, BuildSsh(log));
+        }
+
+        if (string.Equals(profileId, FlyProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IFlyApiClient api = _dryRun ? new DryRunFlyApiClient(log) : BuildRealFlyClient();
+            IFlyCli cli = _dryRun ? new DryRunFlyCli(log) : new ProcessFlyCli(new ProcessRunner());
+            return new FlyProvisioner(api, cli);
         }
 
         throw new ArgumentException($"Unknown hosting profile '{profileId}'. Known: {string.Join(", ", KnownProfiles)}.");
@@ -205,6 +213,17 @@ public sealed class HostingComposer
             var options = _credentials.GetCloudVmOptions(profileId, serverName) ?? throw new InvalidOperationException(
                 $"No launch options stored for '{profileId}'/'{serverName}'. Store them first (HostingCredentialStore.SetCloudVmOptions, " +
                 "or 'mp-host credentials set-cloud-options').");
+            return new ProviderConnection(serverName, options, new Dictionary<string, string>());
+        }
+
+        if (string.Equals(profileId, FlyProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            var creds = _credentials.GetFlyCreds() ?? throw new InvalidOperationException(
+                "No Fly.io credential in the Hosting vault. Store one first (HostingCredentialStore.SetFlyCreds, or 'mp-host credentials set-fly').");
+            var options = new Dictionary<string, string>(_credentials.GetCloudVmOptions(profileId, serverName) ?? new Dictionary<string, string>())
+            {
+                ["orgSlug"] = creds.OrgSlug,
+            };
             return new ProviderConnection(serverName, options, new Dictionary<string, string>());
         }
 
@@ -327,5 +346,14 @@ public sealed class HostingComposer
         var creds = _credentials.GetAzureCreds() ?? throw new InvalidOperationException(
             "No Azure credential in the Hosting vault. Store one first (HostingCredentialStore.SetAzureCreds, or 'mp-host credentials set-azure').");
         return new HttpAzureVmApiClient(new HttpClient(), creds.TenantId, creds.ClientId, creds.ClientSecret, creds.SubscriptionId);
+    }
+
+    private HttpFlyApiClient BuildRealFlyClient()
+    {
+        var creds = _credentials.GetFlyCreds() ?? throw new InvalidOperationException(
+            "No Fly.io credential in the Hosting vault. Store one first (HostingCredentialStore.SetFlyCreds, or 'mp-host credentials set-fly').");
+        var http = new HttpClient { BaseAddress = new Uri("https://api.machines.dev/v1/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", creds.ApiToken);
+        return new HttpFlyApiClient(http);
     }
 }
