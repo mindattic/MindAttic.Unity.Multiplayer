@@ -1,13 +1,27 @@
 # Unity.Multiplayer
 
-Reusable Unity 6 multiplayer for MindAttic games: attribute-decorated RPCs and synced fields, a listen server or
-a dedicated server from the exact same game code, and joining by IP:port or a short typed join code.
+The one-stop shop for multiplayer Unity 6 games. With its two sibling packages, [MindAttic Components](https://github.com/mindattic/MindAttic.Components)
+(the menus and HUD) and [Unity.Shared](https://github.com/mindattic/Unity.Shared) (player profiles), it is one kit that
+covers the whole game: attribute-decorated RPCs and synced fields, a listen server or a dedicated server from the same
+code, joining by IP:port or a short join code, menus, player names and colours, votes, objects found by key, bots, a
+test kit, and one command to build, deploy and smoke-test a server. **MindAttic ▸ Multiplayer ▸ New Game…** turns an
+empty Unity project into a working networked game in minutes.
 
 ![Unity](https://img.shields.io/badge/unity-6000.4-black)
 ![Netcode for GameObjects](https://img.shields.io/badge/netcode-2.x-blue)
 ![.NET](https://img.shields.io/badge/dotnet-10-512BD4)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
-![Status](https://img.shields.io/badge/status-v1.0.0-brightgreen)
+![Status](https://img.shields.io/badge/status-v2.0.0-brightgreen)
+
+| Package | What it gives a game |
+|---|---|
+| **Unity.Multiplayer** (`com.mindattic.unity.multiplayer`, this repo) | Networking, roster, votes, keyed objects, bots, the test kit, the server package and `mp-host` |
+| **MindAttic Components** (`com.mindattic.components.unity`) | The drop-in menus and vote overlay, and the widgets for your own HUD |
+| **Unity.Shared** (`com.mindattic.unity.shared`) | The player's name and colour (and settings) from their MindAttic profile |
+
+See [The kit](https://mindattic.github.io/Unity.Multiplayer/articles/kit.html) for which piece does which job, and
+[Case study: Unity.Cursory](https://mindattic.github.io/Unity.Multiplayer/articles/case-study-cursory.html) for a full
+game built on all three.
 
 The whole networked surface of a game object is usually three declarations:
 
@@ -27,13 +41,15 @@ public partial class MinimalPlayer : NetEntity
 Try it: the full docs site, with a 10-minute getting-started guide, every attribute's rules, and the complete
 hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.github.io/Unity.Multiplayer/).
 
-> **Status: v1.0.0**, first stable release — see Roadmap below for what's built, and
-> [CHANGELOG.md](CHANGELOG.md) for what shipped in this release. The design and build order are in
+> **Status: v2.0.0**, the one-stop shop release (the New Game wizard and template, the kit docs). See Roadmap below
+> for what's built, and [CHANGELOG.md](CHANGELOG.md) for what shipped in each release. The design and build order are in
 > [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
 > [docs/BIBLE.md](docs/BIBLE.md).
 
 ## Why
 
+- Start a new multiplayer game from a working one: menus, roster, votes, keyed objects, a bot, tests and a deploy
+  config from one wizard, all built from the kit's own pieces, not a demo to throw away.
 - Network a new game object in three attributes, not a day of hand-rolled `NetworkVariable`s and RPCs.
 - Ship a listen server for tonight's game and a dedicated server for a persistent world from the same game
   code — the topology is one setting, never a fork.
@@ -48,6 +64,11 @@ hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.g
 
 ## Features
 
+- **New Game wizard** — **MindAttic ▸ Multiplayer ▸ New Game…** checks `Packages/manifest.json` and names (or adds)
+  the exact lines the kit needs, then makes `Assets/<YourGame>`: a scene with `NetBootstrap`, `NetFrontEnd` and
+  `NetVotes`; a player with a `[ToServer]` move and a `[Synced]` position in its roster name and colour; crates spawned
+  by key; a restart vote; an `IBotDriver`; EditMode and PlayMode tests on the test kit; and `mp-host.json` plus a nightly
+  smoke workflow. See [Getting started](https://mindattic.github.io/Unity.Multiplayer/articles/getting-started.html).
 - **Attribute RPCs and synced state** — `[ToServer]`, `[ToClients]`, `[ToOwner]`, `[ToClient]`, `[Synced]`,
   with per-RPC rate limiting, ownership checks and a change handler, all generated at compile time. See
   [Attributes reference](https://mindattic.github.io/Unity.Multiplayer/articles/attributes.html).
@@ -77,18 +98,35 @@ hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.g
 
 ## Quick start
 
-Prerequisites: Unity 6000.4.3f1, and this package's repository checked out beside your game's.
+Prerequisites: Unity 6000.4.3f1, and the kit's three repos cloned side by side with your game's folder:
 
-Add the package to the game's `Packages/manifest.json` as a local package:
+```powershell
+git clone https://github.com/mindattic/Unity.Multiplayer
+git clone https://github.com/mindattic/MindAttic.Components
+git clone https://github.com/mindattic/Unity.Shared
+```
+
+Add the package to the game's `Packages/manifest.json` as a local package, with Netcode for GameObjects listed as a
+testable (the package's test kit builds on NGO's test helpers and does not compile without it):
 
 ```json
-"com.mindattic.unity.multiplayer": "file:../../Unity.Multiplayer/unity/com.mindattic.unity.multiplayer"
+"dependencies": {
+  "com.mindattic.unity.multiplayer": "file:../../Unity.Multiplayer/unity/com.mindattic.unity.multiplayer",
+  ...
+},
+"testables": [ "com.unity.netcode.gameobjects" ]
 ```
 
 It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install `com.unity.services.multiplayer` as
 well for Unity Relay join codes.
 
-Then, in **Window > Package Manager**, select **MindAttic Multiplayer**, open **Samples** and import
+**A new game:** run **MindAttic ▸ Multiplayer ▸ New Game…**, click **Add missing lines to Packages/manifest.json**,
+type a name and click **Create game**, then open its `Game.unity`, press Play and click **Host**. That is a whole game
+with menus, votes, a bot and tests; `mp-host game local` runs its dedicated server in Docker and `mp-host game smoke`
+runs it with two bots. [Getting started](https://mindattic.github.io/Unity.Multiplayer/articles/getting-started.html)
+walks through every step and every file.
+
+**Just the samples:** in **Window > Package Manager**, select **MindAttic Multiplayer**, open **Samples** and import
 **Minimal**. Open its `Minimal.unity` scene, press Play and click **Host**; a second copy (Multiplayer Play
 Mode, or a build) clicks **Join by IP** or **Join by code**. Each player's square is moved by the server
 through one `[ToServer]` call, one `[ToClients]` call and one `[Synced]` field — the sample's own
@@ -115,6 +153,7 @@ project onto the package.
 | `unity/com.mindattic.unity.multiplayer/Runtime/UI/` | The optional drop-in front end (`Unity.Multiplayer.UI`, compiled only when MindAttic Components is installed) |
 | `unity/com.mindattic.unity.multiplayer/Samples~/Minimal/` | The Minimal sample Package Manager imports (scene, player prefab, menu, line-by-line README) |
 | `unity/com.mindattic.unity.multiplayer/Samples~/FrontEnd/` | The Front End sample: the same arena with the drop-in front end and its game hooks |
+| `unity/com.mindattic.unity.multiplayer/Samples~/GameTemplate/` | The game template **New Game…** copies (`Editor/Setup/NewGame*.cs`): scene, player, keyed crates, votes, bot, tests |
 | `src/Generators/` | The source generator, analyzers and suppressor (netstandard2.0, Roslyn 4.3.1) |
 | `src/Hosting.Cli/` | `mp-host`: builds a server package and deploys it to any hosting profile |
 | `server/Rendezvous/` | The rendezvous service (ASP.NET Core .NET 10 minimal API + Dockerfile): join code to a dedicated server's IP:port |
@@ -171,6 +210,7 @@ powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1
 powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
 powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager and runs its PlayMode tests (-Author rebuilds its scene and prefabs)
 powershell -File tests/run-sample.ps1 -Sample FrontEnd   # the same for the Front End sample (needs the sibling MindAttic.Components and Unity.Shared repos)
+powershell -File tests/run-new-game.ps1     # a brand-new project in %TEMP%: New Game's manifest check, create, the game's EditMode + PlayMode tests (-Smoke adds mp-host game smoke; -Author rebuilds the template's scene and prefabs)
 powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Linux player (server + 2 bots, same build, role picked by MINDATTIC_ROLE)
 ```
 
@@ -191,14 +231,16 @@ RPC direction and synced fields, the source generator and its analyzer, the rend
 condition simulation, the editor tooling, the Minimal sample, CI and the nightly smoke test, the full hosting
 pipeline (`mp-host` plus every provider's profile), and this docs site.
 
-**v1.0.0** is tagged and released (UM-T20): see [CHANGELOG.md](CHANGELOG.md) for everything that shipped and
-the [GitHub releases page](https://github.com/mindattic/Unity.Multiplayer/releases) for the release itself.
+**v1.0.0** is tagged and released (UM-T20). **v2.0.0** (UM-T59) adds the drop-in front end, the roster, votes, keyed
+objects, bots, the test kit, `mp-host game` and the New Game wizard: everything the kit needs to be a one-stop shop.
+See [CHANGELOG.md](CHANGELOG.md) for everything that shipped and the
+[GitHub releases page](https://github.com/mindattic/Unity.Multiplayer/releases) for the releases themselves.
 
 ## Documentation
 
-- [Docs site](https://mindattic.github.io/Unity.Multiplayer/) — guides (getting started, topologies,
-  attributes, join codes, reconnect and seats, testing, hosting, porting, troubleshooting) and the API
-  reference generated from this repo's XML doc comments.
+- [Docs site](https://mindattic.github.io/Unity.Multiplayer/) — guides (getting started, the kit, the Unity.Cursory
+  case study, front end, players, votes, objects, topologies, attributes, join codes, reconnect and seats, testing,
+  bots, hosting, porting, troubleshooting) and the API reference generated from this repo's XML doc comments.
 - [CHANGELOG.md](CHANGELOG.md) — what shipped in each release.
 - [docs/BIBLE.md](docs/BIBLE.md) — the project's rules and verified state.
 - [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md) — the design and build order.

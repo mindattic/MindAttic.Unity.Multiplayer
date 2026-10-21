@@ -23,6 +23,13 @@ runs before they're fixed. Full table and examples: [Attributes reference](attri
 | MAMP012 bad `[Synced]` field | The field is `static`/`readonly`/`const`, or its generated property name collides with an existing member. | Remove the modifier, or rename the field/the colliding member. |
 | MAMP013 non-constant initializer | `[Synced] float _mass = SomeMethod();` — the initial value must be known at compile time. | Set a literal initial value, then assign the real starting value in `OnSpawned` on the server. |
 
+## Compile-time: installing the package
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `NetSessionTest.cs`: CS0234 "The type or namespace name 'TestHelpers' does not exist in the namespace 'Unity.Netcode'", CS0246 `NetcodeIntegrationTest`; batch mode says "Scripts have compiler errors" | The package's test kit (`Unity.Multiplayer.Testing`) builds on NGO's test helpers, which only compile when NGO is a testable. | Add `"testables": [ "com.unity.netcode.gameobjects" ]` to `Packages/manifest.json` ([Getting started](getting-started.md#2-make-a-unity-project-beside-them-2-minutes)). |
+| **New Game…** or **Add Front End** says MindAttic Components is missing | The front end and the vote overlay are built from it, and a `package.json` cannot depend on a `file:` package. | Click **Add missing lines to Packages/manifest.json** in **New Game…**, or add the line it shows. See [The kit](kit.md). |
+
 ## Editor: Validate Prefabs
 
 **MindAttic ▸ Multiplayer ▸ Validate Prefabs** checks every network prefab under `Assets` (anything with a

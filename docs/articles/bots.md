@@ -11,6 +11,10 @@ a pad, a level one player cannot solve.
 
 ## What a new game does
 
+A game made with **MindAttic ▸ Multiplayer ▸ New Game…** already has all four steps below: its `GameBot` driver,
+`BotTests` (a `NetBotTest`), an `mp-host.json` with `"bots": "A,B"`, and `.github/workflows/nightly.yml`. See
+[Getting started](getting-started.md#8-bots-end-to-end-and-every-night-2-minutes). For an existing game:
+
 1. **Write a driver.** One class, anywhere in the game's code:
 
    ```csharp
@@ -186,4 +190,7 @@ Secrets: `UNITY_LICENSE` (or `UNITY_EMAIL`/`UNITY_PASSWORD`/`UNITY_SERIAL`) for 
 when Unity.Multiplayer or a sibling is private. `compose.log` is uploaded as the `smoke-logs` artifact.
 
 The package's own nightly (`nightly-smoke.yml`, the Minimal sample's `SmokeDriver`) predates this and still drives
-its roles through environment variables. New games use the above.
+its roles through environment variables. It stays that way for now. The reusable workflow builds a project that is
+already in the repo, and the package's generic game, the New Game template, only becomes a project once the wizard
+has run. Locally, `tests/run-new-game.ps1 -Smoke` runs `mp-host game smoke` on a freshly generated game. New games use
+the above.

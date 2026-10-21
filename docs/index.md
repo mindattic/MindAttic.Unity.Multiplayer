@@ -4,11 +4,14 @@ _disableToc: true
 
 # Unity.Multiplayer
 
-> **v1.0.0** — first stable release. See the [changelog](https://github.com/mindattic/Unity.Multiplayer/blob/main/CHANGELOG.md)
+> **v2.0.0**: the one-stop shop release. **MindAttic ▸ Multiplayer ▸ New Game…** makes a complete networked game in
+> a fresh project. See the [changelog](https://github.com/mindattic/Unity.Multiplayer/blob/main/CHANGELOG.md)
 > and [all releases](https://github.com/mindattic/Unity.Multiplayer/releases).
 
-Reusable Unity 6 multiplayer for MindAttic games: attribute-decorated RPCs, a listen server or a dedicated
-server, and joining by IP:port or a join code.
+The one-stop shop for multiplayer Unity 6 games. With its two sibling packages, MindAttic Components and Unity.Shared,
+it is [one kit](articles/kit.md) that covers the whole game: attribute-decorated RPCs and synced fields, a listen server
+or a dedicated server from the same code, menus, player names and colours, votes, objects found by key, bots, a test
+kit, and one command to build and deploy a server.
 
 ```csharp
 public partial class MinimalPlayer : NetEntity
@@ -31,8 +34,11 @@ call, one server-to-everyone call and one server-owned field. The package's sour
 
 ## Start here
 
-- **[Getting started in 10 minutes](articles/getting-started.md)** — network your own scene, add the menus with one
-  click, write a player, host and join.
+- **[Getting started: a new game](articles/getting-started.md)**: from an empty folder to a networked game with
+  menus, votes, bots, tests and a server running in Docker, in minutes, with every step copy-pasteable.
+- **[The kit](articles/kit.md)**: Unity.Multiplayer, MindAttic Components and Unity.Shared, and which piece does
+  which job.
+- **[Case study: Unity.Cursory](articles/case-study-cursory.md)**: how a full co-op physics game uses every piece.
 - **[Drop-in front end](articles/front-end.md)** — `NetFrontEnd`: main menu, lobby with join code, connection
   dialogs, reconnect and an in-game Esc menu from one component, with hooks for the game's own options.
 - **[Topologies](articles/topologies.md)** — listen server vs. dedicated server, and how the same game code runs

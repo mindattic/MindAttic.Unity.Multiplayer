@@ -7,8 +7,39 @@ carries the package's own version.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-21
+
+The one-stop shop release. With MindAttic Components and Unity.Shared, the package is now one kit for a whole
+multiplayer game: menus, the roster, votes, keyed objects, bots, a test kit and `mp-host game` all landed since 1.0.0,
+and **MindAttic ▸ Multiplayer ▸ New Game…** puts every one of them into a fresh project as a working game. Upgrading
+from 1.0.0 needs no code changes; the major version follows
+[HOUSE-LAW-1](https://github.com/mindattic/MindAttic/blob/main/MindAttic.HouseRules.md#house-law-1--whole-number-versioning).
+See [Getting started](docs/articles/getting-started.md), [The kit](docs/articles/kit.md) and
+[Case study: Unity.Cursory](docs/articles/case-study-cursory.md).
+
 ### Added
 
+- **New Game wizard and game template** (UM-T59) — **MindAttic ▸ Multiplayer ▸ New Game…** checks
+  `Packages/manifest.json` and lists the exact lines the template needs: MindAttic Components, Unity.Shared (optional),
+  the Unity Test Framework, and NGO under `testables`. The `file:` paths point at the repos beside Unity.Multiplayer,
+  relative where possible. **Add missing lines** writes them, and never writes a path that does not exist. The wizard
+  then copies the new `Samples~/GameTemplate` into `Assets/<Name>`, with the game's own namespace and assembly names and
+  fresh asset GUIDs. It also puts the scene first in Build Settings, turns on Run In Background, and writes
+  `mp-host.json` (server scene, smoke bots and scenario) and `.github/workflows/nightly.yml` (one `uses:` of
+  `game-smoke.yml`). The template contains:
+  - a scene with `NetBootstrap`, `NetFrontEnd` and `NetVotes`;
+  - a `Player` `NetEntity` with a `[ToServer] Move` and a `[Synced]` position, drawn in its `NetRoster` name and colour;
+  - crates spawned by key through `NetSession.Objects`;
+  - a restart `VoteKind`;
+  - a `[NetBotDriver]` `GameBot`;
+  - EditMode tests (scene wiring, the prefab validator) and PlayMode tests on `NetSessionTest` and `NetBotTest`.
+
+  `NewGame.CreateFromCommandLine` (`-addPackages`, `-checkOnly`, `-gameName`) runs the wizard in batch mode, and
+  `NewGameManifest` is its plain-text manifest logic. `tests/run-new-game.ps1` proves it end to end: it creates a
+  brand-new project in `%TEMP%`, runs the wizard as a game developer would, and runs the generated game's own suites
+  (`-Smoke` adds `mp-host game smoke`). The template is also listed as a Package Manager sample (**Game Template**).
+  New docs: [Getting started](docs/articles/getting-started.md), rewritten for a brand-new game;
+  [The kit](docs/articles/kit.md); and [Case study: Unity.Cursory](docs/articles/case-study-cursory.md).
 - **Networked objects by key** (UM-T60) — a stable, game-given name for any networked object, so clients never match
   objects by spawn order. Put a `NetKey` on a network prefab's root and spawn instances on the server with
   `NetSession.Objects.Spawn(prefab, key, position, rotation, parent, ownerClientId)`; every peer finds them in

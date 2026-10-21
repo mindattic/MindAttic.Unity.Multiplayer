@@ -1,8 +1,8 @@
 {
   "name": "com.mindattic.unity.multiplayer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "displayName": "MindAttic Multiplayer",
-  "description": "Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS); AWS GameLift's server lifecycle lights up when its Server SDK package is installed (MINDATTIC_GAMELIFT). A drop-in multiplayer front end (NetFrontEnd: main menu, lobby with join code, connection dialogs, reconnect, in-game menu) lights up when com.mindattic.components.unity is installed (MINDATTIC_COMPONENTS), with the player's name and colour from com.mindattic.unity.shared when that is too; package.json cannot list those file: packages, so add them to the game's manifest (docs/articles/front-end.md).",
+  "description": "The one-stop shop for multiplayer Unity 6 games, with MindAttic Components and Unity.Shared: MindAttic > Multiplayer > New Game... makes a complete networked game (menus, roster, votes, keyed objects, bots, tests, mp-host deploy and smoke) in a fresh project. Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS); AWS GameLift's server lifecycle lights up when its Server SDK package is installed (MINDATTIC_GAMELIFT). A drop-in multiplayer front end (NetFrontEnd: main menu, lobby with join code, connection dialogs, reconnect, in-game menu) lights up when com.mindattic.components.unity is installed (MINDATTIC_COMPONENTS), with the player's name and colour from com.mindattic.unity.shared when that is too; package.json cannot list those file: packages, so add them to the game's manifest (docs/articles/front-end.md).",
   "unity": "6000.0",
   "author": { "name": "MindAttic" },
   "license": "MIT",
@@ -21,6 +21,11 @@
       "displayName": "Front End",
       "description": "The Minimal arena with the drop-in front end instead of a hand-made menu: Host, Join by IP or code, a lobby with the join code and roster, connection dialogs, reconnect and an Esc menu from one NetFrontEnd component, each square in its player's own name and colour, and the game's hooks in FrontEndGame.cs. Needs com.mindattic.components.unity (and optionally com.mindattic.unity.shared) in the manifest; see its README.md.",
       "path": "Samples~/FrontEnd"
+    },
+    {
+      "displayName": "Game Template",
+      "description": "The skeleton MindAttic > Multiplayer > New Game... copies into Assets/<YourGame> (use the menu: it also checks the manifest, renames the namespace, gives the assets fresh GUIDs and writes mp-host.json): a scene with NetBootstrap, NetFrontEnd and NetVotes; a player NetEntity with a [ToServer] move and a [Synced] position in its roster name and colour; crates spawned by key; a restart vote; an IBotDriver; EditMode and PlayMode tests on the test kit. Needs com.mindattic.components.unity (and optionally com.mindattic.unity.shared); see its README.md.",
+      "path": "Samples~/GameTemplate"
     }
   ]
 }

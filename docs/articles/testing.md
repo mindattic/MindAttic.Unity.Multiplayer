@@ -189,6 +189,11 @@ the nightly compose smoke without Docker; see [Bots and end-to-end smoke tests](
 
 ### Examples to copy
 
+- A game made with **MindAttic ▸ Multiplayer ▸ New Game…** starts with both kinds. `Tests/PlayMode/GameTests.cs` has
+  `PlayerTests` (a `[ToServer]` round trip, roster name and colour, server-side clamping), `CrateTests` (objects by
+  key, a restart vote through `VoteBoard`) and `BotTests` (`NetBotTest`). `Tests/EditMode/GameSetupTests.cs` checks the
+  scene's kit components and runs the prefab validator. Its asmdefs are the ones above. `tests/run-new-game.ps1` runs
+  them in a brand-new project.
 - `tests/MinimalSample/Tests` — the Minimal sample's player prefab tested as a game would: `SetPlayerPrefab`,
   `StartAndJoinAll`, `WaitForSpawn` for each peer's player, `WaitUntil` on synced positions and RPCs.
 - The package's own suites under `unity/com.mindattic.unity.multiplayer/Tests/Runtime`: `HostAndClientTests` and

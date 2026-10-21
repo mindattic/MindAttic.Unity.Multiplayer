@@ -1,5 +1,9 @@
-- name: Getting started in 10 minutes
+- name: "Getting started: a new game"
   href: getting-started.md
+- name: The kit
+  href: kit.md
+- name: "Case study: Unity.Cursory"
+  href: case-study-cursory.md
 - name: Drop-in front end
   href: front-end.md
 - name: Votes

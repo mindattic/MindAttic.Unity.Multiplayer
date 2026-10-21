@@ -1,0 +1,36 @@
+{
+    "name": "MyGame.EditorTests",
+    "rootNamespace": "MyGame.EditorTests",
+    "references": [
+        "MyGame",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer.Editor",
+        "Unity.Multiplayer.UI",
+        "Unity.Netcode.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "MINDATTIC_COMPONENTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.mindattic.components.unity",
+            "expression": "1.0.0",
+            "define": "MINDATTIC_COMPONENTS"
+        }
+    ],
+    "noEngineReferences": false
+}
