@@ -5,6 +5,16 @@ All notable changes to Unity.Multiplayer are documented here. The package follow
 whole-number versioning (`1`, `2`, `3` — never `1.1.0`); `unity/com.mindattic.unity.multiplayer/package.json`
 carries the package's own version.
 
+## [Unreleased]
+
+### Added
+
+- **`NetBootstrap.Configure`** (UM-T33) — sets the bootstrap's default `NetConfig` in code (topology, address,
+  port, transport, tick rate, max players, game version, join codes, conditions, …) before the session starts,
+  instead of reflecting into its private serialized fields. `Configure(NetConfig)` copies and validates the
+  config; `Configure(Action<NetConfig>)` edits a copy of the current defaults; both are refused while the
+  session runs. `DefaultConfig` reads the defaults back. The environment and command line still override them.
+
 ## [1.0.0] — 2026-10-21
 
 First stable release. Everything below was built across UM-T2 through UM-T19 and UM-T23 through UM-T46; full

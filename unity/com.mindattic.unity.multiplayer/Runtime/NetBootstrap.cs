@@ -1,3 +1,4 @@
+using System;
 using Unity.Multiplayer.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -11,6 +12,8 @@ namespace Unity.Multiplayer
     /// the headless settings and the command line and starts the session when it should (see <see cref="NetLaunch"/>).
     /// </summary>
     /// <remarks>
+    /// <para>Settings: the Inspector holds the defaults; code sets them with <see cref="Configure(NetConfig)"/> before the
+    /// session starts; the environment and command line override both (<see cref="BuildConfig"/>).</para>
     /// <para>Launch behaviour: <c>-mode host|server|client</c> on the command line always starts that topology; a
     /// headless process (<c>-batchmode</c>, <c>-nographics</c>, a Dedicated Server build) starts as a dedicated server
     /// when <see cref="serveWhenHeadless"/> is on; otherwise the session starts only when <see cref="autoStart"/> is on,
@@ -127,6 +130,9 @@ namespace Unity.Multiplayer
         /// </summary>
         public string Password { get; set; }
 
+        /// <summary>The rendezvous secret set by <see cref="Configure(NetConfig)"/>; never serialized.</summary>
+        [NonSerialized] private string _rendezvousSecret;
+
         /// <summary>The first enabled NetBootstrap in the loaded scenes, for game code that has no reference to it.</summary>
         public static NetBootstrap Instance { get; private set; }
 
@@ -134,54 +140,102 @@ namespace Unity.Multiplayer
         public NetSession Session { get; private set; }
 
         /// <summary>
-        /// The Inspector settings as a <see cref="NetConfig"/>, with the command line folded in when
-        /// <see cref="readCommandLine"/> is on. A new object every call.
+        /// The session settings this component starts with: <see cref="DefaultConfig"/> with the environment and the
+        /// command line folded in when <see cref="readCommandLine"/> is on, so <c>-port</c>, <c>-transport</c> and the
+        /// rest always win over the Inspector and over <see cref="Configure(NetConfig)"/>. A new object every call.
         /// </summary>
         public NetConfig BuildConfig()
         {
-            var config = new NetConfig
-            {
-                Topology = topology,
-                Address = address,
-                Port = (ushort)Mathf.Clamp(port, 1, 65535),
-                Transport = transport,
-                TickRate = tickRate,
-                MaxPlayers = maxPlayers,
-                ServerName = string.IsNullOrWhiteSpace(serverName) ? null : serverName.Trim(),
-                Password = string.IsNullOrEmpty(Password) ? null : Password,
-                GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? Application.version : gameVersion,
-                ReconnectGraceSeconds = Mathf.Max(0f, reconnectGraceSeconds),
-                JoinCodes = joinCodes,
-                RendezvousUrl = string.IsNullOrWhiteSpace(rendezvousUrl) ? null : rendezvousUrl.Trim(),
-                PublicAddress = string.IsNullOrWhiteSpace(publicAddress) ? null : publicAddress.Trim(),
-                PublicPort = (ushort)Mathf.Clamp(publicPort, 0, 65535),
-                Conditions = conditions,
-                SimulatedLatencyMs = Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs),
-                SimulatedJitterMs = Mathf.Clamp(simulatedJitterMs, 0, Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs)),
-                SimulatedPacketLossPercent = Mathf.Clamp(simulatedPacketLossPercent, 0, 100),
-            };
+            return BuildConfig(System.Environment.GetCommandLineArgs());
+        }
 
-            if (string.IsNullOrWhiteSpace(config.GameVersion))
-            {
-                config.GameVersion = "0";
-            }
-
+        /// <summary><see cref="BuildConfig()"/> with a given command line (for tests).</summary>
+        internal NetConfig BuildConfig(string[] args)
+        {
+            NetConfig config = DefaultConfig;
             if (readCommandLine)
             {
-                HeadlessBootstrap.ReadCommandLine(config);
+                HeadlessBootstrap.ReadCommandLine(config, args);
             }
 
             return config;
         }
 
         /// <summary>
-        /// Replaces the Inspector session settings with <paramref name="config"/>'s (for code that sets the
-        /// component up at runtime, before its Start runs).
+        /// The default session settings: the Inspector's, or the last <see cref="Configure(NetConfig)"/>'s, before the
+        /// environment and command line are applied. A new object every call; changing it changes nothing until it is
+        /// passed back to <see cref="Configure(NetConfig)"/>. An empty Game Version reads as <c>Application.version</c>.
         /// </summary>
-        internal void SetDefaults(NetConfig config)
+        public NetConfig DefaultConfig
         {
+            get
+            {
+                var config = new NetConfig
+                {
+                    Topology = topology,
+                    Address = address,
+                    Port = (ushort)Mathf.Clamp(port, 1, 65535),
+                    Transport = transport,
+                    TickRate = tickRate,
+                    MaxPlayers = maxPlayers,
+                    ServerName = string.IsNullOrWhiteSpace(serverName) ? null : serverName.Trim(),
+                    Password = string.IsNullOrEmpty(Password) ? null : Password,
+                    GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? Application.version : gameVersion,
+                    ReconnectGraceSeconds = Mathf.Max(0f, reconnectGraceSeconds),
+                    JoinCodes = joinCodes,
+                    RendezvousUrl = string.IsNullOrWhiteSpace(rendezvousUrl) ? null : rendezvousUrl.Trim(),
+                    RendezvousSecret = string.IsNullOrEmpty(_rendezvousSecret) ? null : _rendezvousSecret,
+                    PublicAddress = string.IsNullOrWhiteSpace(publicAddress) ? null : publicAddress.Trim(),
+                    PublicPort = (ushort)Mathf.Clamp(publicPort, 0, 65535),
+                    Conditions = conditions,
+                    SimulatedLatencyMs = Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs),
+                    SimulatedJitterMs = Mathf.Clamp(simulatedJitterMs, 0, Mathf.Clamp(simulatedLatencyMs, 0, NetConditions.MaxLatencyMs)),
+                    SimulatedPacketLossPercent = Mathf.Clamp(simulatedPacketLossPercent, 0, 100),
+                };
+
+                if (string.IsNullOrWhiteSpace(config.GameVersion))
+                {
+                    config.GameVersion = "0";
+                }
+
+                return config;
+            }
+        }
+
+        /// <summary>
+        /// Sets the default session settings in code, replacing the Inspector's: every <see cref="NetConfig"/> field
+        /// (topology, address, port, transport, tick rate, max players, game version, server name, password, reconnect
+        /// grace, join codes, rendezvous URL and secret, public address and port, network conditions). Call it before
+        /// the component's Start (for example on an inactive GameObject, then activate it) so Auto Start and the
+        /// headless launch use it, or any time before UI calls <see cref="Begin"/>, <see cref="StartHost"/> and the
+        /// rest. The environment and command line still override it (<see cref="BuildConfig"/>). The config is copied,
+        /// so later changes to <paramref name="config"/> do nothing. The secret and password are never serialized.
+        /// </summary>
+        /// <returns>This component, so calls chain.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="config"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="config"/> is invalid (<see cref="NetConfig.Validate"/>); nothing changes.</exception>
+        /// <exception cref="InvalidOperationException">This component's session has started and not yet ended; nothing changes.</exception>
+        /// <example>
+        /// <code>
+        /// bootstrap.Configure(new NetConfig { Topology = Topology.Server, Port = 47961, GameVersion = "1.2" });
+        /// </code>
+        /// </example>
+        public NetBootstrap Configure(NetConfig config)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
+            if (Session != null && Session.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "NetBootstrap.Configure: the session is " + Session.State + "; change the settings before it starts or after it ends.");
+            }
+
+            config.EnsureValid();
             topology = config.Topology;
-            address = config.Address ?? string.Empty;
+            address = config.Address == null ? string.Empty : config.Address.Trim();
             port = config.Port;
             transport = config.Transport;
             tickRate = config.TickRate;
@@ -192,12 +246,40 @@ namespace Unity.Multiplayer
             reconnectGraceSeconds = (float)config.ReconnectGraceSeconds;
             joinCodes = config.JoinCodes;
             rendezvousUrl = config.RendezvousUrl ?? string.Empty;
+            _rendezvousSecret = config.RendezvousSecret;
             publicAddress = config.PublicAddress ?? string.Empty;
             publicPort = config.PublicPort;
             conditions = config.Conditions;
             simulatedLatencyMs = config.SimulatedLatencyMs;
             simulatedJitterMs = config.SimulatedJitterMs;
             simulatedPacketLossPercent = config.SimulatedPacketLossPercent;
+            return this;
+        }
+
+        /// <summary>
+        /// Changes some default settings and keeps the rest: <paramref name="edit"/> gets a copy of
+        /// <see cref="DefaultConfig"/>, and the result goes through <see cref="Configure(NetConfig)"/> (validated,
+        /// refused while the session runs).
+        /// </summary>
+        /// <returns>This component, so calls chain.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="edit"/> is null.</exception>
+        /// <exception cref="ArgumentException">The edited config is invalid; nothing changes.</exception>
+        /// <exception cref="InvalidOperationException">This component's session has started and not yet ended; nothing changes.</exception>
+        /// <example>
+        /// <code>
+        /// bootstrap.Configure(c => { c.Topology = Topology.Server; c.Port = 47961; });
+        /// </code>
+        /// </example>
+        public NetBootstrap Configure(Action<NetConfig> edit)
+        {
+            if (edit == null)
+            {
+                throw new ArgumentNullException(nameof(edit));
+            }
+
+            NetConfig config = DefaultConfig;
+            edit(config);
+            return Configure(config);
         }
 
         /// <summary>

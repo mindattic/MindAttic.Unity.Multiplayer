@@ -41,6 +41,11 @@ a headless process (`-batchmode`, `-nographics`, or a Dedicated Server build) se
 `NetBootstrap`'s **Auto Start** applies. The headless bootstrap also turns off vsync and sets
 `targetFrameRate` to the configured tick rate, since nothing is rendering.
 
+The settings come in three layers, each overriding the one before: `NetBootstrap`'s Inspector fields (or
+`NetBootstrap.Configure(NetConfig)` from code, before the session starts; see
+[Settings in code](getting-started.md#settings-in-code)), then the environment (`MINDATTIC_*`), then the command
+line.
+
 The default join-code provider for a Server is the **rendezvous service** (self-hosted; see
 [Join codes](join-codes.md)), since Relay isn't needed when the server already has a reachable address.
 

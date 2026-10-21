@@ -101,6 +101,23 @@ source generator writes the other half (the RPC plumbing) when the script compil
 `bootstrap.Session` is the live `NetSession`: `IsActive`, `IsHost`, `State` and `PublishedCodeText` read its
 state, and `Ended` / `JoinCodeFailed` report why a session ended or a code failed.
 
+### Settings in code
+
+The Inspector holds `NetBootstrap`'s default settings. Code (a menu, a launcher, a test) sets them with
+`Configure` instead, before the session starts:
+
+```csharp
+bootstrap.Configure(new NetConfig { Topology = Topology.Server, Port = 47961, GameVersion = "1.2" });
+// or change a few and keep the rest:
+bootstrap.Configure(c => { c.Port = 47961; c.MaxPlayers = 4; });
+```
+
+`Configure` copies the config, validates it (`ArgumentException` lists every problem) and is refused with
+`InvalidOperationException` while the session is running; `DefaultConfig` reads the current defaults back. To
+have Auto Start or a headless launch use them, call it on an inactive GameObject and then activate it. The
+environment and the command line (`-port`, `-transport`, `-mode`, …) still win over both the Inspector and
+`Configure`, so a launch line can always retarget a build.
+
 ## Make it your own game
 
 1. In your own scene, run **MindAttic > Multiplayer > Set Up Scene**. It adds a NetworkManager with Unity

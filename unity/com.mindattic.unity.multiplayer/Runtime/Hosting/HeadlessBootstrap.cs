@@ -55,8 +55,14 @@ namespace Unity.Multiplayer
         /// <exception cref="ArgumentNullException"><paramref name="config"/> is null.</exception>
         public static NetCommandLineResult ReadCommandLine(NetConfig config)
         {
+            return ReadCommandLine(config, Environment.GetCommandLineArgs());
+        }
+
+        /// <summary><see cref="ReadCommandLine(NetConfig)"/> with a given command line (for tests).</summary>
+        internal static NetCommandLineResult ReadCommandLine(NetConfig config, string[] args)
+        {
             NetEnvironment.Apply(config);
-            NetCommandLineResult result = NetCommandLine.Apply(config, Environment.GetCommandLineArgs());
+            NetCommandLineResult result = NetCommandLine.Apply(config, args);
             for (int i = 0; i < result.Errors.Count; i++)
             {
                 Debug.LogWarning("[MindAttic.Multiplayer] Command line: " + result.Errors[i]);
