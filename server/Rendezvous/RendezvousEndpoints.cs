@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>The HTTP API, routes per <see cref="RendezvousProtocol"/>.</summary>
 internal static class RendezvousEndpoints

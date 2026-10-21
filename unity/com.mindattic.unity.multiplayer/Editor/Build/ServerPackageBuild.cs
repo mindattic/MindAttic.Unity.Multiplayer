@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MindAttic.Unity.Multiplayer.Editor
+namespace Unity.Multiplayer.Editor
 {
     /// <summary>What <see cref="ServerPackageBuild.Build"/> builds.</summary>
     public sealed class ServerPackageBuildOptions
@@ -134,7 +134,7 @@ namespace MindAttic.Unity.Multiplayer.Editor
 
         /// <summary>
         /// Batch-mode entry point: <c>Unity -batchmode -quit -projectPath . -executeMethod
-        /// MindAttic.Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverProfile GenericVps|RunPod]
+        /// Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverProfile GenericVps|RunPod]
         /// [-serverOutput dir] [-port n] [-transport udp|websocket] [-serverBackend mono|il2cpp] [-serverDevelopment]</c>.
         /// Exits 1 on failure.
         /// </summary>

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using F = MindAttic.Unity.Multiplayer.Core.RendezvousProtocol.Fields;
+using F = Unity.Multiplayer.Core.RendezvousProtocol.Fields;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary><c>POST /v1/register</c> body.</summary>
 public sealed record RegisterRequest(

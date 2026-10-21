@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Everything a session needs to start: topology, endpoint, transport, tick rate, capacity and

@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// An <see cref="ITickClock"/> driven by hand: <see cref="Step"/> ticks once, <see cref="Advance"/>

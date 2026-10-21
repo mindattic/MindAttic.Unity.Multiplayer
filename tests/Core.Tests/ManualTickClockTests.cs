@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     /// <summary>
     /// The ITickClock contract, checked against ManualTickClock. The adapter's NetworkTickClock (UM-T8)

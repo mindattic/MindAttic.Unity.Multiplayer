@@ -1,9 +1,9 @@
 {
-    "name": "MindAttic.Unity.Multiplayer.Editor",
-    "rootNamespace": "MindAttic.Unity.Multiplayer.Editor",
+    "name": "Unity.Multiplayer.Editor",
+    "rootNamespace": "Unity.Multiplayer.Editor",
     "references": [
-        "MindAttic.Unity.Multiplayer.Core",
-        "MindAttic.Unity.Multiplayer",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
         "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [

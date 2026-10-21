@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// The engine-free life cycle of one session. The NGO adapter drives it from NetworkManager

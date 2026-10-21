@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>Records everything one <see cref="NetSession"/> raises, for assertions.</summary>
     internal sealed class SessionProbe

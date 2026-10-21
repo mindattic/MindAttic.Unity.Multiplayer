@@ -83,9 +83,9 @@ namespace Unity.Netcode
     }
 }
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
-    using global::MindAttic.Unity.Multiplayer.Core;
+    using global::Unity.Multiplayer.Core;
     using global::Unity.Netcode;
 
     public abstract class NetEntity : NetworkBehaviour

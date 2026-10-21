@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>What one admin command line produced.</summary>
     public readonly struct AdminCommandResult

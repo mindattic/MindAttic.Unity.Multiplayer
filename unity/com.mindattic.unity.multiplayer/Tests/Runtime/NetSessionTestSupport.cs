@@ -1,6 +1,6 @@
 using Unity.Netcode;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     internal static class NetSessionTestSupport
     {

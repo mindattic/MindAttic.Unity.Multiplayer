@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// What a client sends with its connection request: the game version and protocol hash it was built with,

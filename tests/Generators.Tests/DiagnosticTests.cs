@@ -2,13 +2,13 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Generators.Tests
+namespace Unity.Multiplayer.Generators.Tests
 {
     /// <summary>Each analyzer diagnostic fires on the mistake it names, on the right line, and stops generation there.</summary>
     [TestFixture]
     public class DiagnosticTests
     {
-        private const string Usings = "using MindAttic.Unity.Multiplayer;\nusing MindAttic.Unity.Multiplayer.Core;\nusing UnityEngine;\n";
+        private const string Usings = "using Unity.Multiplayer;\nusing Unity.Multiplayer.Core;\nusing UnityEngine;\n";
 
         private static Diagnostic Single(RunResult result, string id)
         {

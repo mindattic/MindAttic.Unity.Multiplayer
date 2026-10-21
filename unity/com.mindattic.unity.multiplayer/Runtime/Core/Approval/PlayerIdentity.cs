@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Who this player is, as far as the server knows: the stable player token that gets a reconnecting

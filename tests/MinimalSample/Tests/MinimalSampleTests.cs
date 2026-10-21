@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Reflection;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.TestHelpers.Runtime;
@@ -9,9 +9,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using SessionState = MindAttic.Unity.Multiplayer.Core.SessionState;
+using SessionState = Unity.Multiplayer.Core.SessionState;
 
-namespace MindAttic.Unity.Multiplayer.Samples.Minimal.Tests
+namespace Unity.Multiplayer.Samples.Minimal.Tests
 {
     /// <summary>
     /// UM-T16: the Minimal sample as Package Manager imports it (run-sample.ps1 imports it into tests/SampleHost and

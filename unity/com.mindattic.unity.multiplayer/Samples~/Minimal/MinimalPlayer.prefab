@@ -69,5 +69,5 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c2405cb46e4842c7b1563f3a36d29ba5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: MindAttic.Unity.Multiplayer.Samples.Minimal::MindAttic.Unity.Multiplayer.Samples.Minimal.MinimalPlayer
+  m_EditorClassIdentifier: Unity.Multiplayer.Samples.Minimal::Unity.Multiplayer.Samples.Minimal.MinimalPlayer
   ShowTopMostFoldoutHeaderGroup: 1

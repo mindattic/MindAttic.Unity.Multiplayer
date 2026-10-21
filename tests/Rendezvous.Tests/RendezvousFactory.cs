@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous.Tests;
+namespace Unity.Multiplayer.Rendezvous.Tests;
 
 /// <summary>
 /// Hosts the service in-process with a test secret, a hand-driven clock, and a fake caller IP taken

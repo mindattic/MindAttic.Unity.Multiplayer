@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Reads join-code settings from environment variables onto a <see cref="NetConfig"/>: how a container or a

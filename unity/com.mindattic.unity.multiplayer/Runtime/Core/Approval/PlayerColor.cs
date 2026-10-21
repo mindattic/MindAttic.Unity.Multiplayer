@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A player's chosen colour as 8-bit RGBA, engine-free so Core can carry it in the approval payload.

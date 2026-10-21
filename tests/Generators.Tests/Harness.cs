@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Generators.Tests
+namespace Unity.Multiplayer.Generators.Tests
 {
     /// <summary>What one generator run produced.</summary>
     internal sealed class RunResult

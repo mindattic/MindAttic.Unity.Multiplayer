@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MindAttic.Unity.Multiplayer.Generators
+namespace Unity.Multiplayer.Generators
 {
     internal sealed class ParameterModel
     {

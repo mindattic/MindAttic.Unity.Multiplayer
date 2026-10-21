@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// The server's log file in the package's <c>Logs/</c> folder: one file per run, named

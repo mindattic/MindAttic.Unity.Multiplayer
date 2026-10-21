@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous.Tests;
+namespace Unity.Multiplayer.Rendezvous.Tests;
 
 [TestFixture]
 public class RegistrationStoreTests

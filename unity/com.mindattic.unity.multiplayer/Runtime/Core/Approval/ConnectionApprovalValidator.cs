@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// The server's connection-approval rule, engine-free so it is tested here and merely called by the NGO

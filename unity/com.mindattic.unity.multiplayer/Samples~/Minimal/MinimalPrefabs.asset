@@ -11,6 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f4ab9c75004aa04db6c6c4d315ef588, type: 3}
   m_Name: MinimalPrefabs
-  m_EditorClassIdentifier: MindAttic.Unity.Multiplayer::MindAttic.Unity.Multiplayer.NetPrefabList
+  m_EditorClassIdentifier: Unity.Multiplayer::Unity.Multiplayer.NetPrefabList
   prefabs:
   - {fileID: 4969379116817213342, guid: a24346cf54cf6694ca2c3f6a8ba9a862, type: 3}

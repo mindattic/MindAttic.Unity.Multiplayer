@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Decides whether a process starts a session by itself at launch, and as what. The rule NetBootstrap

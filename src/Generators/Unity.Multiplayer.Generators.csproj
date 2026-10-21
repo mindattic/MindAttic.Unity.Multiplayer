@@ -15,8 +15,8 @@
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyName>MindAttic.Unity.Multiplayer.Generators</AssemblyName>
-    <RootNamespace>MindAttic.Unity.Multiplayer.Generators</RootNamespace>
+    <AssemblyName>Unity.Multiplayer.Generators</AssemblyName>
+    <RootNamespace>Unity.Multiplayer.Generators</RootNamespace>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IsRoslynComponent>true</IsRoslynComponent>
     <IsPackable>false</IsPackable>

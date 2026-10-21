@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A validated join code: <see cref="JoinCodeFormat.MinDataLength"/>–<see cref="JoinCodeFormat.MaxDataLength"/>

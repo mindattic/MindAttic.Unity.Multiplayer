@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// A generic NetEntity base. Abstract and memberless, so the generator lets it compile (MAMP005 fires only for

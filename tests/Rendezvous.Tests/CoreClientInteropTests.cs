@@ -1,6 +1,6 @@
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous.Tests;
+namespace Unity.Multiplayer.Rendezvous.Tests;
 
 /// <summary>
 /// UM-T13: the game's own client (Core's <see cref="RendezvousClient"/> and <see cref="RendezvousJoinCodeService"/>, the

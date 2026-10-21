@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A token bucket: holds up to <see cref="Capacity"/> tokens, refills at <see cref="RatePerSecond"/>, and each

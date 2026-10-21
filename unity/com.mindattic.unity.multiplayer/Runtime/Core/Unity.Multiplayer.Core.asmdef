@@ -1,6 +1,6 @@
 {
-    "name": "MindAttic.Unity.Multiplayer.Core",
-    "rootNamespace": "MindAttic.Unity.Multiplayer.Core",
+    "name": "Unity.Multiplayer.Core",
+    "rootNamespace": "Unity.Multiplayer.Core",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

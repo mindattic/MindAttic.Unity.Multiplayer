@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 #endif
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Samples.Minimal
+namespace Unity.Multiplayer.Samples.Minimal
 {
     internal static class MinimalInput
     {

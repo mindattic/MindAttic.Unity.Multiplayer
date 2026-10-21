@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>One live registration: a code, the server it leads to and the token that owns it.</summary>
 public sealed record Registration(JoinCode Code, string Token, JoinTarget Target, DateTimeOffset ExpiresAt);

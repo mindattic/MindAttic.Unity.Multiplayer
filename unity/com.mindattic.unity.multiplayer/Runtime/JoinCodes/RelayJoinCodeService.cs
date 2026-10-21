@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Netcode.Transports.UTP;
 #if MINDATTIC_UGS
 using Unity.Services.Authentication;
@@ -11,7 +11,7 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 #endif
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// The <see cref="IJoinCodeService"/> over Unity Relay (RFC 0001): the default for listen servers, because Relay gets

@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using MindAttic.Unity.Multiplayer.Core;
-using MindAttic.Unity.Multiplayer.Tests;
+using Unity.Multiplayer.Core;
+using Unity.Multiplayer.Tests;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEditor;
@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-namespace MindAttic.Unity.Multiplayer.Editor.Tests
+namespace Unity.Multiplayer.Editor.Tests
 {
     public class DedicatedServerBuildTests
     {

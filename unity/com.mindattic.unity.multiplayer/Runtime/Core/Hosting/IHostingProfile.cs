@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A kind of host a server package is built for. Every profile gets the same provider-neutral package

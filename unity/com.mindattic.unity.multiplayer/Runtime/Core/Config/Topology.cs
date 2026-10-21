@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>How this process takes part in a session.</summary>
     public enum Topology

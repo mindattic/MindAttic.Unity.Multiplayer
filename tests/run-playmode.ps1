@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the package's PlayMode suite (MindAttic.Unity.Multiplayer.Tests) in batch mode.
+  Runs the package's PlayMode suite (Unity.Multiplayer.Tests) in batch mode.
 
 .DESCRIPTION
   tests/PlayModeHost is a bare Unity 6000.4.3f1 project whose manifest references the package by
@@ -26,7 +26,7 @@ $results = Join-Path $logs 'playmode-results.xml'
 Remove-Item $results -ErrorAction SilentlyContinue
 
 $a = @('-batchmode', '-nographics', '-projectPath', $project, '-logFile', (Join-Path $logs 'playmode.log'),
-       '-runTests', '-testPlatform', 'PlayMode', '-assemblyNames', 'MindAttic.Unity.Multiplayer.Tests',
+       '-runTests', '-testPlatform', 'PlayMode', '-assemblyNames', 'Unity.Multiplayer.Tests',
        '-testResults', $results)
 if ($Filter) { $a += @('-testFilter', $Filter) }
 $p = Start-Process -FilePath $Unity -ArgumentList $a -Wait -PassThru -NoNewWindow

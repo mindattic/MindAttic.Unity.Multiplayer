@@ -1,14 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.TestHelpers.Runtime;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// UM-T9: connection approval and seats, over a real Unity Transport on loopback. A Host and two Clients,

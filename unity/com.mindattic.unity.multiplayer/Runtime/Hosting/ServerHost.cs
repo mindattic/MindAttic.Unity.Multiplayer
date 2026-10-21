@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// Runs a dedicated server the way the server package promises (<see cref="ServerPackageSpec"/>): log files in

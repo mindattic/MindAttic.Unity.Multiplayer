@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>Where a server is in its life, as its health endpoint reports it.</summary>
     public enum HealthStatus

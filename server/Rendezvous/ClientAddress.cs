@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>Who a request came from, for rate limiting and for registrations that omit their address.</summary>
 internal static class ClientAddress

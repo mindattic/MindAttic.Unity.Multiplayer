@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// One multiplayer session: host it, serve it, join it, leave it. The facade game code uses instead of

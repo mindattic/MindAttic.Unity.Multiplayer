@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using MindAttic.Unity.Multiplayer.Core;
-using MindAttic.Unity.Multiplayer.Tests;
+using Unity.Multiplayer.Core;
+using Unity.Multiplayer.Tests;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEditor;
@@ -13,7 +13,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MindAttic.Unity.Multiplayer.Editor.Tests
+namespace Unity.Multiplayer.Editor.Tests
 {
     public class ServerPackageBuildTests
     {

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using MindAttic.Unity.Multiplayer.Tests;
+using Unity.Multiplayer.Tests;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Editor.Tests
+namespace Unity.Multiplayer.Editor.Tests
 {
     public class NetPrefabValidatorTests
     {

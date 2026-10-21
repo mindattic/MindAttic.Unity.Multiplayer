@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>Why player input did not parse as a join code.</summary>
     public enum JoinCodeError

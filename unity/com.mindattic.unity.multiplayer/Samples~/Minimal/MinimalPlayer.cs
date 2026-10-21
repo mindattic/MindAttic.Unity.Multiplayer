@@ -1,11 +1,11 @@
 // The Minimal sample's player: one square per connected player, moved by the server.
 // Everything networked about it is three declarations: one [ToServer] method, one [ToClients] method and one [Synced]
 // field. The package's source generator writes the rest when this file compiles. README.md walks through it.
-using MindAttic.Unity.Multiplayer;      // NetEntity, the base class of anything networked
-using MindAttic.Unity.Multiplayer.Core; // the attributes: [ToServer], [ToClients], [Synced]
+using Unity.Multiplayer;      // NetEntity, the base class of anything networked
+using Unity.Multiplayer.Core; // the attributes: [ToServer], [ToClients], [Synced]
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Samples.Minimal
+namespace Unity.Multiplayer.Samples.Minimal
 {
     // "partial" because the generator writes the other half of this class. NetEntity is the package's networked base
     // class. It must sit on a prefab that has a NetworkObject; this one is the NetworkManager's player prefab, so every

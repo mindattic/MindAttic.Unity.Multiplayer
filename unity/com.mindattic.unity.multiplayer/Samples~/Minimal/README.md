@@ -64,7 +64,7 @@ The sample is five assets and three scripts:
 | `MinimalPlayer.cs` | The networked player |
 | `MinimalMenu.cs` | The menu |
 | `MinimalInput.cs` | Reads the keyboard; nothing here is about networking |
-| `MindAttic.Unity.Multiplayer.Samples.Minimal.asmdef` | The sample's assembly |
+| `Unity.Multiplayer.Samples.Minimal.asmdef` | The sample's assembly |
 
 ### The scene
 **MindAttic > Multiplayer > Set Up Scene** made the **NetworkManager** object. It holds three components:
@@ -172,5 +172,5 @@ buttons while one runs and shows any error.
    `On<Name>` handlers.
 4. Run **MindAttic > Multiplayer > Validate Prefabs**, then call the Net Bootstrap from your own UI.
 
-Your scripts' assembly must reference `MindAttic.Unity.Multiplayer`, `MindAttic.Unity.Multiplayer.Core` and
+Your scripts' assembly must reference `Unity.Multiplayer`, `Unity.Multiplayer.Core` and
 `Unity.Netcode.Runtime`, as this sample's asmdef does. The generated half uses Netcode types; your code does not.

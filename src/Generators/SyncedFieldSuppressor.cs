@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace MindAttic.Unity.Multiplayer.Generators
+namespace Unity.Multiplayer.Generators
 {
     /// <summary>
     /// A <c>[Synced]</c> field is a declaration the generator reads, never used directly, so the compiler's "never used",

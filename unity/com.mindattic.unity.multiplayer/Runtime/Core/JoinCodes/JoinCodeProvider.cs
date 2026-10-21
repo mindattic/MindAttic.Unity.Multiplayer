@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>Which service turns a session into a join code (RFC 0001).</summary>
     public enum JoinCodeProvider

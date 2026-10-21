@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using MindAttic.Unity.Multiplayer.Core;
-using MindAttic.Unity.Multiplayer.Rendezvous;
+using Unity.Multiplayer.Core;
+using Unity.Multiplayer.Rendezvous;
 
 if (args.Contains(HealthProbe.Argument))
 {

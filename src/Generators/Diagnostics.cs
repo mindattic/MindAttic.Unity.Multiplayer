@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace MindAttic.Unity.Multiplayer.Generators
+namespace Unity.Multiplayer.Generators
 {
     /// <summary>
     /// Every diagnostic the generator and its analyzer report. IDs are stable: MAMP = MindAttic MultiPlayer.
@@ -67,7 +67,7 @@ namespace MindAttic.Unity.Multiplayer.Generators
         public static readonly DiagnosticDescriptor NotANetEntity = Error(
             "MAMP008",
             "Network attribute outside a NetEntity",
-            "[{0}] on '{1}' does nothing: '{2}' does not derive from MindAttic.Unity.Multiplayer.NetEntity");
+            "[{0}] on '{1}' does nothing: '{2}' does not derive from Unity.Multiplayer.NetEntity");
 
         public static readonly DiagnosticDescriptor InvalidRpcSignature = Error(
             "MAMP009",

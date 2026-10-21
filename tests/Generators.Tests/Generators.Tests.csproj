@@ -11,8 +11,8 @@
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyName>MindAttic.Unity.Multiplayer.Generators.Tests</AssemblyName>
-    <RootNamespace>MindAttic.Unity.Multiplayer.Generators.Tests</RootNamespace>
+    <AssemblyName>Unity.Multiplayer.Generators.Tests</AssemblyName>
+    <RootNamespace>Unity.Multiplayer.Generators.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Generators\MindAttic.Unity.Multiplayer.Generators.csproj" />
+    <ProjectReference Include="..\..\src\Generators\Unity.Multiplayer.Generators.csproj" />
   </ItemGroup>
 
   <ItemGroup>

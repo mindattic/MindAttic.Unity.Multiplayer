@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A clean shutdown, requested once from any thread (a SIGTERM or SIGINT handler, the <c>stop</c> admin command, a

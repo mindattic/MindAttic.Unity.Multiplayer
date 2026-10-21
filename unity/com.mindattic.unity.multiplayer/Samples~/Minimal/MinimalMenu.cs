@@ -3,11 +3,11 @@
 // package. README.md walks through it.
 using System;
 using System.Threading.Tasks;
-using MindAttic.Unity.Multiplayer;      // NetBootstrap and NetSession
-using MindAttic.Unity.Multiplayer.Core; // Disconnection
+using Unity.Multiplayer;      // NetBootstrap and NetSession
+using Unity.Multiplayer.Core; // Disconnection
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Samples.Minimal
+namespace Unity.Multiplayer.Samples.Minimal
 {
     public sealed class MinimalMenu : MonoBehaviour
     {

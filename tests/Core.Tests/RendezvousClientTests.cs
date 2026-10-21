@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     /// <summary>
     /// A rendezvous service in memory, behind <see cref="IRendezvousHttp"/>: the protocol's routes, status codes and

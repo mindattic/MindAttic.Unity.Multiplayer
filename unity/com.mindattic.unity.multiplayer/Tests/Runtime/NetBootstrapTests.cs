@@ -1,12 +1,12 @@
 using System.Collections;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// UM-T8: the headless bootstrap. Run in batch mode (tests/run-playmode.ps1 passes -batchmode -nographics),

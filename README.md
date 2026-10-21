@@ -1,4 +1,4 @@
-# MindAttic.Unity.Multiplayer
+# Unity.Multiplayer
 Reusable Unity 6 multiplayer for MindAttic games: attribute RPCs, host or dedicated server, join by IP or code.
 
 > **Status: early.** A game can host, serve and join by IP:port through `NetSession` / `NetBootstrap`, with
@@ -70,7 +70,7 @@ docker run --rm -p 7777:7777/udp -e MINDATTIC_RENDEZVOUS_SECRET=<secret> game-se
 ```
 
 Arguments after the image name are added to the server's command line. CI builds the same way with
-`Unity -batchmode -quit -projectPath <game> -executeMethod MindAttic.Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine`
+`Unity -batchmode -quit -projectPath <game> -executeMethod Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine`
 and the optional `-serverOutput <dir> -port <n> -transport udp|websocket -serverBackend mono|il2cpp -serverDevelopment`.
 
 ## Build a server package for a host
@@ -95,7 +95,7 @@ answers `GET /healthz` on its health port (default 8081: 200 while running, 503 
 SIGTERM or SIGINT it shuts down cleanly: `ServerHost.ShuttingDown` fires (save there), the session closes, and the
 process exits. A server password is checked at connection approval; clients set `NetBootstrap.Password` or
 `NetConfig.Password`. CI builds a package with
-`-executeMethod MindAttic.Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverProfile GenericVps`.
+`-executeMethod Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverProfile GenericVps`.
 More profiles (G-Portal's Private Server program, Nitrado, Edgegap, GameLift) can be added later as `IHostingProfile`s
 without changing games.
 

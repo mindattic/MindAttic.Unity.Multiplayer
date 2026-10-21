@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the package's EditMode suite (MindAttic.Unity.Multiplayer.Editor.Tests) in batch mode.
+  Runs the package's EditMode suite (Unity.Multiplayer.Editor.Tests) in batch mode.
 
 .DESCRIPTION
   Uses the same bare Unity 6000.4.3f1 host project as run-playmode.ps1 (tests/PlayModeHost, the package listed in
@@ -31,7 +31,7 @@ $results = Join-Path $logs 'editmode-results.xml'
 Remove-Item $results -ErrorAction SilentlyContinue
 
 $a = @('-batchmode', '-nographics', '-projectPath', $project, '-logFile', (Join-Path $logs 'editmode.log'),
-       '-runTests', '-testPlatform', 'EditMode', '-assemblyNames', 'MindAttic.Unity.Multiplayer.Editor.Tests',
+       '-runTests', '-testPlatform', 'EditMode', '-assemblyNames', 'Unity.Multiplayer.Editor.Tests',
        '-testResults', $results)
 if ($Filter) { $a += @('-testFilter', $Filter) }
 if ($SkipBuild) { $a += @('-testCategory', '!Build') }

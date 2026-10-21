@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// An <see cref="IJoinCodeService"/> that keeps its codes in this process: for tests, local play

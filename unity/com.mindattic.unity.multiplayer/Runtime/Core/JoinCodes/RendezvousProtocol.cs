@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// The self-hosted rendezvous service's wire protocol (RFC 0001): its routes, header and JSON field

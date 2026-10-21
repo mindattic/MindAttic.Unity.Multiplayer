@@ -1,9 +1,9 @@
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// The one component a game adds to network a scene. It sits on the NetworkManager's GameObject, owns the

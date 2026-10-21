@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Linq;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode.TestHelpers.Runtime;
 using UnityEngine.TestTools;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// UM-T8, dedicated server: a Server with no local player and two Clients, all driven through

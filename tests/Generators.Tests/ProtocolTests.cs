@@ -2,16 +2,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Generators.Tests
+namespace Unity.Multiplayer.Generators.Tests
 {
     /// <summary>The generated <c>[assembly: NetProtocol]</c>: Core's algorithm, one hash per assembly, wire-relevant only.</summary>
     [TestFixture]
     public class ProtocolTests
     {
-        private const string Usings = "using MindAttic.Unity.Multiplayer;\nusing MindAttic.Unity.Multiplayer.Core;\nusing UnityEngine;\n";
+        private const string Usings = "using Unity.Multiplayer;\nusing Unity.Multiplayer.Core;\nusing UnityEngine;\n";
 
         private const string Avatar = Usings + @"
 namespace Game

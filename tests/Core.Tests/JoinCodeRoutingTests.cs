@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     [TestFixture]
     public class RendezvousJsonTests

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.TestHelpers.Runtime;
@@ -11,7 +11,7 @@ using Unity.Networking.Transport.Utilities;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// UM-T14: the session under bad network conditions. A Host and two Clients (Ann, Bob) over real Unity Transport on

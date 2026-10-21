@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using F = MindAttic.Unity.Multiplayer.Core.RendezvousProtocol.Fields;
+using F = Unity.Multiplayer.Core.RendezvousProtocol.Fields;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Speaks the self-hosted rendezvous service's HTTP API (<see cref="RendezvousProtocol"/>): register a

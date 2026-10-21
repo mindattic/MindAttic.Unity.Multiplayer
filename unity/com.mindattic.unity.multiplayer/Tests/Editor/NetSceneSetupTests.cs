@@ -1,5 +1,5 @@
 using System.Linq;
-using MindAttic.Unity.Multiplayer.Tests;
+using Unity.Multiplayer.Tests;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -8,7 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MindAttic.Unity.Multiplayer.Editor.Tests
+namespace Unity.Multiplayer.Editor.Tests
 {
     public class NetSceneSetupTests
     {

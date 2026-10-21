@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>Why bytes did not decode as a <see cref="ConnectionPayload"/>.</summary>
     public enum PayloadDecodeError

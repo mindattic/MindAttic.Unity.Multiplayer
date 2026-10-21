@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>
 /// Frees the memory of expired registrations every <see cref="RendezvousOptions.SweepIntervalSeconds"/>.

@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Maps Unity Relay's own join codes to <see cref="JoinCode"/>s and back. Relay codes are 6 to 12 characters

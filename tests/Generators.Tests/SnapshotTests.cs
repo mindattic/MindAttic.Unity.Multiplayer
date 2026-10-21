@@ -2,7 +2,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Generators.Tests
+namespace Unity.Multiplayer.Generators.Tests
 {
     /// <summary>Pins the generated code: what the PlayMode suite's TestAvatar compiles against, and every member shape.</summary>
     [TestFixture]
@@ -17,8 +17,8 @@ namespace MindAttic.Unity.Multiplayer.Generators.Tests
 
             Assert.That(result.GeneratorDiagnostics, Is.Empty, Harness.Format(result.GeneratorDiagnostics));
             Assert.That(result.CompileDiagnostics, Is.Empty, Harness.Format(result.CompileDiagnostics));
-            Assert.That(result.Sources.Keys, Is.EquivalentTo(new[] { "MindAttic.Unity.Multiplayer.Tests.TestAvatar.Net.g.cs", NetEntityGenerator.ProtocolHintName }));
-            Harness.MatchesSnapshot(result.Source("MindAttic.Unity.Multiplayer.Tests.TestAvatar.Net.g.cs"), "TestAvatar.Net.g.cs");
+            Assert.That(result.Sources.Keys, Is.EquivalentTo(new[] { "Unity.Multiplayer.Tests.TestAvatar.Net.g.cs", NetEntityGenerator.ProtocolHintName }));
+            Harness.MatchesSnapshot(result.Source("Unity.Multiplayer.Tests.TestAvatar.Net.g.cs"), "TestAvatar.Net.g.cs");
             Harness.MatchesSnapshot(result.Source(NetEntityGenerator.ProtocolHintName), "TestAvatar.Protocol.g.cs");
         }
 
@@ -26,8 +26,8 @@ namespace MindAttic.Unity.Multiplayer.Generators.Tests
         public void EveryMemberShapeGeneratesAndCompilesClean()
         {
             const string source = @"
-using MindAttic.Unity.Multiplayer;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer;
+using Unity.Multiplayer.Core;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -84,7 +84,7 @@ public partial class Arena
         [Test]
         public void AnEntityWithoutNetworkMembersGetsNoFiles()
         {
-            RunResult result = Harness.Run("public partial class Plain : MindAttic.Unity.Multiplayer.NetEntity { }");
+            RunResult result = Harness.Run("public partial class Plain : Unity.Multiplayer.NetEntity { }");
 
             Assert.That(result.Sources, Is.Empty);
             Assert.That(result.Errors, Is.Empty, Harness.Format(result.Errors));

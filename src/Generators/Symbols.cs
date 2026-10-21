@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace MindAttic.Unity.Multiplayer.Generators
+namespace Unity.Multiplayer.Generators
 {
     /// <summary>Metadata names the generator matches on. Core's types are matched by name, never referenced.</summary>
     internal static class Names
     {
-        public const string CoreNamespace = "MindAttic.Unity.Multiplayer.Core";
+        public const string CoreNamespace = "Unity.Multiplayer.Core";
         public const string ToServer = CoreNamespace + ".ToServerAttribute";
         public const string ToClients = CoreNamespace + ".ToClientsAttribute";
         public const string ToOwner = CoreNamespace + ".ToOwnerAttribute";
@@ -17,10 +17,10 @@ namespace MindAttic.Unity.Multiplayer.Generators
         public const string Synced = CoreNamespace + ".SyncedAttribute";
         public const string NetSender = CoreNamespace + ".NetSender";
         public const string NetProtocol = CoreNamespace + ".NetProtocolAttribute";
-        public const string NetEntity = "MindAttic.Unity.Multiplayer.NetEntity";
+        public const string NetEntity = "Unity.Multiplayer.NetEntity";
 
         /// <summary>The domain line of <c>ProtocolHash.Compute</c>; the two must stay identical.</summary>
-        public const string ProtocolDomain = "MindAttic.Unity.Multiplayer.Protocol/1";
+        public const string ProtocolDomain = "Unity.Multiplayer.Protocol/1";
     }
 
     /// <summary>The four RPC directions, in the order the attributes are documented.</summary>

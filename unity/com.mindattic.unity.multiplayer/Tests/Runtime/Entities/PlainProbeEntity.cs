@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// A plain, valid NetEntity for the EditMode setup, validator and build tests. It lives in this assembly because

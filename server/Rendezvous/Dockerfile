@@ -28,5 +28,5 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 USER $APP_UID
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD ["dotnet", "MindAttic.Unity.Multiplayer.Rendezvous.dll", "--healthcheck"]
-ENTRYPOINT ["dotnet", "MindAttic.Unity.Multiplayer.Rendezvous.dll"]
+    CMD ["dotnet", "Unity.Multiplayer.Rendezvous.dll", "--healthcheck"]
+ENTRYPOINT ["dotnet", "Unity.Multiplayer.Rendezvous.dll"]

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// An asset listing the prefabs a game spawns over the network. Assign it to <see cref="NetBootstrap"/> (or pass it to

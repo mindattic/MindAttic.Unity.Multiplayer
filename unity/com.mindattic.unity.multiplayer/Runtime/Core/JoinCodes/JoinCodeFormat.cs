@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// The join-code format: data characters from a 32-symbol alphabet with no look-alike glyphs,

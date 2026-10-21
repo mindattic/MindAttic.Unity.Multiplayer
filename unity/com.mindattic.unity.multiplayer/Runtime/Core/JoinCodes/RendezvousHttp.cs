@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>One HTTP exchange with the rendezvous service, as <see cref="RendezvousClient"/> sees it.</summary>
     public interface IRendezvousHttp

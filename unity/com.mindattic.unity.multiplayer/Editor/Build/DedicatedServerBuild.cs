@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MindAttic.Unity.Multiplayer.Editor
+namespace Unity.Multiplayer.Editor
 {
     /// <summary>What <see cref="DedicatedServerBuild.Build"/> builds.</summary>
     public sealed class DedicatedServerBuildOptions
@@ -127,7 +127,7 @@ namespace MindAttic.Unity.Multiplayer.Editor
 
         /// <summary>
         /// Batch-mode entry point: <c>Unity -batchmode -quit -projectPath . -executeMethod
-        /// MindAttic.Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine [-serverOutput dir] [-port n]
+        /// Unity.Multiplayer.Editor.DedicatedServerBuild.BuildFromCommandLine [-serverOutput dir] [-port n]
         /// [-transport udp|websocket] [-serverBackend mono|il2cpp] [-serverDevelopment]</c>. Exits 1 on failure.
         /// </summary>
         public static void BuildFromCommandLine()

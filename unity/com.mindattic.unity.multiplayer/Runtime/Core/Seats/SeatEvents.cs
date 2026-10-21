@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>Server side: a connection request that connection approval turned down.</summary>
     public readonly struct ConnectionRejection

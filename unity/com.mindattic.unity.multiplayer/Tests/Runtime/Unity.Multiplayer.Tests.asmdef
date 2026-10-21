@@ -1,9 +1,9 @@
 {
-    "name": "MindAttic.Unity.Multiplayer.Tests",
-    "rootNamespace": "MindAttic.Unity.Multiplayer.Tests",
+    "name": "Unity.Multiplayer.Tests",
+    "rootNamespace": "Unity.Multiplayer.Tests",
     "references": [
-        "MindAttic.Unity.Multiplayer.Core",
-        "MindAttic.Unity.Multiplayer",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
         "Unity.Netcode.Runtime",
         "Unity.Netcode.Runtime.Tests",
         "Unity.Networking.Transport",

@@ -1,13 +1,11 @@
 {
-    "name": "MindAttic.Unity.Multiplayer",
-    "rootNamespace": "MindAttic.Unity.Multiplayer",
+    "name": "Unity.Multiplayer.Samples.Minimal",
+    "rootNamespace": "Unity.Multiplayer.Samples.Minimal",
     "references": [
-        "MindAttic.Unity.Multiplayer.Core",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
         "Unity.Netcode.Runtime",
-        "Unity.Networking.Transport",
-        "Unity.Services.Multiplayer",
-        "Unity.Services.Core",
-        "Unity.Services.Authentication"
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -18,9 +16,9 @@
     "defineConstraints": [],
     "versionDefines": [
         {
-            "name": "com.unity.services.multiplayer",
+            "name": "com.unity.inputsystem",
             "expression": "1.0.0",
-            "define": "MINDATTIC_UGS"
+            "define": "MINDATTIC_SAMPLE_INPUT_SYSTEM"
         }
     ],
     "noEngineReferences": false

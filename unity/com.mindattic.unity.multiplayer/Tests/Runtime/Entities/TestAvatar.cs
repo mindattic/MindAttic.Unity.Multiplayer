@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// What a game writes: attribute-marked partial methods, synced fields and their handlers, and nothing else. No NGO

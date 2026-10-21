@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using MindAttic.Unity.Multiplayer;
-using MindAttic.Unity.Multiplayer.Editor;
+using Unity.Multiplayer;
+using Unity.Multiplayer.Editor;
 using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.PackageManager.UI;
@@ -20,7 +20,7 @@ public static class MinimalSampleHost
 {
     public const string PackageName = "com.mindattic.unity.multiplayer";
     public const string SampleName = "Minimal";
-    private const string SampleNamespace = "MindAttic.Unity.Multiplayer.Samples.Minimal.";
+    private const string SampleNamespace = "Unity.Multiplayer.Samples.Minimal.";
 
     /// <summary>Imports the Minimal sample through Package Manager's sample API and writes its folder to logs/sample-path.txt.</summary>
     public static void Import()

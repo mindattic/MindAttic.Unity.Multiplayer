@@ -1,9 +1,9 @@
 using System;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// Settings for a headless (dedicated server) process: one started with <c>-batchmode -nographics</c>, or a

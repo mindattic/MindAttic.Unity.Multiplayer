@@ -1,8 +1,8 @@
 using System;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Netcode;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// The <see cref="ITickClock"/> of a running session, driven by NGO's <c>NetworkTickSystem</c>: one

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Loads a dedicated server's settings the way the server package promises: the defaults, then <c>server.json</c>,

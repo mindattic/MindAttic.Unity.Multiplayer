@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>
 /// The service's settings, bound from the <c>Rendezvous</c> configuration section (appsettings.json,

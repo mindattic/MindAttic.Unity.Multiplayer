@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// A 64-bit fingerprint of a game's network protocol: every <c>[ToServer]</c> / <c>[ToClients]</c> /
@@ -28,7 +28,7 @@ namespace MindAttic.Unity.Multiplayer.Core
     public readonly struct ProtocolHash : IEquatable<ProtocolHash>
     {
         /// <summary>The first line hashed, so the format can change later without colliding with this one.</summary>
-        public const string Domain = "MindAttic.Unity.Multiplayer.Protocol/1";
+        public const string Domain = "Unity.Multiplayer.Protocol/1";
 
         private const ulong FnvOffsetBasis = 14695981039346656037UL;
         private const ulong FnvPrime = 1099511628211UL;

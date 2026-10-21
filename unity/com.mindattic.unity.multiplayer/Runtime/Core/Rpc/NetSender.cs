@@ -1,6 +1,6 @@
 using System;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>
     /// Who sent a <see cref="ToServerAttribute"/> call, as the server knows them: the connection's client id, the seat it

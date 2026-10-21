@@ -5,8 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>MindAttic.Unity.Multiplayer.Rendezvous.Tests</AssemblyName>
-    <RootNamespace>MindAttic.Unity.Multiplayer.Rendezvous.Tests</RootNamespace>
+    <AssemblyName>Unity.Multiplayer.Rendezvous.Tests</AssemblyName>
+    <RootNamespace>Unity.Multiplayer.Rendezvous.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>

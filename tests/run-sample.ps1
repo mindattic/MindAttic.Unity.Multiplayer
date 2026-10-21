@@ -98,7 +98,7 @@ Copy-Item (Join-Path $PSScriptRoot 'MinimalSample/Tests') (Join-Path $assets 'Mi
 $results = Join-Path $logs 'sample-results.xml'
 Remove-Item $results -ErrorAction SilentlyContinue
 $code = Invoke-Unity 'sample-tests.log' @('-runTests', '-testPlatform', 'PlayMode',
-    '-assemblyNames', 'MindAttic.Unity.Multiplayer.Samples.Minimal.Tests', '-testResults', $results)
+    '-assemblyNames', 'Unity.Multiplayer.Samples.Minimal.Tests', '-testResults', $results)
 if (-not (Test-Path $results)) {
     Write-Host "FAIL: no results file (Unity exit $code); see $(Join-Path $logs 'sample-tests.log')" -ForegroundColor Red
     exit 1

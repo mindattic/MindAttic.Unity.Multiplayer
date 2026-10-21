@@ -1,6 +1,6 @@
 ---
 codex: 1
-project: MindAttic.Unity.Multiplayer
+project: Unity.Multiplayer
 code: UM
 layer: rfc
 status: accepted
@@ -19,7 +19,7 @@ Cursory is a co-op physics puzzle game. The server owns the game (CUR-LAW-1), an
 
 Players join by **IP:port or a join code**.
 
-The main goal is a multiplayer layer that is **reusable in any game with minimal effort**. That layer is a new repo, **MindAttic.Unity.Multiplayer**, built around attribute-decorated RPCs, with full docs and a docs website. All work is filed as **chained workflow tickets**, so it can only be built in the right order.
+The main goal is a multiplayer layer that is **reusable in any game with minimal effort**. That layer is a new repo, **Unity.Multiplayer**, built around attribute-decorated RPCs, with full docs and a docs website. All work is filed as **chained workflow tickets**, so it can only be built in the right order.
 
 What exploration found:
 - **MindAttic.Unity has no code.** Its design exists only as ticket MAU-T2, which sets the family conventions:
@@ -36,22 +36,22 @@ What exploration found:
 - **Join codes: one `IJoinCodeService` interface, two implementations:**
   - Unity Relay: gets through NAT, so it is the default for listen servers
   - a self-hosted rendezvous service that maps a code to IP:port, the default for dedicated servers
-- **Docs:** DocFX, published to GitHub Pages at `mindattic.github.io/MindAttic.Unity.Multiplayer`. The README still follows README-STYLE.
+- **Docs:** DocFX, published to GitHub Pages at `mindattic.github.io/Unity.Multiplayer`. The README still follows README-STYLE.
 - **Approving this plan approves every ticket below** (`orchestrator approve`). The `requires` links stop work from starting out of order.
 
 ## Architecture
 
-### MindAttic.Unity.Multiplayer (public, MIT)
+### Unity.Multiplayer (public, MIT)
 ```
 unity/com.mindattic.unity.multiplayer/      package.json (unity 6000.0; deps netcode.gameobjects 2.x,
                                             transport 2.x; services.multiplayer optional via versionDefines)
-  Runtime/Core/   MindAttic.Unity.Multiplayer.Core.asmdef  (noEngineReferences, netstandard2.1)
+  Runtime/Core/   Unity.Multiplayer.Core.asmdef  (noEngineReferences, netstandard2.1)
                   SessionStateMachine, JoinCode format, NetConfig, ITickClock, attributes
                   ([ToServer]/[ToClients]/[ToOwner]/[ToClient]/[Synced]), approval payload,
                   protocol-hash contract, SeatRegistry + ConnectionAdmission (engine-free seat
                   rules), rendezvous wire protocol + client (RendezvousClient,
                   RendezvousJoinCodeService, ServerAdvertisement)
-  Runtime/        MindAttic.Unity.Multiplayer.asmdef  (NGO adapter)
+  Runtime/        Unity.Multiplayer.asmdef  (NGO adapter)
                   NetSession (StartHost/StartServer/JoinByAddress/JoinByCode/Leave), NetEntity
                   (non-generic NetworkBehaviour base), NetSender, transports (UDP | WebSocket),
                   RelayJoinCodeService, ConnectionApproval
@@ -59,7 +59,7 @@ unity/com.mindattic.unity.multiplayer/      package.json (unity 6000.0; deps net
                   player object, over Core's SeatRegistry),
                   NetworkTickClock, server-driven scene flow, per-sender rate limiter,
                   headless bootstrap (-batchmode, targetFrameRate=tick), NetBootstrap component
-  Runtime/Generators/  MindAttic.Unity.Multiplayer.Generators.dll  (RoslynAnalyzer label)
+  Runtime/Generators/  Unity.Multiplayer.Generators.dll  (RoslynAnalyzer label)
   Editor/         setup wizard (MindAttic ▸ Multiplayer ▸ Set Up Scene), prefab validator,
                   "Build Dedicated Server (Linux)" menu
   Tests/Runtime/  NetcodeIntegrationTest PlayMode suites (NGO in manifest "testables")
@@ -153,7 +153,7 @@ These values keep "mass > 1.5 needs two players" intact. Level masses stay clear
 ### Ticket chain
 Each ticket requires the one before it unless it notes otherwise. "MP" means the multiplayer repo and "UC" means UnityCursory; the real IDs are assigned at filing.
 
-**MindAttic.Unity.Multiplayer**
+**Unity.Multiplayer**
 1. **UM-T3 (chore)** Repo skeleton:
    - package.json and asmdefs
    - LICENSE (MIT), .gitattributes (LF, HOUSE-LAW-13), README stub

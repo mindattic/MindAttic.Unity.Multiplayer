@@ -1,11 +1,11 @@
 {
-    "name": "MindAttic.Unity.Multiplayer.Editor.Tests",
-    "rootNamespace": "MindAttic.Unity.Multiplayer.Editor.Tests",
+    "name": "Unity.Multiplayer.Editor.Tests",
+    "rootNamespace": "Unity.Multiplayer.Editor.Tests",
     "references": [
-        "MindAttic.Unity.Multiplayer.Core",
-        "MindAttic.Unity.Multiplayer",
-        "MindAttic.Unity.Multiplayer.Editor",
-        "MindAttic.Unity.Multiplayer.Tests",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.Editor",
+        "Unity.Multiplayer.Tests",
         "Unity.Netcode.Runtime",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

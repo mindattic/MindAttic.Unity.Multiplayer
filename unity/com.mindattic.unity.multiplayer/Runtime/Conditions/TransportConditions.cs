@@ -4,14 +4,14 @@
 #define MINDATTIC_NETSIM
 #endif
 
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Netcode.Transports.UTP;
 #if MINDATTIC_NETSIM
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 #endif
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// Puts <see cref="NetConditions"/> on a running Unity Transport by retuning the simulator pipeline stage NGO adds to

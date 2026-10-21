@@ -1,13 +1,13 @@
 using System;
 using System.Reflection;
 using System.Text;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 
 // Stands in for the attribute the generator emits into a game assembly.
-[assembly: NetProtocol(MindAttic.Unity.Multiplayer.Core.Tests.TestProtocol.Hash, MindAttic.Unity.Multiplayer.Core.Tests.TestProtocol.SignatureCount)]
+[assembly: NetProtocol(Unity.Multiplayer.Core.Tests.TestProtocol.Hash, Unity.Multiplayer.Core.Tests.TestProtocol.SignatureCount)]
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     [TestFixture]
     public class ProtocolHashTests

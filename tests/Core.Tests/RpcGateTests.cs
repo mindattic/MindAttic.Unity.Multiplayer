@@ -1,8 +1,8 @@
 using System;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     /// <summary>UM-T10: the token bucket, the per-sender rate limiter and the RPC gate every generated stub runs.</summary>
     [TestFixture]

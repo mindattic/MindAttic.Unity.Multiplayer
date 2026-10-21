@@ -1,4 +1,4 @@
-namespace MindAttic.Unity.Multiplayer.Rendezvous;
+namespace Unity.Multiplayer.Rendezvous;
 
 /// <summary>
 /// <c>--healthcheck</c>: GETs the running service's <c>/healthz</c> and exits 0 when it answers 200,

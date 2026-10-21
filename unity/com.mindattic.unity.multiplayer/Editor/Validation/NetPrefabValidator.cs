@@ -6,7 +6,7 @@ using Unity.Netcode;
 using UnityEditor;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Editor
+namespace Unity.Multiplayer.Editor
 {
     /// <summary>What is wrong with a network prefab.</summary>
     public enum NetPrefabIssueKind

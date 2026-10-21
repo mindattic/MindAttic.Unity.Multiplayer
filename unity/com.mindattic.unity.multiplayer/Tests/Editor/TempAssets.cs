@@ -4,7 +4,7 @@ using Unity.Netcode;
 using UnityEditor;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer.Editor.Tests
+namespace Unity.Multiplayer.Editor.Tests
 {
     /// <summary>A throwaway folder under Assets for tests that need real prefab and list assets.</summary>
     internal static class TempAssets

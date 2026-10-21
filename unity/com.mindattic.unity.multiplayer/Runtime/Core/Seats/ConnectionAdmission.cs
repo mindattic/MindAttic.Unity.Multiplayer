@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MindAttic.Unity.Multiplayer.Core
+namespace Unity.Multiplayer.Core
 {
     /// <summary>The outcome of <see cref="ConnectionAdmission.Admit"/>: the approval decision and, when approved, the seat.</summary>
     public readonly struct Admission

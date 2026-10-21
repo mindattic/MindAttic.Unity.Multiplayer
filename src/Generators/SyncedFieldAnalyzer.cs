@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace MindAttic.Unity.Multiplayer.Generators
+namespace Unity.Multiplayer.Generators
 {
     /// <summary>
     /// A <c>[Synced]</c> field is only a declaration: the value lives in the generated network variable behind the

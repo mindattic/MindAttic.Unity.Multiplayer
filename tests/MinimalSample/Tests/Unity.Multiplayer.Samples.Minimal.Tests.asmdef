@@ -1,10 +1,10 @@
 {
-    "name": "MindAttic.Unity.Multiplayer.Samples.Minimal.Tests",
-    "rootNamespace": "MindAttic.Unity.Multiplayer.Samples.Minimal.Tests",
+    "name": "Unity.Multiplayer.Samples.Minimal.Tests",
+    "rootNamespace": "Unity.Multiplayer.Samples.Minimal.Tests",
     "references": [
-        "MindAttic.Unity.Multiplayer.Core",
-        "MindAttic.Unity.Multiplayer",
-        "MindAttic.Unity.Multiplayer.Samples.Minimal",
+        "Unity.Multiplayer.Core",
+        "Unity.Multiplayer",
+        "Unity.Multiplayer.Samples.Minimal",
         "Unity.Netcode.Runtime",
         "Unity.Netcode.Runtime.Tests",
         "UnityEngine.TestRunner",

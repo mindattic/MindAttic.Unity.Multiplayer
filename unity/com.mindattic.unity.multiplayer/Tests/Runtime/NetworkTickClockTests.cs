@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// UM-T8: <see cref="NetworkTickClock"/> keeps the <see cref="ITickClock"/> contract on top of a

@@ -6,10 +6,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using MindAttic.Unity.Multiplayer.Core;
-using F = MindAttic.Unity.Multiplayer.Core.RendezvousProtocol.Fields;
+using Unity.Multiplayer.Core;
+using F = Unity.Multiplayer.Core.RendezvousProtocol.Fields;
 
-namespace MindAttic.Unity.Multiplayer.Tests
+namespace Unity.Multiplayer.Tests
 {
     /// <summary>
     /// The rendezvous service's HTTP API (<see cref="RendezvousProtocol"/>), served from this process on a loopback port so

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using NUnit.Framework;
 
-namespace MindAttic.Unity.Multiplayer.Core.Tests
+namespace Unity.Multiplayer.Core.Tests
 {
     [TestFixture]
     public class ConnectionPayloadCodecTests

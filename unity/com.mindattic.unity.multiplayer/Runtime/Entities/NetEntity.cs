@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using MindAttic.Unity.Multiplayer.Core;
+using Unity.Multiplayer.Core;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace MindAttic.Unity.Multiplayer
+namespace Unity.Multiplayer
 {
     /// <summary>
     /// The base class for every networked game component. A game derives a <c>partial</c> class from it, declares

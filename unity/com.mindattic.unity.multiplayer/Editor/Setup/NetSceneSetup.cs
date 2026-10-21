@@ -6,7 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MindAttic.Unity.Multiplayer.Editor
+namespace Unity.Multiplayer.Editor
 {
     /// <summary>What <see cref="NetSceneSetup.Run"/> uses besides the scene.</summary>
     public sealed class NetSceneSetupOptions
