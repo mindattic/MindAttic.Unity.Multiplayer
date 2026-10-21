@@ -34,12 +34,15 @@ public static class UpdateCommand
         IProvisioner provisioner = composer.BuildProvisioner(profile, log);
 
         var package = await packageBuilder.BuildAsync(DeployArguments.BuildPackageRequest(args, profile), log, ct);
-        await imageTool.LoginAsync(composer.GhcrRegistry, ghcr.Username, ghcr.Token, log, ct);
-        await imageTool.BuildAsync(package.Directory, imageReference, log, ct);
-        await imageTool.PushAsync(imageReference, log, ct);
+        if (provisioner.RequiresContainerImage)
+        {
+            await imageTool.LoginAsync(composer.GhcrRegistry, ghcr.Username, ghcr.Token, log, ct);
+            await imageTool.BuildAsync(package.Directory, imageReference, log, ct);
+            await imageTool.PushAsync(imageReference, log, ct);
+        }
 
         var request = new ProvisionRequest(connection, imageReference, composer.GhcrRegistry, ghcr.Username, ghcr.Token,
-            package.Manifest, environment, args.Get("region"), args.Get("size"));
+            package.Manifest, environment, args.Get("region"), args.Get("size"), package.Directory);
         await provisioner.UpdateAsync(serverId, request, log, ct);
         log.Info($"{serverId} updated to {imageReference}.");
         return 0;

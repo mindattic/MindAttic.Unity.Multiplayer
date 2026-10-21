@@ -28,11 +28,12 @@ namespace Unity.Multiplayer.Core.Tests
         // --- profiles ---------------------------------------------------------------------------------------------
 
         [Test]
-        public void GenericVps_IsTheDefault_AndRunPodIsRegistered()
+        public void GenericVps_IsTheDefault_AndRunPodAndGameLiftAreRegistered()
         {
             Assert.That(HostingProfiles.Default.Id, Is.EqualTo("GenericVps"));
-            Assert.That(HostingProfiles.All.Select(p => p.Id), Is.EqualTo(new[] { "GenericVps", "RunPod" }));
+            Assert.That(HostingProfiles.All.Select(p => p.Id), Is.EqualTo(new[] { "GenericVps", "RunPod", "GameLift" }));
             Assert.That(HostingProfiles.Find("runpod"), Is.InstanceOf<RunPodProfile>());
+            Assert.That(HostingProfiles.Find("gamelift"), Is.InstanceOf<GameLiftProfile>());
             Assert.That(HostingProfiles.Find("GPortal"), Is.Null);
         }
 

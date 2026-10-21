@@ -134,7 +134,7 @@ namespace Unity.Multiplayer.Editor
 
         /// <summary>
         /// Batch-mode entry point: <c>Unity -batchmode -quit -projectPath . -executeMethod
-        /// Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverProfile GenericVps|RunPod]
+        /// Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverProfile GenericVps|RunPod|GameLift]
         /// [-serverOutput dir] [-port n] [-transport udp|websocket] [-serverBackend mono|il2cpp] [-serverDevelopment]</c>.
         /// Exits 1 on failure.
         /// </summary>

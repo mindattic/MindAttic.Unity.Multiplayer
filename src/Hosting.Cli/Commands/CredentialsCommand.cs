@@ -10,11 +10,11 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// <c>mp-host credentials set-&lt;hetzner|vultr|digitalocean|linode&gt; --token &lt;apikey&gt; --ssh-user &lt;u&gt; --ssh-key &lt;private key path&gt; --ssh-public-key &lt;public key path&gt;</c>,
 /// <c>mp-host credentials set-ovh --endpoint &lt;ovh-eu|ovh-us|ovh-ca|...&gt; --service-name &lt;public cloud project id&gt; --app-key &lt;k&gt; --app-secret &lt;s&gt; --consumer-key &lt;c&gt; --ssh-user &lt;u&gt; --ssh-key &lt;private key path&gt; --ssh-public-key &lt;public key path&gt;</c>,
 /// <c>mp-host credentials set-aws --access-key-id &lt;id&gt; --secret-access-key &lt;key&gt; --region &lt;r&gt;</c>
-/// (shared by <c>AwsEc2</c> and <c>AwsLightsail</c>),
+/// (shared by <c>AwsEc2</c>, <c>AwsLightsail</c> and <c>GameLift</c>),
 /// <c>mp-host credentials set-gce --project &lt;id&gt; --access-token &lt;token&gt;</c>,
 /// <c>mp-host credentials set-azure --tenant &lt;id&gt; --client-id &lt;id&gt; --client-secret &lt;secret&gt; --subscription &lt;id&gt;</c>,
 /// <c>mp-host credentials set-fly --token &lt;Fly API token&gt; --org &lt;org slug&gt;</c>,
-/// <c>mp-host credentials set-cloud-options --profile &lt;AwsEc2|AwsLightsail|Gce|AzureVm|Fly&gt; --name &lt;server&gt; --opt KEY=VALUE [--opt KEY=VALUE ...]</c>
+/// <c>mp-host credentials set-cloud-options --profile &lt;AwsEc2|AwsLightsail|Gce|AzureVm|Fly|GameLift&gt; --name &lt;server&gt; --opt KEY=VALUE [--opt KEY=VALUE ...]</c>
 /// (also how a Fly deploy overrides its defaults: <c>--opt rendezvousMode=app</c> or <c>--opt rendezvousImage=...</c>)
 /// (the per-server launch options each UM-T27 provisioner's class doc lists, e.g. <c>sshUser</c>,
 /// <c>sshKeyPath</c>, <c>sshPublicKeyPath</c>, <c>amiId</c>, <c>keyName</c>, <c>resourceGroup</c>,
@@ -92,7 +92,7 @@ public static class CredentialsCommand
             case "set-aws":
                 credentials.SetAwsCreds(new HostingCredentialStore.AwsCreds(
                     args.Require("access-key-id"), args.Require("secret-access-key"), args.Require("region")));
-                log.Info("AWS credential stored (shared by AwsEc2 and AwsLightsail).");
+                log.Info("AWS credential stored (shared by AwsEc2, AwsLightsail and GameLift).");
                 return Task.FromResult(0);
 
             case "set-gce":

@@ -7,9 +7,10 @@ namespace Unity.Multiplayer.Hosting.Cli.Deploy;
 
 /// <summary>
 /// The one pipeline UM-T25 gives every provider profile: build the server package, build and push
-/// its image to GHCR, provision the host, open its firewall, wait for it to go healthy, wait for
-/// the self-registered join code, and hand back a summary. Every step is an injected interface, so
-/// a dry run or a test substitutes every one of them without this class knowing the difference.
+/// its image to GHCR (skipped for a provisioner whose <see cref="IProvisioner.RequiresContainerImage"/>
+/// is false, e.g. GameLift), provision the host, open its firewall, wait for it to go healthy, wait
+/// for the self-registered join code, and hand back a summary. Every step is an injected interface,
+/// so a dry run or a test substitutes every one of them without this class knowing the difference.
 /// </summary>
 public sealed class DeployPipeline
 {
@@ -44,13 +45,16 @@ public sealed class DeployPipeline
 
         BuiltServerPackage package = await _packageBuilder.BuildAsync(packageRequest, log, ct);
 
-        await _imageTool.LoginAsync(ghcrRegistry, ghcrUsername, ghcrToken, log, ct);
-        await _imageTool.BuildAsync(package.Directory, imageReference, log, ct);
-        await _imageTool.PushAsync(imageReference, log, ct);
+        if (_provisioner.RequiresContainerImage)
+        {
+            await _imageTool.LoginAsync(ghcrRegistry, ghcrUsername, ghcrToken, log, ct);
+            await _imageTool.BuildAsync(package.Directory, imageReference, log, ct);
+            await _imageTool.PushAsync(imageReference, log, ct);
+        }
 
         var request = new ProvisionRequest(
             connection, imageReference, ghcrRegistry, ghcrUsername, ghcrToken,
-            package.Manifest, environmentVariables, region, size);
+            package.Manifest, environmentVariables, region, size, package.Directory);
 
         ProvisionResult provisioned = await _provisioner.ProvisionAsync(request, log, ct);
         await _provisioner.OpenFirewallAsync(provisioned.ServerId, request, log, ct);

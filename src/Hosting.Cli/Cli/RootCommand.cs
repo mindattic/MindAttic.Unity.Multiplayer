@@ -10,7 +10,7 @@ public static class RootCommand
         mp-host -- the MindAttic.Unity.Multiplayer hosting deploy CLI (UM-T25)
 
         Usage:
-          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm|Fly> --name <server> --image <owner/repo> ...
+          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm|Fly|GameLift> --name <server> --image <owner/repo> ...
           mp-host status      --profile <p> --name <server> --server-id <id>
           mp-host logs         --profile <p> --name <server> --server-id <id> [--tail <n>]
           mp-host update       --profile <p> --name <server> --server-id <id> --image <owner/repo> ...
@@ -23,7 +23,9 @@ public static class RootCommand
         UM-T27 big-cloud profiles -- the per-player-hour egress cost estimate before using one for a
         public launch. Fly (UM-T28) deploys through Fly's Machines API with a dedicated IPv4 for its
         UDP game port and rendezvous as either a second process group or a second Fly app; see
-        docs/articles/hosting/flyio.md.
+        docs/articles/hosting/flyio.md. GameLift (UM-T30) uploads the raw (non-Docker) build and
+        creates a managed fleet instead of a VM; a matchmaker then allocates one game session per
+        match with Unity.Multiplayer.Core.GameLiftMatchAllocator -- see docs/articles/hosting/gamelift.md.
 
         Every command accepts --dry-run, which prints every API/SSH/docker call it would make
         instead of making it. Credentials are read from MindAttic.Vault (see 'credentials'); none

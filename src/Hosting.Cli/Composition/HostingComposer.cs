@@ -11,6 +11,7 @@ using Unity.Multiplayer.Hosting.Cli.Provisioning.Azure;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.CloudVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.DigitalOcean;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Fly;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.GameLift;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Gce;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.GenericVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Hetzner;
@@ -58,7 +59,7 @@ public sealed class HostingComposer
     {
         GenericVpsProvisioner.Id, RunPodProvisioner.Id,
         HetznerProvisioner.Id, VultrProvisioner.Id, DigitalOceanProvisioner.Id, LinodeProvisioner.Id, OvhProvisioner.Id,
-        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id, FlyProvisioner.Id,
+        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id, FlyProvisioner.Id, GameLiftProvisioner.Id,
     };
 
     /// <summary>The provisioner for <paramref name="profileId"/>, wired to the vault credential (or dry-run) for it.</summary>
@@ -135,6 +136,12 @@ public sealed class HostingComposer
             IFlyApiClient api = _dryRun ? new DryRunFlyApiClient(log) : BuildRealFlyClient();
             IFlyCli cli = _dryRun ? new DryRunFlyCli(log) : new ProcessFlyCli(new ProcessRunner());
             return new FlyProvisioner(api, cli);
+        }
+
+        if (string.Equals(profileId, GameLiftProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IGameLiftFleetApiClient api = _dryRun ? new DryRunGameLiftFleetApiClient(log) : BuildRealGameLiftClient();
+            return new GameLiftProvisioner(api);
         }
 
         throw new ArgumentException($"Unknown hosting profile '{profileId}'. Known: {string.Join(", ", KnownProfiles)}.");
@@ -259,7 +266,8 @@ public sealed class HostingComposer
         string.Equals(profileId, Ec2Provisioner.Id, StringComparison.OrdinalIgnoreCase)
         || string.Equals(profileId, LightsailProvisioner.Id, StringComparison.OrdinalIgnoreCase)
         || string.Equals(profileId, GceProvisioner.Id, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(profileId, AzureVmProvisioner.Id, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(profileId, AzureVmProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(profileId, GameLiftProvisioner.Id, StringComparison.OrdinalIgnoreCase);
 
     private HttpRunPodApiClient BuildRealRunPodClient()
     {
@@ -355,5 +363,12 @@ public sealed class HostingComposer
         var http = new HttpClient { BaseAddress = new Uri("https://api.machines.dev/v1/") };
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", creds.ApiToken);
         return new HttpFlyApiClient(http);
+    }
+
+    private HttpGameLiftFleetApiClient BuildRealGameLiftClient()
+    {
+        var creds = RequireAwsCreds();
+        var http = new HttpClient { BaseAddress = new Uri($"https://gamelift.{creds.Region}.amazonaws.com/") };
+        return new HttpGameLiftFleetApiClient(http, new HttpClient(), creds.AccessKeyId, creds.SecretAccessKey, creds.Region);
     }
 }

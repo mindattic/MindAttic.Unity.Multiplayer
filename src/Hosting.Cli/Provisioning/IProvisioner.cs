@@ -16,6 +16,16 @@ public interface IProvisioner
     /// <summary>A name for people.</summary>
     string DisplayName { get; }
 
+    /// <summary>
+    /// False for a provisioner whose host never runs the pushed Docker image at all (GameLift's
+    /// classic EC2 fleets run the raw build directly from its RuntimeConfiguration launch path, not a
+    /// container): the deploy and update pipelines then skip the GHCR login/build/push steps entirely
+    /// and leave <see cref="ProvisionRequest.ImageReference"/> unused, using
+    /// <see cref="ProvisionRequest.PackageDirectory"/> instead. Every other provisioner keeps the
+    /// default, true.
+    /// </summary>
+    bool RequiresContainerImage => true;
+
     /// <summary>Creates (or reuses) the host and starts the container running the pushed image plus its environment.</summary>
     Task<ProvisionResult> ProvisionAsync(ProvisionRequest request, IDeployLog log, CancellationToken ct);
 

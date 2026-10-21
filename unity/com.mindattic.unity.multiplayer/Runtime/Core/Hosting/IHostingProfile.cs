@@ -10,9 +10,10 @@ namespace Unity.Multiplayer.Core
     /// games never change.
     /// </summary>
     /// <remarks>
-    /// Built in: <see cref="GenericVpsProfile"/> (the default) and <see cref="RunPodProfile"/>. G-Portal (its Private
-    /// Server program for studios), Nitrado, Edgegap and GameLift are possible later profiles, registered with
-    /// <see cref="HostingProfiles.Register"/>.
+    /// Built in: <see cref="GenericVpsProfile"/> (the default), <see cref="RunPodProfile"/> and
+    /// <see cref="GameLiftProfile"/>. G-Portal (its Private Server program for studios), Nitrado and Edgegap/Gameye
+    /// (which allocate per match instead of keeping a server running -- see <see cref="IMatchAllocator"/>)
+    /// are possible later additions, registered with <see cref="HostingProfiles.Register"/>.
     /// </remarks>
     public interface IHostingProfile
     {
@@ -45,6 +46,7 @@ namespace Unity.Multiplayer.Core
         {
             new GenericVpsProfile(),
             new RunPodProfile(),
+            new GameLiftProfile(),
         };
 
         /// <summary>The default profile: <see cref="GenericVpsProfile"/>, a Docker image plus rendezvous on a UDP-capable VPS.</summary>

@@ -6,7 +6,7 @@ using Unity.Multiplayer.Hosting.Cli.Deploy;
 namespace Unity.Multiplayer.Hosting.Cli.Commands;
 
 /// <summary>
-/// <c>mp-host deploy --profile &lt;GenericVps|RunPod&gt; --name &lt;server&gt; --image &lt;owner/repo&gt;
+/// <c>mp-host deploy --profile &lt;GenericVps|RunPod|...|GameLift&gt; --name &lt;server&gt; --image &lt;owner/repo&gt;
 /// [--tag &lt;tag&gt;] (--package &lt;dir&gt; | --unity &lt;exe&gt; --unity-project &lt;dir&gt;)
 /// --rendezvous-url &lt;url&gt; --rendezvous-secret &lt;secret&gt; --public-address &lt;addr&gt;
 /// [--server-password &lt;pwd&gt;] [--env KEY=VALUE ...] [--region &lt;r&gt;] [--size &lt;s&gt;]

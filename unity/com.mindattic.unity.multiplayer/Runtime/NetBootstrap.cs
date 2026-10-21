@@ -375,7 +375,10 @@ namespace Unity.Multiplayer
                     // A dedicated server with a rendezvous URL registers itself once it is running.
                     if (package != null)
                     {
-                        ServerHost.Attach(gameObject, Session, config, package);
+                        ServerHost host = ServerHost.Attach(gameObject, Session, config, package);
+
+                        // A no-op unless the GameLift Server SDK package is installed (GameLiftProfile).
+                        GameLiftServerHost.Attach(gameObject, host, Session, config.Port);
                     }
                 }
                 else if (package != null)

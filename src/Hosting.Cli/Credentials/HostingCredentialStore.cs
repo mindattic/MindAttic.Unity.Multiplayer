@@ -65,7 +65,7 @@ public sealed class HostingCredentialStore : CredentialStore
         string Endpoint, string ServiceName, string ApplicationKey, string ApplicationSecret, string ConsumerKey,
         string SshUser, string SshPrivateKeyPath, string SshPublicKey);
 
-    /// <summary>An AWS account's long-term access key (AwsEc2 and AwsLightsail share one; each deploy's <c>--region</c> picks the endpoint).</summary>
+    /// <summary>An AWS account's long-term access key (AwsEc2, AwsLightsail and GameLift share one; each deploy's <c>--region</c> picks the endpoint).</summary>
     public sealed record AwsCreds(string AccessKeyId, string SecretAccessKey, string Region);
 
     /// <summary>A GCE project id plus an operator-refreshed OAuth2 access token (see <c>docs/articles/hosting/gce.md</c> for how to mint one).</summary>

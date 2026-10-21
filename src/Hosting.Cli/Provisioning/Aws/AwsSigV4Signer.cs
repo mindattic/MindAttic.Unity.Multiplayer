@@ -33,6 +33,28 @@ public static class AwsSigV4Signer
         string secretAccessKey,
         string region,
         string service,
+        DateTime utcNow) =>
+        SignWithPayloadHash(method, host, canonicalUri, canonicalQueryString, extraSignedHeaders, Sha256Hex(body),
+            accessKeyId, secretAccessKey, region, service, utcNow);
+
+    /// <summary>
+    /// Signs one request whose payload hash is already known -- a binary body (an S3 <c>PutObject</c>
+    /// of a zipped build, for GameLift's build upload) cannot be hashed as a <see cref="string"/> the
+    /// way <see cref="Sign"/> does without corrupting it, so the caller hashes the raw bytes itself
+    /// (<see cref="SHA256"/> over the exact bytes sent) and passes the lower-case hex digest here
+    /// instead of a body.
+    /// </summary>
+    public static SignedHeaders SignWithPayloadHash(
+        string method,
+        string host,
+        string canonicalUri,
+        string canonicalQueryString,
+        IReadOnlyDictionary<string, string> extraSignedHeaders,
+        string payloadHash,
+        string accessKeyId,
+        string secretAccessKey,
+        string region,
+        string service,
         DateTime utcNow)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(accessKeyId);
@@ -52,7 +74,6 @@ public static class AwsSigV4Signer
 
         string canonicalHeaders = string.Concat(headers.Select(kv => $"{kv.Key}:{kv.Value}\n"));
         string signedHeaderNames = string.Join(';', headers.Keys);
-        string payloadHash = Sha256Hex(body);
 
         string canonicalRequest = string.Join('\n', method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaderNames, payloadHash);
         string credentialScope = $"{dateStamp}/{region}/{service}/aws4_request";
@@ -65,6 +86,9 @@ public static class AwsSigV4Signer
             $"Credential={accessKeyId}/{credentialScope}, SignedHeaders={signedHeaderNames}, Signature={signature}";
         return new SignedHeaders(amzDate, authorization);
     }
+
+    /// <summary>The lower-case hex SHA-256 digest of raw bytes, for <see cref="SignWithPayloadHash"/>'s <c>x-amz-content-sha256</c>/payload hash on a binary body.</summary>
+    public static string Sha256Hex(byte[] data) => Convert.ToHexStringLower(SHA256.HashData(data));
 
     private static byte[] DeriveSigningKey(string secretAccessKey, string dateStamp, string region, string service)
     {

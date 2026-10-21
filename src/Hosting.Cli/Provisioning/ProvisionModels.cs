@@ -34,7 +34,8 @@ public sealed record ProvisionRequest(
     ServerPackageManifest Manifest,
     IReadOnlyDictionary<string, string> EnvironmentVariables,
     string? Region,
-    string? Size)
+    string? Size,
+    string? PackageDirectory = null)
 {
     /// <summary>Convenience passthrough.</summary>
     public string ServerName => Connection.ServerName;

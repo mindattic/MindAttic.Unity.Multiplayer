@@ -54,4 +54,30 @@ public class AwsSigV4SignerTests
         Assert.Throws<ArgumentException>(() =>
             AwsSigV4Signer.Sign("GET", "h", "/", "", new Dictionary<string, string>(), "", "AKIA", "", "us-east-1", "ec2", FixedNow));
     }
+
+    [Test]
+    public void SignWithPayloadHash_matches_Sign_for_the_same_body()
+    {
+        var byBody = AwsSigV4Signer.Sign("PUT", "bucket.s3.us-east-1.amazonaws.com", "/key", "",
+            new Dictionary<string, string>(), "zip-bytes-as-text", "AKIA", "secret", "us-east-1", "s3", FixedNow);
+        var byHash = AwsSigV4Signer.SignWithPayloadHash("PUT", "bucket.s3.us-east-1.amazonaws.com", "/key", "",
+            new Dictionary<string, string>(), AwsSigV4Signer.Sha256Hex(System.Text.Encoding.UTF8.GetBytes("zip-bytes-as-text")),
+            "AKIA", "secret", "us-east-1", "s3", FixedNow);
+
+        Assert.That(byHash.Authorization, Is.EqualTo(byBody.Authorization));
+    }
+
+    [Test]
+    public void Sha256Hex_of_bytes_is_the_same_digest_Sign_would_compute_from_the_equivalent_string()
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes("hello world");
+        string fromBytes = AwsSigV4Signer.Sha256Hex(bytes);
+
+        // SignWithPayloadHash trusts the caller's hash verbatim into the canonical request, so a
+        // Sign() over the equivalent string body produces the same Authorization only when the two
+        // payload hashes agree -- this is what actually matters for binary (non-UTF8-roundtrippable) bodies.
+        var viaString = AwsSigV4Signer.Sign("PUT", "h", "/", "", new Dictionary<string, string>(), "hello world", "AKIA", "secret", "us-east-1", "s3", FixedNow);
+        var viaHash = AwsSigV4Signer.SignWithPayloadHash("PUT", "h", "/", "", new Dictionary<string, string>(), fromBytes, "AKIA", "secret", "us-east-1", "s3", FixedNow);
+        Assert.That(viaHash.Authorization, Is.EqualTo(viaString.Authorization));
+    }
 }
