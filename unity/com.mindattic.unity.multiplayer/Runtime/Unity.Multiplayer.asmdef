@@ -8,6 +8,7 @@
         "Unity.Services.Multiplayer",
         "Unity.Services.Core",
         "Unity.Services.Authentication",
+        "Unity.Services.Relay",
         "Aws.GameLift.Server"
     ],
     "includePlatforms": [],
