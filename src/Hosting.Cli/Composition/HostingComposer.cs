@@ -16,6 +16,7 @@ using Unity.Multiplayer.Hosting.Cli.Provisioning.Gce;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.GenericVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Hetzner;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Linode;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Oci;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Ovh;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.RunPod;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Vultr;
@@ -59,7 +60,7 @@ public sealed class HostingComposer
     {
         GenericVpsProvisioner.Id, RunPodProvisioner.Id,
         HetznerProvisioner.Id, VultrProvisioner.Id, DigitalOceanProvisioner.Id, LinodeProvisioner.Id, OvhProvisioner.Id,
-        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id, FlyProvisioner.Id, GameLiftProvisioner.Id,
+        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id, FlyProvisioner.Id, GameLiftProvisioner.Id, OciProvisioner.Id,
     };
 
     /// <summary>The provisioner for <paramref name="profileId"/>, wired to the vault credential (or dry-run) for it.</summary>
@@ -142,6 +143,12 @@ public sealed class HostingComposer
         {
             IGameLiftFleetApiClient api = _dryRun ? new DryRunGameLiftFleetApiClient(log) : BuildRealGameLiftClient();
             return new GameLiftProvisioner(api);
+        }
+
+        if (string.Equals(profileId, OciProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IOciApiClient api = _dryRun ? new DryRunOciApiClient(log) : BuildRealOciClient();
+            return new OciProvisioner(api, BuildSsh(log));
         }
 
         throw new ArgumentException($"Unknown hosting profile '{profileId}'. Known: {string.Join(", ", KnownProfiles)}.");
@@ -231,6 +238,17 @@ public sealed class HostingComposer
             {
                 ["orgSlug"] = creds.OrgSlug,
             };
+            return new ProviderConnection(serverName, options, new Dictionary<string, string>());
+        }
+
+        if (string.Equals(profileId, OciProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            var creds = _credentials.GetOciCreds() ?? throw new InvalidOperationException(
+                "No OCI credential in the Hosting vault. Store one first (HostingCredentialStore.SetOciCreds, or 'mp-host credentials set-oci').");
+            var launchOptions = _credentials.GetCloudVmOptions(profileId, serverName) ?? throw new InvalidOperationException(
+                $"No launch options stored for '{profileId}'/'{serverName}'. Store them first (HostingCredentialStore.SetCloudVmOptions, " +
+                "or 'mp-host credentials set-cloud-options').");
+            var options = new Dictionary<string, string>(launchOptions) { ["compartmentId"] = creds.CompartmentOcid };
             return new ProviderConnection(serverName, options, new Dictionary<string, string>());
         }
 
@@ -370,5 +388,14 @@ public sealed class HostingComposer
         var creds = RequireAwsCreds();
         var http = new HttpClient { BaseAddress = new Uri($"https://gamelift.{creds.Region}.amazonaws.com/") };
         return new HttpGameLiftFleetApiClient(http, new HttpClient(), creds.AccessKeyId, creds.SecretAccessKey, creds.Region);
+    }
+
+    private HttpOciApiClient BuildRealOciClient()
+    {
+        var creds = _credentials.GetOciCreds() ?? throw new InvalidOperationException(
+            "No OCI credential in the Hosting vault. Store one first (HostingCredentialStore.SetOciCreds, or 'mp-host credentials set-oci').");
+        var http = new HttpClient { BaseAddress = new Uri($"https://iaas.{creds.Region}.oraclecloud.com/") };
+        string privateKeyPem = File.ReadAllText(creds.PrivateKeyPath);
+        return new HttpOciApiClient(http, creds.CompartmentOcid, creds.TenancyOcid, creds.UserOcid, creds.Fingerprint, privateKeyPem);
     }
 }

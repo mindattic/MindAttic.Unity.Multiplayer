@@ -266,4 +266,47 @@ public class HostingCredentialStoreTests
         _store.SaveRaw("gameye", "{\"type\":\"gameye\",\"apiKey\":\"gy-key-1\",\"imageName\":\"my-game\",\"location\":\"\"}");
         Assert.That(_store.GetGameyeCreds(), Is.Null);
     }
+
+    [Test]
+    public void Oci_creds_round_trip_every_field()
+    {
+        Assert.That(_store.GetOciCreds(), Is.Null);
+
+        _store.SetOciCreds(new HostingCredentialStore.OciCreds(
+            "ocid1.tenancy.oc1..t", "ocid1.user.oc1..u", "aa:bb:cc", "/keys/oci_api_key.pem", "us-ashburn-1", "ocid1.compartment.oc1..c"));
+
+        var creds = _store.GetOciCreds();
+        Assert.That(creds, Is.Not.Null);
+        Assert.That(creds!.TenancyOcid, Is.EqualTo("ocid1.tenancy.oc1..t"));
+        Assert.That(creds.UserOcid, Is.EqualTo("ocid1.user.oc1..u"));
+        Assert.That(creds.Fingerprint, Is.EqualTo("aa:bb:cc"));
+        Assert.That(creds.PrivateKeyPath, Is.EqualTo("/keys/oci_api_key.pem"));
+        Assert.That(creds.Region, Is.EqualTo("us-ashburn-1"));
+        Assert.That(creds.CompartmentOcid, Is.EqualTo("ocid1.compartment.oc1..c"));
+    }
+
+    [Test]
+    public void GetOciCreds_is_null_when_a_field_is_missing()
+    {
+        _store.SaveRaw("oci", "{\"type\":\"oci\",\"tenancyOcid\":\"t\",\"userOcid\":\"u\",\"fingerprint\":\"\",\"privateKeyPath\":\"/k\",\"region\":\"r\",\"compartmentOcid\":\"c\"}");
+        Assert.That(_store.GetOciCreds(), Is.Null);
+    }
+
+    [Test]
+    public void Local_state_round_trips_and_then_clears()
+    {
+        Assert.That(_store.GetLocalState("home"), Is.Null);
+
+        _store.SetLocalState("home", new HostingCredentialStore.LocalServerState("C:/pkg/GenericVps", "docker-compose.local.yml", 7777, "udp", true));
+        var state = _store.GetLocalState("home");
+        Assert.That(state, Is.Not.Null);
+        Assert.That(state!.PackageDirectory, Is.EqualTo("C:/pkg/GenericVps"));
+        Assert.That(state.ComposeFileName, Is.EqualTo("docker-compose.local.yml"));
+        Assert.That(state.Port, Is.EqualTo(7777));
+        Assert.That(state.Protocol, Is.EqualTo("udp"));
+        Assert.That(state.UpnpMapped, Is.True);
+
+        _store.ClearLocalState("home");
+        Assert.That(_store.GetLocalState("home"), Is.Null);
+    }
 }

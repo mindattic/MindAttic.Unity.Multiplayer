@@ -78,6 +78,13 @@ public sealed class HostingCredentialStore : CredentialStore
     public sealed record FlyCreds(string ApiToken, string OrgSlug);
 
     /// <summary>
+    /// An OCI API signing key (UM-T31): the tenancy/user OCIDs and key fingerprint from the OCI
+    /// Console's "API Keys" page, the PEM private key half's file path, the region to call (e.g.
+    /// <c>us-ashburn-1</c>), and the compartment OCID every instance is created in.
+    /// </summary>
+    public sealed record OciCreds(string TenancyOcid, string UserOcid, string Fingerprint, string PrivateKeyPath, string Region, string CompartmentOcid);
+
+    /// <summary>
     /// An Edgegap API token plus the app name <c>Unity.Multiplayer.Core.EdgegapMatchAllocator</c> deploys
     /// (UM-T29). mp-host itself never calls Edgegap's API; this only gives a matchmaking service (or a
     /// one-off script) a vault-backed place to read the token from instead of hard-coding it.
@@ -125,14 +132,28 @@ public sealed class HostingCredentialStore : CredentialStore
     /// <summary>Fly.io provider id in this store.</summary>
     public const string FlyProviderId = "fly";
 
+    /// <summary>OCI (Oracle Cloud Infrastructure) provider id in this store.</summary>
+    public const string OciProviderId = "oci";
+
     /// <summary>Edgegap provider id in this store.</summary>
     public const string EdgegapProviderId = "edgegap";
 
     /// <summary>Gameye provider id in this store.</summary>
     public const string GameyeProviderId = "gameye";
 
+    /// <summary>
+    /// What <c>mp-host local up</c> remembers between invocations so <c>mp-host local down</c> can
+    /// find the same package directory and compose file (and know whether to remove a UPnP mapping)
+    /// without the operator repeating every flag. Not a secret -- stored in the same keyring purely
+    /// for convenience, the same way <see cref="GetCloudVmOptions"/> stores non-secret launch options.
+    /// </summary>
+    public sealed record LocalServerState(string PackageDirectory, string ComposeFileName, int Port, string Protocol, bool UpnpMapped);
+
     /// <summary>The generic-VPS provider id for a given server name (one SSH target per server).</summary>
     public static string GenericVpsProviderId(string serverName) => "genericvps:" + serverName;
+
+    /// <summary>The local-hosting state id for a given server name.</summary>
+    public static string LocalStateProviderId(string serverName) => "local:" + serverName;
 
     /// <summary>The cloud-VM launch-options id for a given profile + server name (one set of options per server).</summary>
     public static string CloudVmOptionsProviderId(string profileId, string serverName) => $"cloudvmoptions:{profileId}:{serverName}";
@@ -537,6 +558,50 @@ public sealed class HostingCredentialStore : CredentialStore
         }));
     }
 
+    /// <summary>Reads the OCI API signing key credential, or null when missing or incomplete.</summary>
+    public OciCreds? GetOciCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(OciProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string tenancyOcid = StringProp(doc, "tenancyOcid");
+            string userOcid = StringProp(doc, "userOcid");
+            string fingerprint = StringProp(doc, "fingerprint");
+            string privateKeyPath = StringProp(doc, "privateKeyPath");
+            string region = StringProp(doc, "region");
+            string compartmentOcid = StringProp(doc, "compartmentOcid");
+            if (string.IsNullOrWhiteSpace(tenancyOcid) || string.IsNullOrWhiteSpace(userOcid) || string.IsNullOrWhiteSpace(fingerprint)
+                || string.IsNullOrWhiteSpace(privateKeyPath) || string.IsNullOrWhiteSpace(region) || string.IsNullOrWhiteSpace(compartmentOcid))
+            {
+                return null;
+            }
+
+            return new OciCreds(tenancyOcid, userOcid, fingerprint, privateKeyPath, region, compartmentOcid);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the OCI API signing key credential.</summary>
+    public void SetOciCreds(OciCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(OciProviderId, Write(w =>
+        {
+            w.WriteString("type", "oci");
+            w.WriteString("tenancyOcid", creds.TenancyOcid);
+            w.WriteString("userOcid", creds.UserOcid);
+            w.WriteString("fingerprint", creds.Fingerprint);
+            w.WriteString("privateKeyPath", creds.PrivateKeyPath);
+            w.WriteString("region", creds.Region);
+            w.WriteString("compartmentOcid", creds.CompartmentOcid);
+        }));
+    }
+
     /// <summary>
     /// Reads the free-form launch options stored for <paramref name="profileId"/>/<paramref name="serverName"/>
     /// (<c>sshUser</c>/<c>sshKeyPath</c>/<c>sshPublicKeyPath</c>, plus whichever provider-specific keys
@@ -584,6 +649,50 @@ public sealed class HostingCredentialStore : CredentialStore
             }
         }));
     }
+
+    /// <summary>Reads the local-hosting state for <paramref name="serverName"/>, or null when missing or incomplete.</summary>
+    public LocalServerState? GetLocalState(string serverName)
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(LocalStateProviderId(serverName), out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string packageDirectory = StringProp(doc, "packageDirectory");
+            string composeFileName = StringProp(doc, "composeFileName");
+            string protocol = StringProp(doc, "protocol");
+            if (string.IsNullOrWhiteSpace(packageDirectory) || string.IsNullOrWhiteSpace(composeFileName)) return null;
+            int port = doc.RootElement.TryGetProperty("port", out var p) && p.ValueKind == JsonValueKind.Number ? p.GetInt32() : 0;
+            bool upnpMapped = doc.RootElement.TryGetProperty("upnpMapped", out var u) && u.ValueKind == JsonValueKind.True;
+            return new LocalServerState(packageDirectory, composeFileName, port, string.IsNullOrWhiteSpace(protocol) ? "udp" : protocol, upnpMapped);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the local-hosting state for <paramref name="serverName"/>.</summary>
+    public void SetLocalState(string serverName, LocalServerState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        SaveRaw(LocalStateProviderId(serverName), Write(w =>
+        {
+            w.WriteString("type", "localstate");
+            w.WriteString("packageDirectory", state.PackageDirectory);
+            w.WriteString("composeFileName", state.ComposeFileName);
+            w.WriteNumber("port", state.Port);
+            w.WriteString("protocol", state.Protocol);
+            w.WriteBoolean("upnpMapped", state.UpnpMapped);
+        }));
+    }
+
+    /// <summary>
+    /// Clears the local-hosting state for <paramref name="serverName"/> (after a successful
+    /// <c>mp-host local down</c>). Writes an empty object rather than deleting the entry --
+    /// <see cref="GetLocalState"/> treats a blank <c>packageDirectory</c> the same as "missing".
+    /// </summary>
+    public void ClearLocalState(string serverName) => SaveRaw(LocalStateProviderId(serverName), "{}");
 
     private static string StringProp(JsonDocument doc, string name) => StringPropOrNull(doc, name) ?? "";
 

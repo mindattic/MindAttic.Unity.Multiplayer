@@ -14,6 +14,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// <c>mp-host credentials set-gce --project &lt;id&gt; --access-token &lt;token&gt;</c>,
 /// <c>mp-host credentials set-azure --tenant &lt;id&gt; --client-id &lt;id&gt; --client-secret &lt;secret&gt; --subscription &lt;id&gt;</c>,
 /// <c>mp-host credentials set-fly --token &lt;Fly API token&gt; --org &lt;org slug&gt;</c>,
+/// <c>mp-host credentials set-oci --tenancy &lt;OCID&gt; --user &lt;OCID&gt; --fingerprint &lt;key fingerprint&gt; --key &lt;PEM private key path&gt; --region &lt;r&gt; --compartment &lt;OCID&gt;</c>,
 /// <c>mp-host credentials set-cloud-options --profile &lt;AwsEc2|AwsLightsail|Gce|AzureVm|Fly|GameLift&gt; --name &lt;server&gt; --opt KEY=VALUE [--opt KEY=VALUE ...]</c>
 /// (also how a Fly deploy overrides its defaults: <c>--opt rendezvousMode=app</c> or <c>--opt rendezvousImage=...</c>)
 /// (the per-server launch options each UM-T27 provisioner's class doc lists, e.g. <c>sshUser</c>,
@@ -37,7 +38,7 @@ public static class CredentialsCommand
     {
         if (rawArgs.Count < 2)
         {
-            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-cloud-options|set-edgegap|set-gameye> ...");
+            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-oci|set-cloud-options|set-edgegap|set-gameye> ...");
             return Task.FromResult(1);
         }
 
@@ -109,6 +110,12 @@ public static class CredentialsCommand
             case "set-fly":
                 credentials.SetFlyCreds(new HostingCredentialStore.FlyCreds(args.Require("token"), args.Require("org")));
                 log.Info("Fly.io credential stored.");
+                return Task.FromResult(0);
+
+            case "set-oci":
+                credentials.SetOciCreds(new HostingCredentialStore.OciCreds(
+                    args.Require("tenancy"), args.Require("user"), args.Require("fingerprint"), args.Require("key"), args.Require("region"), args.Require("compartment")));
+                log.Info("OCI credential stored.");
                 return Task.FromResult(0);
 
             case "set-cloud-options":
