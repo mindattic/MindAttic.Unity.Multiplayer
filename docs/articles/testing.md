@@ -292,6 +292,7 @@ Run it locally with `powershell -File tests/run-smoke.ps1`. A game gets the same
 
 `.github/workflows/ci.yml` runs the four `dotnet test` suites above as a matrix job, plus GameCI's
 `unity-test-runner` for EditMode and PlayMode (`-runTests -batchmode`, filtered to one test assembly per mode).
-Both Unity jobs need a `UNITY_LICENSE` repository secret. `.github/workflows/docs.yml` (this site) and
+Both Unity jobs need a `UNITY_LICENSE` repository secret; `tools/set-ci-secrets.ps1` sets it (see
+[CI secrets](ci-secrets.md)). `.github/workflows/docs.yml` (this site) and
 `.github/workflows/nightly-smoke.yml` are separate workflows — see [Hosting](hosting.md) for what the smoke test
 proves about a real deploy, and the repository root `README.md` for the exact commands.

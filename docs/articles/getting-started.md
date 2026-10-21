@@ -232,8 +232,9 @@ rendezvous service, and as two bots (`-bot A`, `-bot B`, from `mp-host.json`). I
 `[NetBot:A] OK:`.
 
 Push the project to GitHub and the `nightly.yml` the wizard wrote runs the same smoke test every night. It is one job:
-`uses: mindattic/Unity.Multiplayer/.github/workflows/game-smoke.yml@main`. Add a `UNITY_LICENSE` secret for GameCI. If
-your MindAttic repos are private, also add `MINDATTIC_REPOS_TOKEN`. See [Bots](bots.md#the-nightly-workflow).
+`uses: mindattic/Unity.Multiplayer/.github/workflows/game-smoke.yml@main`. It needs the Unity license secrets; set them
+with `powershell -File tools\set-ci-secrets.ps1 -Repos mindattic/<YourGame>` (see [CI secrets](ci-secrets.md)). See
+[Bots](bots.md#the-nightly-workflow).
 
 ## 9. Make it yours
 

@@ -24,6 +24,8 @@
   href: testing.md
 - name: Bots and end-to-end smoke tests
   href: bots.md
+- name: CI secrets
+  href: ci-secrets.md
 - name: Hosting
   href: hosting.md
   items:

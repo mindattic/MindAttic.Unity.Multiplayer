@@ -187,7 +187,8 @@ Inputs, all optional:
 | `multiplayer-ref` | `main` |
 
 Secrets: `UNITY_LICENSE` (or `UNITY_EMAIL`/`UNITY_PASSWORD`/`UNITY_SERIAL`) for GameCI, and `MINDATTIC_REPOS_TOKEN`
-when Unity.Multiplayer or a sibling is private. `compose.log` is uploaded as the `smoke-logs` artifact.
+when Unity.Multiplayer or a sibling is private. `tools/set-ci-secrets.ps1` sets them; see [CI secrets](ci-secrets.md).
+`compose.log` is uploaded as the `smoke-logs` artifact.
 
 The package's own nightly (`nightly-smoke.yml`, the Minimal sample's `SmokeDriver`) predates this and still drives
 its roles through environment variables. It stays that way for now. The reusable workflow builds a project that is

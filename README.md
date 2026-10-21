@@ -214,7 +214,9 @@ powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Li
 ```
 
 CI (`.github/workflows/ci.yml`) runs the `dotnet test` suites and the PlayMode/EditMode suites through GameCI's
-`unity-test-runner`, and needs a `UNITY_LICENSE` repository secret. A nightly job
+`unity-test-runner`, and needs a `UNITY_LICENSE` repository secret: run `powershell -File tools\set-ci-secrets.ps1`
+to set it and the other CI secrets (see
+[CI secrets](https://mindattic.github.io/Unity.Multiplayer/articles/ci-secrets.html)). A nightly job
 (`.github/workflows/nightly-smoke.yml`) runs the Docker Compose smoke test above end to end.
 `.github/workflows/docs.yml` publishes the docs site. See
 [Testing](https://mindattic.github.io/Unity.Multiplayer/articles/testing.html) for what each suite covers.
