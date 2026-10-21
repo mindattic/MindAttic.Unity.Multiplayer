@@ -86,6 +86,11 @@ carries the package's own version.
 
 ### Fixed
 
+- **`mp-host game status|logs|update|destroy` look at the profile the project last deployed with** (UM-T61) — they used
+  to default to GenericVps, so after `mp-host game local` a bare `game status` or `game logs` looked for a VPS that
+  doesn't exist. The deployment store now remembers each project folder's last profile (`game deploy`, `game local`,
+  `game update`) beside the remembered server ids and these verbs default to it; `--profile` still wins, and
+  `game deploy` itself still takes `mp-host.json`'s profile, else GenericVps.
 - **A host with the default Join Codes uses a configured rendezvous URL** (UM-T63) — with `JoinCodes` left at `Auto`,
   `NetFrontEnd`'s Host and `NetSession.HostWithCode` tried only Unity Relay, so a game with a rendezvous URL but no
   Relay hosted with no code. `Auto` for a listen server is now Relay when it is installed, then the rendezvous service

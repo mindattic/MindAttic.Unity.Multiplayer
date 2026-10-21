@@ -20,6 +20,9 @@ public sealed class GamePlan
     /// <summary>The profile name that means "this machine" (<c>mp-host local</c>), not a hosted provider.</summary>
     public const string LocalProfile = "Local";
 
+    /// <summary>The profile a project that has never deployed (and names none in <c>mp-host.json</c>) uses.</summary>
+    public const string DefaultProfile = "GenericVps";
+
     /// <summary>The image <c>game local</c> tags a rendezvous built from a local Unity.Multiplayer checkout.</summary>
     public const string LocalRendezvousImage = "mindattic-rendezvous:local";
 
@@ -119,7 +122,16 @@ public sealed class GamePlan
         }
         else
         {
-            profile = Option("profile") ?? "GenericVps";
+            // UM-T61: a bare status/logs/update/destroy looks at the profile this project last deployed with (so after
+            // 'game local' it inspects the local server, not a VPS that doesn't exist). --profile always wins; deploy
+            // itself never guesses, it takes --profile, mp-host.json, else GenericVps.
+            string? remembered = verb == "deploy" || args.Get("profile") is not null ? null : services.Deployments.LastProfile(project.Directory);
+            profile = args.Get("profile") ?? remembered ?? Option("profile") ?? DefaultProfile;
+            if (remembered is not null && args.Get("profile") is null)
+            {
+                log.Info($"Profile {remembered}: the one this project last deployed with (pass --profile to pick another).");
+            }
+
             if (string.Equals(profile, LocalProfile, StringComparison.OrdinalIgnoreCase)) profile = LocalProfile;
         }
 

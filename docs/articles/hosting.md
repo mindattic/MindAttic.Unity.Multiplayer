@@ -28,7 +28,7 @@ mp-host game down                        # stop it
 mp-host game deploy --dry-run            # see every step of a hosted deploy without doing any of it
 mp-host game deploy                      # GenericVps (default): build, push to GHCR, deploy, print the join code
 mp-host game deploy --profile RunPod --rendezvous-url http://<vps>:8080
-mp-host game status | logs | update | destroy --yes
+mp-host game status | logs | update | destroy --yes   # the profile this project last deployed with
 ```
 
 What it works out from the project, so nothing is per-game:
@@ -43,7 +43,8 @@ What it works out from the project, so nothing is per-game:
 | Public address | GenericVps: the stored SSH target's host; RunPod: cosmetic | `--public-address` |
 | Rendezvous | hosted: `http://<public address>:8080` beside the game; Local: a rendezvous container, built from the Unity.Multiplayer checkout the project's `Packages/manifest.json` points at by `file:` (else `ghcr.io/mindattic/rendezvous`) | `--rendezvous-url`, `--rendezvous-image`, `--no-rendezvous` |
 | Package | built into `Builds/ServerPackage/<profile>` (log beside it) | `--skip-build` reuses it, `--package <dir>` uses another |
-| Server id | remembered from the last `game deploy` on this machine | `--server-id` |
+| Profile | `game deploy`: `"profile"` in `mp-host.json`, else GenericVps. `game status`, `logs`, `update`, `destroy`: the profile this project last deployed with from this machine (`game local` counts as Local), else the same as deploy | `--profile` |
+| Server id | remembered from the last `game deploy` to that profile on this machine | `--server-id` |
 
 The build is the library's own batch entry point,
 `Unity -batchmode -executeMethod Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverScene <scene> …`:

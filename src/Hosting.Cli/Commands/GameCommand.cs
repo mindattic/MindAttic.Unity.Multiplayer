@@ -23,9 +23,10 @@ public static class GameCommand
 
           game local     build the server package and run it + rendezvous on this machine (Docker)
           game down      stop the local server
-          game deploy    build, push and deploy to --profile (default GenericVps; Local = 'game local')
+          game deploy    build, push and deploy to --profile (default mp-host.json's, else GenericVps; Local = 'game local')
           game update    rebuild and roll the deployed server onto the new image
-          game status | logs [--tail n] | destroy --yes     the deployed server (id remembered from 'game deploy')
+          game status | logs [--tail n] | destroy --yes     the deployed server (profile and id remembered from the
+                         project's last 'game deploy' / 'game local'; --profile picks another)
 
         Options: --profile <GenericVps|RunPod|Hetzner|...|Local>  --scene <Assets/...unity>  --unity <editor exe>
                  --name <server>  --image <owner/repo>  --tag <t>  --public-address <addr>  --rendezvous-url <url>
@@ -103,6 +104,7 @@ public static class GameCommand
         if (exit == 0 && !plan.DryRun)
         {
             if (plan.Verb == "destroy" && !plan.IsLocal) services.Deployments.Remove(plan.Profile, plan.Name);
+            if (plan.Verb is "deploy" or "update" or "local") services.Deployments.SetLastProfile(plan.Project.Directory, plan.Profile);
             if (plan.IsLocal && plan.Delegated[1] == "up")
             {
                 log.Info($"Stop it with: mp-host game down --project \"{plan.Project.Directory}\"");

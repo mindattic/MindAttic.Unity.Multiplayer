@@ -346,6 +346,66 @@ public class GameCommandTests
     }
 
     [Test]
+    public void Plan_status_logs_destroy_update_default_to_the_profile_the_project_last_deployed_with()
+    {
+        // UM-T61: after 'game local', a bare status/logs inspects the local server instead of a GenericVps that doesn't exist.
+        _deployments.SetLastProfile(_project, "Local");
+        var log = new RecordingDeployLog();
+        GamePlan status = GamePlan.Create(new[] { "game", "status", "--project", _project }, Services(), log);
+        Assert.That(status.Profile, Is.EqualTo("Local"));
+        Assert.That(status.Name, Is.EqualTo("unity-cursory-local"));
+        Assert.That(status.Delegated, Is.Null, "local status runs docker compose itself");
+        Assert.That(log.Lines, Has.Some.Contains("Profile Local: the one this project last deployed with"));
+        Assert.That(Plan("game", "logs", "--project", _project).Profile, Is.EqualTo("Local"));
+        Assert.That(Plan("game", "destroy", "--project", _project, "--yes").Delegated!.Take(2), Is.EqualTo(new[] { "local", "down" }));
+
+        // A hosted profile is remembered the same way, and its server id comes from that profile's record.
+        _deployments.SetLastProfile(_project, "RunPod");
+        _deployments.Set(new GameDeployment("RunPod", "unity-cursory", "pod-7", null, _project, DateTimeOffset.UtcNow));
+        GamePlan logs = Plan("game", "logs", "--project", _project);
+        Assert.That(After(logs.Delegated!, "--profile"), Is.EqualTo("RunPod"));
+        Assert.That(After(logs.Delegated!, "--server-id"), Is.EqualTo("pod-7"));
+        Assert.That(After(Plan("game", "update", "--project", _project, "--rendezvous-url", "http://r:8080").Delegated!, "--profile"), Is.EqualTo("RunPod"));
+
+        // --profile always wins, and deploy never guesses from history.
+        _deployments.Set(new GameDeployment("GenericVps", "unity-cursory", "srv-1", "203.0.113.9", _project, DateTimeOffset.UtcNow));
+        Assert.That(Plan("game", "status", "--project", _project, "--profile", "GenericVps").Profile, Is.EqualTo("GenericVps"));
+        Assert.That(Plan("game", "deploy", "--project", _project, "--public-address", "203.0.113.9").Profile, Is.EqualTo(GamePlan.DefaultProfile));
+    }
+
+    [Test]
+    public void Plan_without_a_remembered_profile_still_defaults_to_mp_host_json_then_GenericVps()
+    {
+        _deployments.Set(new GameDeployment("GenericVps", "unity-cursory", "srv-42", "203.0.113.9", _project, DateTimeOffset.UtcNow));
+        Assert.That(Plan("game", "status", "--project", _project).Profile, Is.EqualTo("GenericVps"));
+
+        File.WriteAllText(Path.Combine(_project, "mp-host.json"), """{ "profile": "Local" }""");
+        Assert.That(Plan("game", "status", "--project", _project).Profile, Is.EqualTo("Local"));
+    }
+
+    [Test]
+    public void DeploymentStore_remembers_the_last_profile_per_project_folder()
+    {
+        string other = Path.Combine(_root, "Other Checkout", "My Game");
+        Directory.CreateDirectory(other);
+        Assert.That(_deployments.LastProfile(_project), Is.Null);
+
+        _deployments.SetLastProfile(_project, "Local");
+        _deployments.SetLastProfile(other, "Hetzner");
+        Assert.That(_deployments.LastProfile(_project), Is.EqualTo("Local"));
+        Assert.That(_deployments.LastProfile(_project + Path.DirectorySeparatorChar), Is.EqualTo("Local"), "a trailing separator is the same folder");
+        Assert.That(_deployments.LastProfile(other), Is.EqualTo("Hetzner"), "two checkouts of one game keep their own");
+
+        _deployments.SetLastProfile(_project, "RunPod");
+        Assert.That(_deployments.LastProfile(_project), Is.EqualTo("RunPod"), "the latest deploy replaces it");
+
+        string file = Directory.GetFiles(Path.Combine(_deployments.Directory, "projects")).Single(f => File.ReadAllText(f).Contains("RunPod"));
+        Assert.That(Path.GetFileName(file), Does.StartWith("my-game--"));
+        File.WriteAllText(file, "{ not json");
+        Assert.That(_deployments.LastProfile(_project), Is.Null, "an unreadable record is ignored");
+    }
+
+    [Test]
     public void Plan_passes_every_repeated_env_and_masks_secrets_when_described()
     {
         GamePlan plan = Plan("game", "local", "--project", _project, "--env", "A=1", "--env", "B=2", "--rendezvous-secret", "s3cret", "--server-password", "pw");
