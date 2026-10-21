@@ -68,10 +68,10 @@ namespace Unity.Multiplayer.UI
         /// <summary>Where the local player stands ("Your vote", "You voted Yes").</summary>
         public MaText StandingText { get; private set; }
 
-        /// <summary>Votes Yes; disabled once the local player has voted or is not a voter.</summary>
+        /// <summary>Votes Yes; disabled once the local player has voted or is not a voter, and <see cref="MaButton.Selected"/> when Yes is their answer.</summary>
         public MaButton YesButton { get; private set; }
 
-        /// <summary>Votes No; disabled once the local player has voted or is not a voter.</summary>
+        /// <summary>Votes No; disabled once the local player has voted or is not a voter, and <see cref="MaButton.Selected"/> when No is their answer.</summary>
         public MaButton NoButton { get; private set; }
 
         /// <summary>True (the default) to toast how each vote ended and why a start was refused.</summary>
@@ -258,6 +258,8 @@ namespace Unity.Multiplayer.UI
 
             if (vote == null)
             {
+                YesButton.Selected = false;
+                NoButton.Selected = false;
                 return;
             }
 
@@ -271,6 +273,8 @@ namespace Unity.Multiplayer.UI
             bool canVote = VoteText.CanVote(mine);
             YesButton.Interactable = canVote;
             NoButton.Interactable = canVote;
+            YesButton.Selected = mine == VoteChoice.Yes;
+            NoButton.Selected = mine == VoteChoice.No;
         }
 
         private void Cast(bool yes)

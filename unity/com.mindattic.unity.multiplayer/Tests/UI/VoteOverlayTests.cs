@@ -86,11 +86,31 @@ namespace Unity.Multiplayer.UI.Tests
             Assert.That(overlay.YesButton.Interactable && overlay.NoButton.Interactable, Is.True);
             Assert.That(FrontEndTesting.Buttons(overlay.Panel), Is.EqualTo(new[] { "Yes", "No" }));
 
+            Assert.That(overlay.YesButton.Selected || overlay.NoButton.Selected, Is.False, "nothing picked before voting");
             FrontEndTesting.Click(overlay.Panel, "Yes");
             yield return WaitUntil(() => _resets == 1, "the client's Yes never passed the vote");
             yield return WaitUntil(() => !overlay.Panel.Visible, "the overlay never hid");
             yield return WaitUntil(() => MaToast.OnScreen.Any(t => t != null && t.Message == "Vote passed: Reset the level"),
                 "no toast said the vote passed");
+        }
+
+        [UnityTest]
+        public IEnumerator The_chosen_answer_is_marked_Selected_and_cleared_when_the_vote_ends()
+        {
+            yield return StartBoard();
+            VoteOverlay overlay = VoteOverlay.Create(_onClient);
+            yield return null;
+
+            _onClient.StartVote("reset");
+            yield return WaitUntil(() => overlay.Panel.Visible, "the overlay never showed the vote");
+            yield return WaitUntil(() => overlay.YesButton.Selected, "the starter's Yes was never marked Selected");
+            Assert.That(overlay.NoButton.Selected, Is.False, "only the chosen answer is picked");
+            Assert.That(overlay.YesButton.Interactable, Is.False, "and it can't be changed");
+
+            _onHost.CastVote(true);
+            yield return WaitUntil(() => !overlay.Panel.Visible, "the overlay never hid");
+            yield return null;
+            Assert.That(overlay.YesButton.Selected || overlay.NoButton.Selected, Is.False, "the pick is cleared when the vote ends");
         }
 
         [UnityTest]
