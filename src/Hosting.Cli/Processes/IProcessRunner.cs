@@ -16,12 +16,15 @@ public interface IProcessRunner
 {
     /// <summary>
     /// Runs <paramref name="fileName"/> with <paramref name="arguments"/> in <paramref name="workingDirectory"/>
-    /// (process default when null), optionally feeding <paramref name="standardInput"/> to its stdin.
+    /// (process default when null), optionally feeding <paramref name="standardInput"/> to its stdin
+    /// and/or adding <paramref name="environmentVariables"/> on top of the inherited environment
+    /// (e.g. an SSH_ASKPASS helper's own env vars -- see <c>SshAskPass</c>).
     /// </summary>
     Task<ProcessOutcome> RunAsync(
         string fileName,
         IReadOnlyList<string> arguments,
         string? workingDirectory,
         string? standardInput,
-        CancellationToken ct);
+        CancellationToken ct,
+        IReadOnlyDictionary<string, string>? environmentVariables = null);
 }
