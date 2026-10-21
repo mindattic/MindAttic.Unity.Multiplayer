@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using Unity.Multiplayer.Core;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -90,6 +91,9 @@ namespace Unity.Multiplayer.Editor
         /// <summary><see cref="BuildFromCommandLine"/>: the hosting profile's id.</summary>
         public const string ProfileArg = "-serverProfile";
 
+        /// <summary><see cref="BuildFromCommandLine"/>: the scene to open and boot first (UM-T58).</summary>
+        public const string SceneArg = "-serverScene";
+
         [MenuItem(MenuRoot + "GenericVps (default)", false, 41)]
         private static void BuildGenericVpsMenu()
         {
@@ -134,14 +138,42 @@ namespace Unity.Multiplayer.Editor
 
         /// <summary>
         /// Batch-mode entry point: <c>Unity -batchmode -quit -projectPath . -executeMethod
-        /// Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverProfile GenericVps|RunPod|GameLift]
-        /// [-serverOutput dir] [-port n] [-transport udp|websocket] [-serverBackend mono|il2cpp] [-serverDevelopment]</c>.
-        /// Exits 1 on failure.
+        /// Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine [-serverScene Assets/.../Main.unity]
+        /// [-serverProfile GenericVps|RunPod|GameLift] [-serverOutput dir] [-port n] [-transport udp|websocket]
+        /// [-serverBackend mono|il2cpp] [-serverDevelopment]</c>. Exits 1 on failure.
+        /// <para>The server scene (UM-T58) is opened before anything reads it, so <c>server.json</c> carries that scene's
+        /// NetBootstrap and the scene boots first in the build: <c>-serverScene</c>, else (a batch editor starts on an
+        /// untitled scene) the first enabled Build Settings scene. No game needs a build method of its own;
+        /// <c>mp-host game</c> calls this one.</para>
         /// </summary>
         public static void BuildFromCommandLine()
         {
             string[] args = Environment.GetCommandLineArgs();
-            ServerPackageBuildOptions options = OptionsFromArgs(args, out string error);
+            string error = null;
+            string[] enabled = EnabledBuildScenes();
+            string scene = ServerSceneFor(args, SceneManager.GetActiveScene().path, enabled);
+            if (scene != null)
+            {
+                if (!File.Exists(scene))
+                {
+                    error = SceneArg + " '" + scene + "' does not exist in the project.";
+                }
+                else
+                {
+                    EditorSceneManager.OpenScene(scene, OpenSceneMode.Single);
+                }
+            }
+
+            ServerPackageBuildOptions options = null;
+            if (error == null)
+            {
+                options = OptionsFromArgs(args, out error);
+                if (scene != null)
+                {
+                    options.Scenes = ScenesWithServerFirst(scene, enabled);
+                }
+            }
+
             ServerPackageBuildResult result = error == null ? Build(options) : null;
             if (result != null && result.Succeeded)
             {
@@ -154,6 +186,65 @@ namespace Unity.Multiplayer.Editor
             {
                 EditorApplication.Exit(1);
             }
+        }
+
+        /// <summary>
+        /// The scene <see cref="BuildFromCommandLine"/> opens: <see cref="SceneArg"/>'s value when given; else, when the
+        /// active scene is unsaved (<paramref name="activeScenePath"/> empty, as in a fresh batch editor), the first of
+        /// <paramref name="enabledScenes"/>; else null (keep the open scene, as the menu build does).
+        /// </summary>
+        public static string ServerSceneFor(string[] args, string activeScenePath, IList<string> enabledScenes)
+        {
+            args = args ?? new string[0];
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], SceneArg, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(args[i + 1]))
+                {
+                    return args[i + 1].Replace('\\', '/');
+                }
+            }
+
+            if (!string.IsNullOrEmpty(activeScenePath) || enabledScenes == null || enabledScenes.Count == 0)
+            {
+                return null;
+            }
+
+            return enabledScenes[0];
+        }
+
+        /// <summary>
+        /// The scenes a server build holds: <paramref name="serverScene"/> first (a player boots its first scene), then
+        /// the rest of <paramref name="enabledScenes"/> in order, so scene-synced clients and the server agree on the list.
+        /// </summary>
+        public static string[] ScenesWithServerFirst(string serverScene, IList<string> enabledScenes)
+        {
+            var scenes = new List<string> { serverScene };
+            if (enabledScenes != null)
+            {
+                foreach (string scene in enabledScenes)
+                {
+                    if (!string.Equals(scene, serverScene, StringComparison.OrdinalIgnoreCase))
+                    {
+                        scenes.Add(scene);
+                    }
+                }
+            }
+
+            return scenes.ToArray();
+        }
+
+        private static string[] EnabledBuildScenes()
+        {
+            var scenes = new List<string>();
+            foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
+            {
+                if (scene.enabled && !string.IsNullOrEmpty(scene.path))
+                {
+                    scenes.Add(scene.path);
+                }
+            }
+
+            return scenes.ToArray();
         }
 
         /// <summary>

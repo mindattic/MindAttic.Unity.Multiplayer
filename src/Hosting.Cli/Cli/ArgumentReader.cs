@@ -10,6 +10,7 @@ public sealed class ArgumentReader
 {
     private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _flags = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<string>> _repeated = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Parses <paramref name="args"/>, starting at <paramref name="skip"/> (past the verb).</summary>
     /// <exception cref="ArgumentException">A <c>--name</c> token is immediately followed by another <c>--</c> token or nothing (treated as a flag only when <paramref name="booleanFlags"/> names it).</exception>
@@ -33,9 +34,14 @@ public sealed class ArgumentReader
             else
             {
                 _values[name] = args[++i];
+                if (!_repeated.TryGetValue(name, out List<string>? all)) _repeated[name] = all = new List<string>();
+                all.Add(_values[name]);
             }
         }
     }
+
+    /// <summary>Every value given to a repeatable <c>--name</c> (e.g. <c>--env</c>), in order; empty when it was not given.</summary>
+    public IReadOnlyList<string> Repeated(string name) => _repeated.TryGetValue(name, out List<string>? all) ? all : Array.Empty<string>();
 
     /// <summary>True when <c>--name</c> was given (with or without a value).</summary>
     public bool Has(string name) => _values.ContainsKey(name) || _flags.Contains(name);

@@ -16,7 +16,9 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// </summary>
 public static class DeployCommand
 {
-    public static async Task<int> RunAsync(IReadOnlyList<string> rawArgs, IDeployLog log, HostingCredentialStore credentials, CancellationToken ct)
+    /// <param name="deployed">Told the outcome once the pipeline finishes (<c>mp-host game deploy</c> remembers the server id from it).</param>
+    public static async Task<int> RunAsync(IReadOnlyList<string> rawArgs, IDeployLog log, HostingCredentialStore credentials, CancellationToken ct,
+        Action<DeployOutcome>? deployed = null)
     {
         ArgumentReader args = DeployArguments.Parse(rawArgs);
         string profile = args.Require("profile");
@@ -44,6 +46,7 @@ public static class DeployCommand
             log,
             ct);
 
+        deployed?.Invoke(outcome);
         log.Info($"Server id: {outcome.ServerId}");
         log.Info($"Address: {outcome.PublicAddress}");
         log.Info($"Healthy: {outcome.Healthy}");

@@ -6,6 +6,10 @@ no GHCR push, no SSH, no cloud API, no credential to store. Other players on the
 IP; `local up` also makes a best-effort attempt to forward the game port off the LAN via UPnP, with a
 plain explanation when the router refuses.
 
+From a Unity project, `mp-host game local` (UM-T58, see [Hosting](../hosting.md#deploy-any-game-with-one-command-mp-host-game))
+does all of this with no flags: it builds the package from the project's server scene with the right Unity editor,
+adds a rendezvous container for join codes, skips UPnP unless `--upnp` is given, and `mp-host game down` stops it.
+
 ## What `mp-host local up` does
 
 1. Builds (or reads an already-built) **GenericVps-profile** server package -- the same Linux/Docker

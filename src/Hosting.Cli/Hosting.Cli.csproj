@@ -20,7 +20,19 @@
     <AssemblyName>mp-host</AssemblyName>
     <RootNamespace>Unity.Multiplayer.Hosting.Cli</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <IsPackable>false</IsPackable>
+    <!--
+      UM-T58: installable as a .NET global tool so a game needs neither this repo nor a script of its own:
+      `powershell -File tools/install-mp-host.ps1` packs it into C:\LocalNuGet and installs `mp-host` on PATH
+      (dotnet tool install -g MindAttic.Unity.Multiplayer.Hosting.Cli add-source C:\LocalNuGet).
+      HOUSE-LAW-1: whole-number versions only; bump the major.
+    -->
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mp-host</ToolCommandName>
+    <PackageId>MindAttic.Unity.Multiplayer.Hosting.Cli</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>MindAttic</Authors>
+    <Description>mp-host: build and deploy any Unity.Multiplayer game's dedicated server (Local Docker, a VPS, RunPod or a cloud provider) with no per-game script.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -27,7 +27,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// </summary>
 public static class LocalCommand
 {
-    private static readonly HashSet<string> BooleanFlags = new(StringComparer.OrdinalIgnoreCase) { "dry-run", "no-upnp" };
+    private static readonly HashSet<string> BooleanFlags = new(StringComparer.OrdinalIgnoreCase) { "dry-run", "no-upnp", "development" };
 
     public static async Task<int> RunAsync(IReadOnlyList<string> rawArgs, IDeployLog log, HostingCredentialStore credentials, CancellationToken ct)
     {
@@ -52,8 +52,9 @@ public static class LocalCommand
         bool dryRun = args.Has("dry-run");
         bool noUpnp = args.Has("no-upnp");
 
-        var packageBuilder = new ServerPackageBuilder(new ProcessRunner());
-        var packageRequest = new ServerPackageBuildRequest(GenericVpsProvisioner.Id, args.Get("package"), args.Get("unity"), args.Get("unity-project"));
+        // A dry run narrates the Unity build instead of launching it, the same as deploy/update (UM-T58).
+        IServerPackageBuilder packageBuilder = new Composition.HostingComposer(credentials, dryRun).BuildPackageBuilder();
+        ServerPackageBuildRequest packageRequest = DeployArguments.BuildPackageRequest(args, GenericVpsProvisioner.Id);
         BuiltServerPackage package = await packageBuilder.BuildAsync(packageRequest, log, ct);
         ManifestPort? gamePort = package.Manifest.GamePort;
 

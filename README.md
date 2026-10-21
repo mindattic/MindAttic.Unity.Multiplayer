@@ -115,7 +115,10 @@ Game.x86_64 -batchmode -nographics -port 7777 -transport udp
 `-mode host|server|client`, `-address`, `-tickrate`, `-maxplayers`, `-name` and `-password` are read too.
 **MindAttic ▸ Multiplayer ▸ Build Dedicated Server (Linux)** makes that build and writes its Dockerfile.
 **MindAttic ▸ Multiplayer ▸ Build Server Package** adds `server.json`, `start.sh`, a health endpoint and
-per-profile hosting files into `Builds/ServerPackage/<profile>/`. Full detail, every setting and every hosting
+per-profile hosting files into `Builds/ServerPackage/<profile>/`. To build and run it with no script of your own,
+install `mp-host` once (`powershell -File tools/install-mp-host.ps1`, a .NET tool) and, in the Unity project, run
+`mp-host game local` (this PC, Docker) or `mp-host game deploy --profile <GenericVps|RunPod|...>`; it finds the
+editor from `ProjectVersion.txt` and the server scene from Build Settings. Full detail, every setting and every hosting
 provider: [Topologies](https://mindattic.github.io/Unity.Multiplayer/articles/topologies.html) and
 [Hosting](https://mindattic.github.io/Unity.Multiplayer/articles/hosting.html) on the docs site.
 

@@ -11,6 +11,54 @@ own page covers its specifics. See
 [RFC 0001 § Hosting](https://github.com/mindattic/Unity.Multiplayer/blob/main/docs/rfc/0001-architecture.md#hosting)
 for the design this table implements.
 
+## Deploy any game with one command (`mp-host game`)
+
+A game built on Unity.Multiplayer needs no deploy script and no build method of its own (UM-T58). Install
+`mp-host` once as a .NET tool, then point it at the Unity project:
+
+```powershell
+# once per machine, from a Unity.Multiplayer checkout: packs into C:\LocalNuGet and installs mp-host on PATH
+powershell -File tools/install-mp-host.ps1
+# (equivalent: dotnet pack src/Hosting.Cli -c Release -o C:\LocalNuGet
+#              dotnet tool install -g MindAttic.Unity.Multiplayer.Hosting.Cli --add-source C:\LocalNuGet)
+
+cd <your Unity project>
+mp-host game local                       # build the server, run it + rendezvous on this PC (Docker)
+mp-host game down                        # stop it
+mp-host game deploy --dry-run            # see every step of a hosted deploy without doing any of it
+mp-host game deploy                      # GenericVps (default): build, push to GHCR, deploy, print the join code
+mp-host game deploy --profile RunPod --rendezvous-url http://<vps>:8080
+mp-host game status | logs | update | destroy --yes
+```
+
+What it works out from the project, so nothing is per-game:
+
+| Value | Default | Override |
+|---|---|---|
+| Project | the current folder | `--project <dir>` |
+| Unity editor | the exact `ProjectSettings/ProjectVersion.txt` version, from `UNITY_HUB_EDITORS`, Unity Hub's editor list and install location, then `…/Unity/Hub/Editor/<version>` | `--unity <exe>` or `UNITY_EDITOR` |
+| Server scene | the first enabled scene in Build Settings | `"scene"` in `mp-host.json`, or `--scene Assets/…/Main.unity` |
+| Server name | `productName`, slugged (`Unity.Cursory` → `unity-cursory`); `<name>-local` for Local | `--name` |
+| Image | `ghcr.io/<ghcr user>/<name>:latest` | `--image owner/repo`, `--tag` |
+| Public address | GenericVps: the stored SSH target's host; RunPod: cosmetic | `--public-address` |
+| Rendezvous | hosted: `http://<public address>:8080` beside the game; Local: a rendezvous container, built from the Unity.Multiplayer checkout the project's `Packages/manifest.json` points at by `file:` (else `ghcr.io/mindattic/rendezvous`) | `--rendezvous-url`, `--rendezvous-image`, `--no-rendezvous` |
+| Package | built into `Builds/ServerPackage/<profile>` (log beside it) | `--skip-build` reuses it, `--package <dir>` uses another |
+| Server id | remembered from the last `game deploy` on this machine | `--server-id` |
+
+The build is the library's own batch entry point,
+`Unity -batchmode -executeMethod Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine -serverScene <scene> …`:
+it opens the scene first, so `server.json` carries that scene's whole NetBootstrap (UM-T50) and the scene boots first.
+`--profile` takes every profile below (`Local` is the same as `game local`); `--server-password`, `--env KEY=VALUE`,
+`--region`, `--size`, `--development` and `--upnp` pass through. On Windows with Docker Desktop in Windows-containers
+mode, `game` uses Docker Desktop's Linux engine for that run.
+
+An optional **`mp-host.json`** at the project root sets defaults for any option (a flag always wins), e.g.
+`{ "name": "cursory", "image": "mindattic/unity-cursory" }`. The repo's own `deploy.ps1`, if it keeps one for the
+`/deploy` router, is then just `mp-host game deploy --project $PSScriptRoot @args`.
+
+`mp-host game` resolves everything above and then runs the lower-level commands this page describes
+(`mp-host deploy`, `local up`, …), printing each one, so those remain available for CI or a package built elsewhere.
+
 ## Which path do you need?
 
 ```

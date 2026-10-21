@@ -51,6 +51,34 @@ namespace Unity.Multiplayer.Editor.Tests
         }
 
         [Test]
+        public void ServerSceneFor_PrefersTheServerSceneArgument()
+        {
+            string scene = ServerPackageBuild.ServerSceneFor(
+                new[] { "Unity", "-serverScene", @"Assets\Game\Server.unity" }, "Assets/Other.unity", new[] { "Assets/Game/Main.unity" });
+
+            Assert.That(scene, Is.EqualTo("Assets/Game/Server.unity"));
+        }
+
+        [Test]
+        public void ServerSceneFor_OpensTheFirstBuildSettingsScene_OnlyWhenTheEditorStartedUntitled()
+        {
+            string[] enabled = { "Assets/Game/Main.unity", "Assets/Game/Level2.unity" };
+
+            Assert.That(ServerPackageBuild.ServerSceneFor(new string[0], "", enabled), Is.EqualTo("Assets/Game/Main.unity"));
+            Assert.That(ServerPackageBuild.ServerSceneFor(new string[0], "Assets/Open.unity", enabled), Is.Null, "an open, saved scene is kept, as in the menu build");
+            Assert.That(ServerPackageBuild.ServerSceneFor(new string[0], "", new string[0]), Is.Null);
+        }
+
+        [Test]
+        public void ScenesWithServerFirst_PutsTheServerSceneFirst_WithoutDuplicates()
+        {
+            string[] scenes = ServerPackageBuild.ScenesWithServerFirst("Assets/B.unity", new[] { "Assets/A.unity", "Assets/B.unity", "Assets/C.unity" });
+
+            Assert.That(scenes, Is.EqualTo(new[] { "Assets/B.unity", "Assets/A.unity", "Assets/C.unity" }));
+            Assert.That(ServerPackageBuild.ScenesWithServerFirst("Assets/X.unity", null), Is.EqualTo(new[] { "Assets/X.unity" }));
+        }
+
+        [Test]
         public void ConfigFromScene_TakesTheNetBootstrapInspectorValues()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

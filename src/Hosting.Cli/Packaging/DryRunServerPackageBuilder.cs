@@ -8,13 +8,12 @@ namespace Unity.Multiplayer.Hosting.Cli.Packaging;
 /// a dry run needs to suppress), but a <see cref="ServerPackageBuildRequest.UnityExecutablePath"/> is
 /// never actually launched: Unity batch mode is a real, possibly minutes-long external process with
 /// its own side effects (a Library/ cache, temp output on disk), exactly what <c>--dry-run</c>
-/// promises not to do. Prints the command it would have run and returns a synthesized package (no
-/// directory on disk) so the rest of the pipeline still has something to narrate against, the same
-/// way <see cref="CloudVps.DryRunCloudVpsApiClient"/>'s synthesized server does.
+/// promises not to do. Prints the command it would have run (the same <see cref="UnityBatchCommand"/> line the real
+/// builder runs) and returns a synthesized package (no directory on disk) so the rest of the pipeline still has
+/// something to narrate against, the same way <see cref="CloudVps.DryRunCloudVpsApiClient"/>'s synthesized server does.
 /// </summary>
 public sealed class DryRunServerPackageBuilder : IServerPackageBuilder
 {
-    private const string BatchMethod = "Unity.Multiplayer.Editor.ServerPackageBuild.BuildFromCommandLine";
     private const string SimulatedDirectory = "(dry run: no package built)";
 
     /// <inheritdoc />
@@ -35,10 +34,12 @@ public sealed class DryRunServerPackageBuilder : IServerPackageBuilder
                 "Either --package <built package dir>, or both --unity <Unity executable> and --unity-project <project dir>, is required.");
         }
 
-        log.DryRun(
-            $"{request.UnityExecutablePath} -batchmode -quit -nographics -projectPath {request.UnityProjectPath} "
-            + $"-executeMethod {BatchMethod} -serverProfile {request.ProfileId} -serverOutput <temp dir>");
-        return Task.FromResult(new BuiltServerPackage(SimulatedDirectory, SyntheticManifest(request.ProfileId)));
+        string output = string.IsNullOrWhiteSpace(request.OutputDirectory) ? "<temp dir>" : request.OutputDirectory;
+        log.DryRun(UnityBatchCommand.Format(request.UnityExecutablePath, UnityBatchCommand.Arguments(request, output)));
+        string profile = PackageProfiles.For(request.ProfileId);
+        return Task.FromResult(new BuiltServerPackage(
+            string.IsNullOrWhiteSpace(request.OutputDirectory) ? SimulatedDirectory : request.OutputDirectory,
+            SyntheticManifest(profile)));
     }
 
     private static ServerPackageManifest SyntheticManifest(string profileId) => new(

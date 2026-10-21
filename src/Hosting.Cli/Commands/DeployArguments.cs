@@ -10,13 +10,20 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// </summary>
 public static class DeployArguments
 {
-    private static readonly HashSet<string> BooleanFlags = new(StringComparer.OrdinalIgnoreCase) { "dry-run" };
+    private static readonly HashSet<string> BooleanFlags = new(StringComparer.OrdinalIgnoreCase) { "dry-run", "development" };
 
     /// <summary>Parses <paramref name="args"/> (after the verb) into a reader with this command's flags recognised.</summary>
     public static ArgumentReader Parse(IReadOnlyList<string> args) => new(args, 1, BooleanFlags);
 
+    /// <summary>
+    /// The package step: <c>--package &lt;dir&gt;</c>, or <c>--unity &lt;exe&gt; --unity-project &lt;dir&gt;</c> plus the
+    /// optional <c>--scene &lt;path&gt;</c>, <c>--package-output &lt;dir&gt;</c>, <c>--unity-log &lt;file&gt;</c> and
+    /// <c>--development</c> (UM-T58). The Unity package profile is the one <paramref name="profileId"/> runs
+    /// (<see cref="PackageProfiles.For"/>), so a Hetzner or Local deploy builds the GenericVps package.
+    /// </summary>
     public static ServerPackageBuildRequest BuildPackageRequest(ArgumentReader args, string profileId) =>
-        new(profileId, args.Get("package"), args.Get("unity"), args.Get("unity-project"));
+        new(PackageProfiles.For(profileId), args.Get("package"), args.Get("unity"), args.Get("unity-project"),
+            args.Get("scene"), args.Get("package-output"), args.Get("unity-log"), args.Has("development"));
 
     /// <summary>The <c>ghcr.io/owner/repo:tag</c> reference the pipeline builds, pushes, provisions and updates onto.</summary>
     public static string BuildImageReference(ArgumentReader args, string registry)

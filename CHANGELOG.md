@@ -9,6 +9,15 @@ carries the package's own version.
 
 ### Added
 
+- **`mp-host game`** (UM-T58) — deploy any Unity.Multiplayer game with no per-game script:
+  `mp-host game local|down|deploy|update|status|logs|destroy [--project <dir>] [--profile <p>] [--scene <path>] [--dry-run]`
+  finds the editor from `ProjectVersion.txt` (Unity Hub's folders, editor list and install path, or `--unity` /
+  `UNITY_EDITOR`), picks the server scene (`--scene`, `mp-host.json`, else the first Build Settings scene), defaults
+  name/image/address/rendezvous from the project and vault, remembers deployed server ids, and runs the existing
+  pipeline. `ServerPackageBuild.BuildFromCommandLine` takes `-serverScene` (else opens the first Build Settings scene
+  in a fresh batch editor). `mp-host` packs as the `MindAttic.Unity.Multiplayer.Hosting.Cli` .NET tool
+  (`tools/install-mp-host.ps1`). `mp-host local up --dry-run` no longer launches Unity, and every profile builds the
+  Unity package profile it runs (`GenericVps` for the VPS/cloud providers and Local).
 - **`NetBootstrap.Configure`** (UM-T33) — sets the bootstrap's default `NetConfig` in code (topology, address,
   port, transport, tick rate, max players, game version, join codes, conditions, …) before the session starts,
   instead of reflecting into its private serialized fields. `Configure(NetConfig)` copies and validates the

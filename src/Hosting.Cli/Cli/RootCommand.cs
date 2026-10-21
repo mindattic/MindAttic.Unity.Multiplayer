@@ -10,12 +10,15 @@ public static class RootCommand
         mp-host -- the MindAttic.Unity.Multiplayer hosting deploy CLI (UM-T25)
 
         Usage:
-          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm|Fly|GameLift|Oci> --name <server> --image <owner/repo> ...
+          mp-host game        local | down | deploy | update | status | logs | destroy [--project <unity project dir>] [--profile <p>] [--scene <path>] [--dry-run]
+                                Any Unity.Multiplayer game, no per-game script (UM-T58): finds the editor, builds the server
+                                package from the project and runs the commands below. 'mp-host game help' lists its options.
+          mp-host deploy     --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud|AwsEc2|AwsLightsail|Gce|AzureVm|Fly|GameLift|Oci> --name <server> --image <owner/repo> ...
           mp-host status      --profile <p> --name <server> --server-id <id>
           mp-host logs         --profile <p> --name <server> --server-id <id> [--tail <n>]
           mp-host update       --profile <p> --name <server> --server-id <id> --image <owner/repo> ...
           mp-host destroy      --profile <p> --name <server> --server-id <id> --yes
-          mp-host local        up --name <server> (--package <dir> | --unity <exe> --unity-project <dir>) [--rendezvous-url <url> [--rendezvous-secret <s>]] [--public-address <addr>] [--no-upnp]
+          mp-host local        up --name <server> (--package <dir> | --unity <exe> --unity-project <dir> [--scene <path>] [--package-output <dir>]) [--rendezvous-url <url> [--rendezvous-secret <s>]] [--public-address <addr>] [--no-upnp]
                                 down --name <server>
           mp-host credentials  set-ghcr | set-runpod | set-rendezvous | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh | set-aws | set-gce | set-azure | set-fly | set-oci | set-cloud-options ...
 
@@ -55,6 +58,7 @@ public static class RootCommand
             HostingCredentialStore credentials = HostingCredentialStore.Default;
             return args[0] switch
             {
+                "game" => await GameCommand.RunAsync(args, log, credentials, ct),
                 "deploy" => await DeployCommand.RunAsync(args, log, credentials, ct),
                 "status" => await StatusCommand.RunAsync(args, log, credentials, ct),
                 "logs" => await LogsCommand.RunAsync(args, log, credentials, ct),
