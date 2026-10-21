@@ -147,11 +147,16 @@ namespace Unity.Multiplayer.Editor
             }
         }
 
-        /// <summary>Reads <see cref="BuildFromCommandLine"/>'s arguments; <paramref name="error"/> names the first bad one.</summary>
+        /// <summary>
+        /// Reads <see cref="BuildFromCommandLine"/>'s arguments; <paramref name="error"/> names the first bad one.
+        /// Starts from the open scene's NetBootstrap (<see cref="OptionsFromScene"/>), same as the menu command, so
+        /// a batch build that omits <c>-port</c>/<c>-transport</c> still matches the scene instead of silently
+        /// falling back to <see cref="NetConfig.DefaultPort"/>/UDP; either flag overrides it when given.
+        /// </summary>
         public static DedicatedServerBuildOptions OptionsFromArgs(string[] args, out string error)
         {
             error = null;
-            var options = new DedicatedServerBuildOptions();
+            DedicatedServerBuildOptions options = OptionsFromScene(SceneManager.GetActiveScene());
             args = args ?? new string[0];
             for (int i = 0; i < args.Length; i++)
             {

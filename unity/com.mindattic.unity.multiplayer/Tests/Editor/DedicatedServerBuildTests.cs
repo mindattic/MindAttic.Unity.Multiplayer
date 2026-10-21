@@ -73,6 +73,7 @@ namespace Unity.Multiplayer.Editor.Tests
         [Test]
         public void OptionsFromArgs_DefaultsWithoutArguments()
         {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             DedicatedServerBuildOptions options = DedicatedServerBuild.OptionsFromArgs(new[] { "Unity.exe" }, out string error);
 
             Assert.That(error, Is.Null);
@@ -80,6 +81,39 @@ namespace Unity.Multiplayer.Editor.Tests
             Assert.That(options.Port, Is.EqualTo(NetConfig.DefaultPort));
             Assert.That(options.Transport, Is.EqualTo(TransportKind.Udp));
             Assert.That(options.ScriptingBackend, Is.Null);
+        }
+
+        [Test]
+        public void OptionsFromArgs_FallsBackToTheOpenSceneWhenPortAndTransportAreOmitted()
+        {
+            // The menu command already reads the scene (OptionsFromScene); a batch build that omits
+            // -port/-transport must match it too instead of silently defaulting to 7777/UDP.
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            try
+            {
+                var go = new GameObject("Net", typeof(NetworkManager));
+                var serialized = new SerializedObject(go.AddComponent<NetBootstrap>());
+                serialized.FindProperty("port").intValue = 8123;
+                serialized.FindProperty("transport").intValue = (int)TransportKind.WebSocket;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                DedicatedServerBuildOptions options = DedicatedServerBuild.OptionsFromArgs(new[] { "Unity.exe" }, out string error);
+
+                Assert.That(error, Is.Null);
+                Assert.That(options.Port, Is.EqualTo(8123));
+                Assert.That(options.Transport, Is.EqualTo(TransportKind.WebSocket));
+
+                // An explicit CLI flag still overrides the scene.
+                DedicatedServerBuildOptions overridden = DedicatedServerBuild.OptionsFromArgs(
+                    new[] { "Unity.exe", "-port", "9000" }, out string overrideError);
+                Assert.That(overrideError, Is.Null);
+                Assert.That(overridden.Port, Is.EqualTo(9000));
+                Assert.That(overridden.Transport, Is.EqualTo(TransportKind.WebSocket));
+            }
+            finally
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            }
         }
 
         [TestCase("-port", "0", "-port '0'")]
