@@ -76,4 +76,64 @@ public class HostingCredentialStoreTests
         Assert.That(_store.GetSshCreds("a")!.Host, Is.EqualTo("10.0.0.1"));
         Assert.That(_store.GetSshCreds("b")!.Host, Is.EqualTo("10.0.0.2"));
     }
+
+    [TestCase("Hetzner")]
+    [TestCase("Vultr")]
+    [TestCase("DigitalOcean")]
+    [TestCase("Linode")]
+    public void CloudVps_creds_are_null_before_anything_is_stored_and_round_trip_once_set(string provider)
+    {
+        var (get, set) = CloudVpsAccessors(provider);
+        Assert.That(get(), Is.Null);
+
+        set(new HostingCredentialStore.CloudVpsCreds("api-token-xyz", "deploy", "/keys/id_ed25519", "ssh-ed25519 AAAA... deploy@laptop"));
+        var creds = get();
+        Assert.That(creds, Is.Not.Null);
+        Assert.That(creds!.ApiKey, Is.EqualTo("api-token-xyz"));
+        Assert.That(creds.SshUser, Is.EqualTo("deploy"));
+        Assert.That(creds.SshPrivateKeyPath, Is.EqualTo("/keys/id_ed25519"));
+        Assert.That(creds.SshPublicKey, Is.EqualTo("ssh-ed25519 AAAA... deploy@laptop"));
+    }
+
+    private (Func<HostingCredentialStore.CloudVpsCreds?> Get, Action<HostingCredentialStore.CloudVpsCreds> Set) CloudVpsAccessors(string provider) => provider switch
+    {
+        "Hetzner" => (() => _store.GetHetznerCreds(), c => _store.SetHetznerCreds(c)),
+        "Vultr" => (() => _store.GetVultrCreds(), c => _store.SetVultrCreds(c)),
+        "DigitalOcean" => (() => _store.GetDigitalOceanCreds(), c => _store.SetDigitalOceanCreds(c)),
+        "Linode" => (() => _store.GetLinodeCreds(), c => _store.SetLinodeCreds(c)),
+        _ => throw new ArgumentOutOfRangeException(nameof(provider)),
+    };
+
+    [Test]
+    public void Ovh_creds_round_trip_every_field()
+    {
+        Assert.That(_store.GetOvhCreds(), Is.Null);
+
+        _store.SetOvhCreds(new HostingCredentialStore.OvhCreds(
+            "ovh-eu", "project-123", "app-key", "app-secret", "consumer-key", "root", "/keys/id_ed25519", "ssh-ed25519 AAAA..."));
+
+        var creds = _store.GetOvhCreds();
+        Assert.That(creds, Is.Not.Null);
+        Assert.That(creds!.Endpoint, Is.EqualTo("ovh-eu"));
+        Assert.That(creds.ServiceName, Is.EqualTo("project-123"));
+        Assert.That(creds.ApplicationKey, Is.EqualTo("app-key"));
+        Assert.That(creds.ApplicationSecret, Is.EqualTo("app-secret"));
+        Assert.That(creds.ConsumerKey, Is.EqualTo("consumer-key"));
+        Assert.That(creds.SshUser, Is.EqualTo("root"));
+        Assert.That(creds.SshPrivateKeyPath, Is.EqualTo("/keys/id_ed25519"));
+        Assert.That(creds.SshPublicKey, Is.EqualTo("ssh-ed25519 AAAA..."));
+    }
+
+    [Test]
+    public void Cloud_provider_creds_are_independent_of_each_other_and_of_RunPod()
+    {
+        _store.SetHetznerCreds(new HostingCredentialStore.CloudVpsCreds("hetzner-token", "root", "/k1", "pk1"));
+        _store.SetVultrCreds(new HostingCredentialStore.CloudVpsCreds("vultr-token", "root", "/k2", "pk2"));
+        _store.SetRunPodCreds("runpod-token");
+
+        Assert.That(_store.GetHetznerCreds()!.ApiKey, Is.EqualTo("hetzner-token"));
+        Assert.That(_store.GetVultrCreds()!.ApiKey, Is.EqualTo("vultr-token"));
+        Assert.That(_store.GetRunPodCreds()!.ApiKey, Is.EqualTo("runpod-token"));
+        Assert.That(_store.GetDigitalOceanCreds(), Is.Null);
+    }
 }

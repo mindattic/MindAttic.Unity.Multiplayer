@@ -10,16 +10,17 @@ public static class RootCommand
         mp-host -- the MindAttic.Unity.Multiplayer hosting deploy CLI (UM-T25)
 
         Usage:
-          mp-host deploy      --profile <GenericVps|RunPod> --name <server> --image <owner/repo> ...
+          mp-host deploy      --profile <GenericVps|RunPod|Hetzner|Vultr|DigitalOcean|Linode|OvhCloud> --name <server> --image <owner/repo> ...
           mp-host status      --profile <p> --name <server> --server-id <id>
           mp-host logs         --profile <p> --name <server> --server-id <id> [--tail <n>]
           mp-host update       --profile <p> --name <server> --server-id <id> --image <owner/repo> ...
           mp-host destroy      --profile <p> --name <server> --server-id <id> --yes
-          mp-host credentials  set-ghcr | set-runpod | set-ssh ...
+          mp-host credentials  set-ghcr | set-runpod | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh ...
 
         Every command accepts --dry-run, which prints every API/SSH/docker call it would make
         instead of making it. Credentials are read from MindAttic.Vault (see 'credentials'); none
-        are ever read from, or written to, this repo.
+        are ever read from, or written to, this repo. See docs/articles/hosting/<profile>.md for
+        each profile's setup and sizing guide.
         """;
 
     public static async Task<int> RunAsync(string[] args, IDeployLog log, CancellationToken ct)

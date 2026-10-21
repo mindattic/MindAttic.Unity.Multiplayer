@@ -16,6 +16,12 @@ public static class CloudInitRenderer
     /// <summary>The rendered compose file's name on the host.</summary>
     public const string ComposeFileName = "docker-compose.yml";
 
+    /// <summary>The rendezvous service's published TCP port, in every rendered compose file.</summary>
+    public const int RendezvousPort = 8080;
+
+    /// <summary>The GHCR token's path on the host, written once by provisioning and removed by the bootstrap script.</summary>
+    public const string GhcrTokenPath = "/tmp/mp-host-ghcr-token";
+
     /// <summary>
     /// A <c>docker-compose.yml</c> that runs the pushed image (by reference, never built on the
     /// host) beside the rendezvous service, shaped like
@@ -55,7 +61,7 @@ public static class CloudInitRenderer
         text.Append("    image: ").Append(rendezvousImage).Append('\n');
         text.Append("    restart: unless-stopped\n");
         text.Append("    ports:\n");
-        text.Append("      - \"8080:8080/tcp\"\n");
+        text.Append("      - \"").Append(RendezvousPort).Append(':').Append(RendezvousPort).Append("/tcp\"\n");
         text.Append("    environment:\n");
         text.Append("      Rendezvous__RegistrationSecret: ").Append(YamlQuote(environment.GetValueOrDefault("MINDATTIC_RENDEZVOUS_SECRET", ""))).Append('\n');
         text.Append("volumes:\n");
@@ -82,12 +88,52 @@ public static class CloudInitRenderer
         text.Append("  echo 'docker compose plugin not found after install' >&2\n");
         text.Append("  exit 1\n");
         text.Append("fi\n");
-        text.Append("cat /tmp/mp-host-ghcr-token | docker login ").Append(ghcrRegistry)
+        text.Append("cat ").Append(GhcrTokenPath).Append(" | docker login ").Append(ghcrRegistry)
             .Append(" --username ").Append(ghcrUsername).Append(" --password-stdin\n");
-        text.Append("rm -f /tmp/mp-host-ghcr-token\n");
+        text.Append("rm -f ").Append(GhcrTokenPath).Append('\n');
         text.Append("docker compose -f ").Append(ComposeFileName).Append(" pull\n");
         text.Append("docker compose -f ").Append(ComposeFileName).Append(" up -d\n");
         return text.ToString();
+    }
+
+    /// <summary>
+    /// A <c>#cloud-init</c> user-data document for the plain-VPS cloud providers (UM-T26: Hetzner,
+    /// Vultr, DigitalOcean, Linode, OVHcloud): wraps the same <see cref="RenderCompose"/> compose
+    /// file and <see cref="RenderBootstrapScript"/> bootstrap script that <c>GenericVpsProvisioner</c>
+    /// uploads and runs over SSH, but as cloud-init <c>write_files</c>/<c>runcmd</c> so the provider
+    /// runs it automatically on first boot -- no SSH call is needed during provisioning itself (only
+    /// for the later status/logs/update calls, once the box has an IP).
+    /// </summary>
+    public static string RenderUserData(
+        ServerPackageManifest manifest, string imageReference, string rendezvousImage,
+        IReadOnlyDictionary<string, string> environment,
+        string ghcrRegistry, string ghcrUsername, string ghcrToken, string sshPublicKey)
+    {
+        string compose = RenderCompose(manifest, imageReference, rendezvousImage, environment);
+        string bootstrap = RenderBootstrapScript(ghcrRegistry, ghcrUsername);
+
+        var text = new StringBuilder();
+        text.Append("#cloud-init\n");
+        text.Append("ssh_authorized_keys:\n");
+        text.Append("  - ").Append(sshPublicKey.Trim()).Append('\n');
+        text.Append("write_files:\n");
+        AppendFile(text, "/root/" + ComposeFileName, "'0644'", compose);
+        AppendFile(text, GhcrTokenPath, "'0600'", ghcrToken);
+        AppendFile(text, "/root/mp-host-bootstrap.sh", "'0755'", bootstrap);
+        text.Append("runcmd:\n");
+        text.Append("  - [ sh, -c, \"cd /root && sh mp-host-bootstrap.sh\" ]\n");
+        return text.ToString();
+    }
+
+    private static void AppendFile(StringBuilder text, string path, string permissions, string content)
+    {
+        text.Append("  - path: ").Append(path).Append('\n');
+        text.Append("    permissions: ").Append(permissions).Append('\n');
+        text.Append("    content: |\n");
+        foreach (string line in content.Replace("\r\n", "\n").Split('\n'))
+        {
+            text.Append("      ").Append(line).Append('\n');
+        }
     }
 
     private static string YamlQuote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";

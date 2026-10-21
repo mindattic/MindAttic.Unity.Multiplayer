@@ -49,11 +49,42 @@ public sealed class HostingCredentialStore : CredentialStore
     /// <summary>A bare provider API key (RunPod and friends).</summary>
     public sealed record ApiKeyCreds(string ApiKey);
 
+    /// <summary>
+    /// A UM-T26 plain-VPS cloud provider's API token plus the one SSH keypair mp-host registers
+    /// with that provider and bakes into every server it creates (Hetzner, Vultr, DigitalOcean,
+    /// Linode share this shape; OVH needs <see cref="OvhCreds"/> instead, for its signature auth).
+    /// </summary>
+    public sealed record CloudVpsCreds(string ApiKey, string SshUser, string SshPrivateKeyPath, string SshPublicKey);
+
+    /// <summary>
+    /// OVHcloud's signature-based API credential (application key/secret + a consumer key validated
+    /// for the Public Cloud project), its regional endpoint and project id, plus the same SSH keypair
+    /// shape as <see cref="CloudVpsCreds"/>.
+    /// </summary>
+    public sealed record OvhCreds(
+        string Endpoint, string ServiceName, string ApplicationKey, string ApplicationSecret, string ConsumerKey,
+        string SshUser, string SshPrivateKeyPath, string SshPublicKey);
+
     /// <summary>GHCR provider id in this store.</summary>
     public const string GhcrProviderId = "ghcr";
 
     /// <summary>RunPod provider id in this store.</summary>
     public const string RunPodProviderId = "runpod";
+
+    /// <summary>Hetzner Cloud provider id in this store.</summary>
+    public const string HetznerProviderId = "hetzner";
+
+    /// <summary>Vultr provider id in this store.</summary>
+    public const string VultrProviderId = "vultr";
+
+    /// <summary>DigitalOcean provider id in this store.</summary>
+    public const string DigitalOceanProviderId = "digitalocean";
+
+    /// <summary>Linode (Akamai Cloud Computing) provider id in this store.</summary>
+    public const string LinodeProviderId = "linode";
+
+    /// <summary>OVHcloud provider id in this store.</summary>
+    public const string OvhProviderId = "ovh";
 
     /// <summary>The generic-VPS provider id for a given server name (one SSH target per server).</summary>
     public static string GenericVpsProviderId(string serverName) => "genericvps:" + serverName;
@@ -150,6 +181,116 @@ public sealed class HostingCredentialStore : CredentialStore
             w.WriteString("apiKey", creds.Passphrase ?? "");
             w.WriteString("secret", $"{creds.User}@{creds.Host}:{creds.Port}");
             w.WriteString("sshKeyPath", creds.PrivateKeyPath);
+        }));
+    }
+
+    /// <summary>Reads the Hetzner Cloud credential, or null when missing or incomplete.</summary>
+    public CloudVpsCreds? GetHetznerCreds() => GetCloudVpsCreds(HetznerProviderId);
+
+    /// <summary>Upserts the Hetzner Cloud credential.</summary>
+    public void SetHetznerCreds(CloudVpsCreds creds) => SetCloudVpsCreds(HetznerProviderId, creds);
+
+    /// <summary>Reads the Vultr credential, or null when missing or incomplete.</summary>
+    public CloudVpsCreds? GetVultrCreds() => GetCloudVpsCreds(VultrProviderId);
+
+    /// <summary>Upserts the Vultr credential.</summary>
+    public void SetVultrCreds(CloudVpsCreds creds) => SetCloudVpsCreds(VultrProviderId, creds);
+
+    /// <summary>Reads the DigitalOcean credential, or null when missing or incomplete.</summary>
+    public CloudVpsCreds? GetDigitalOceanCreds() => GetCloudVpsCreds(DigitalOceanProviderId);
+
+    /// <summary>Upserts the DigitalOcean credential.</summary>
+    public void SetDigitalOceanCreds(CloudVpsCreds creds) => SetCloudVpsCreds(DigitalOceanProviderId, creds);
+
+    /// <summary>Reads the Linode credential, or null when missing or incomplete.</summary>
+    public CloudVpsCreds? GetLinodeCreds() => GetCloudVpsCreds(LinodeProviderId);
+
+    /// <summary>Upserts the Linode credential.</summary>
+    public void SetLinodeCreds(CloudVpsCreds creds) => SetCloudVpsCreds(LinodeProviderId, creds);
+
+    /// <summary>Reads the OVHcloud credential, or null when missing or incomplete.</summary>
+    public OvhCreds? GetOvhCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(OvhProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string endpoint = StringProp(doc, "endpoint");
+            string serviceName = StringProp(doc, "serviceName");
+            string appKey = StringProp(doc, "appKey");
+            string appSecret = StringProp(doc, "apiKey");
+            string consumerKey = StringProp(doc, "secret");
+            string sshUser = StringPropOrNull(doc, "sshUser") ?? "root";
+            string sshKeyPath = StringProp(doc, "sshKeyPath");
+            string sshPublicKey = StringProp(doc, "sshPublicKey");
+            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(appKey)
+                || string.IsNullOrWhiteSpace(appSecret) || string.IsNullOrWhiteSpace(consumerKey)
+                || string.IsNullOrWhiteSpace(sshKeyPath) || string.IsNullOrWhiteSpace(sshPublicKey))
+            {
+                return null;
+            }
+
+            return new OvhCreds(endpoint, serviceName, appKey, appSecret, consumerKey, sshUser, sshKeyPath, sshPublicKey);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the OVHcloud credential.</summary>
+    public void SetOvhCreds(OvhCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(OvhProviderId, Write(w =>
+        {
+            w.WriteString("type", "ovh");
+            w.WriteString("endpoint", creds.Endpoint);
+            w.WriteString("serviceName", creds.ServiceName);
+            w.WriteString("appKey", creds.ApplicationKey);
+            w.WriteString("apiKey", creds.ApplicationSecret);
+            w.WriteString("secret", creds.ConsumerKey);
+            w.WriteString("sshUser", creds.SshUser);
+            w.WriteString("sshKeyPath", creds.SshPrivateKeyPath);
+            w.WriteString("sshPublicKey", creds.SshPublicKey);
+        }));
+    }
+
+    private CloudVpsCreds? GetCloudVpsCreds(string providerId)
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(providerId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string apiKey = StringProp(doc, "apiKey");
+            string sshUser = StringPropOrNull(doc, "sshUser") ?? "root";
+            string sshKeyPath = StringProp(doc, "sshKeyPath");
+            string sshPublicKey = StringProp(doc, "secret");
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(sshKeyPath) || string.IsNullOrWhiteSpace(sshPublicKey))
+            {
+                return null;
+            }
+
+            return new CloudVpsCreds(apiKey, sshUser, sshKeyPath, sshPublicKey);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private void SetCloudVpsCreds(string providerId, CloudVpsCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(providerId, Write(w =>
+        {
+            w.WriteString("type", "cloudvps");
+            w.WriteString("apiKey", creds.ApiKey);
+            w.WriteString("secret", creds.SshPublicKey);
+            w.WriteString("sshUser", creds.SshUser);
+            w.WriteString("sshKeyPath", creds.SshPrivateKeyPath);
         }));
     }
 
