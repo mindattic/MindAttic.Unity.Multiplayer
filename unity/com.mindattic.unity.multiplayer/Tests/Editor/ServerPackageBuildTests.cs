@@ -84,6 +84,64 @@ namespace Unity.Multiplayer.Editor.Tests
         }
 
         [Test]
+        public void OptionsFromArgs_SeedsTheWholeConfigFromTheOpenScene_AndFlagsOverridePortAndTransport()
+        {
+            // UM-T50: a batch/CI build used to seed only Port/Transport from the scene, so every other
+            // setting in server.json fell back to defaults and disagreed with the menu build.
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            try
+            {
+                var go = new GameObject("Net", typeof(NetworkManager));
+                var serialized = new SerializedObject(go.AddComponent<NetBootstrap>());
+                serialized.FindProperty("port").intValue = 7900;
+                serialized.FindProperty("transport").intValue = (int)TransportKind.WebSocket;
+                serialized.FindProperty("tickRate").intValue = 20;
+                serialized.FindProperty("maxPlayers").intValue = 6;
+                serialized.FindProperty("gameVersion").stringValue = "2.5";
+                serialized.FindProperty("serverName").stringValue = "Friday";
+                serialized.FindProperty("reconnectGraceSeconds").floatValue = 45f;
+                serialized.FindProperty("joinCodes").intValue = (int)JoinCodeProvider.Rendezvous;
+                serialized.FindProperty("rendezvousUrl").stringValue = "https://codes.example.com";
+                serialized.FindProperty("publicAddress").stringValue = "203.0.113.7";
+                serialized.FindProperty("publicPort").intValue = 30000;
+                serialized.FindProperty("conditions").intValue = (int)NetConditionsProfile.Custom;
+                serialized.FindProperty("simulatedLatencyMs").intValue = 80;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                NetConfig menu = ServerPackageBuild.ConfigFromScene(scene);
+                ServerPackageBuildOptions batch = ServerPackageBuild.OptionsFromArgs(new[] { "Unity.exe" }, out string error);
+
+                Assert.That(error, Is.Null);
+                Assert.That(batch.Config.ToString(), Is.EqualTo(menu.ToString()));
+                Assert.That(batch.Config.Port, Is.EqualTo(7900));
+                Assert.That(batch.Config.Transport, Is.EqualTo(TransportKind.WebSocket));
+                Assert.That(batch.Config.TickRate, Is.EqualTo(20));
+                Assert.That(batch.Config.MaxPlayers, Is.EqualTo(6));
+                Assert.That(batch.Config.GameVersion, Is.EqualTo("2.5"));
+                Assert.That(batch.Config.ServerName, Is.EqualTo("Friday"));
+                Assert.That(batch.Config.ReconnectGraceSeconds, Is.EqualTo(45).Within(0.001));
+                Assert.That(batch.Config.JoinCodes, Is.EqualTo(JoinCodeProvider.Rendezvous));
+                Assert.That(batch.Config.RendezvousUrl, Is.EqualTo("https://codes.example.com"));
+                Assert.That(batch.Config.PublicAddress, Is.EqualTo("203.0.113.7"));
+                Assert.That(batch.Config.PublicPort, Is.EqualTo(30000));
+                Assert.That(batch.Config.Conditions, Is.EqualTo(NetConditionsProfile.Custom));
+                Assert.That(batch.Config.SimulatedLatencyMs, Is.EqualTo(80));
+
+                ServerPackageBuildOptions overridden = ServerPackageBuild.OptionsFromArgs(
+                    new[] { "Unity.exe", "-port", "9100", "-transport", "udp" }, out error);
+                Assert.That(error, Is.Null);
+                Assert.That(overridden.Config.Port, Is.EqualTo(9100));
+                Assert.That(overridden.Config.Transport, Is.EqualTo(TransportKind.Udp));
+                Assert.That(overridden.Config.TickRate, Is.EqualTo(20));
+                Assert.That(overridden.Config.GameVersion, Is.EqualTo("2.5"));
+            }
+            finally
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            }
+        }
+
+        [Test]
         public void OptionsFromArgs_ReadsTheProfileAndRefusesAnUnknownOne()
         {
             ServerPackageBuildOptions options = ServerPackageBuild.OptionsFromArgs(

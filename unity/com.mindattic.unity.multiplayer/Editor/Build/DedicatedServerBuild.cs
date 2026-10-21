@@ -227,32 +227,40 @@ namespace Unity.Multiplayer.Editor
         public static DedicatedServerBuildOptions OptionsFromScene(Scene scene)
         {
             var options = new DedicatedServerBuildOptions();
+            NetBootstrap bootstrap = FindBootstrap(scene);
+            if (bootstrap != null)
+            {
+                NetConfig config = bootstrap.DefaultConfig;
+                options.Port = config.Port;
+                options.Transport = config.Transport;
+            }
+
+            return options;
+        }
+
+        /// <summary>
+        /// The first NetBootstrap in <paramref name="scene"/> (inactive ones included), or null when the scene is not
+        /// loaded or has none. Its <see cref="NetBootstrap.DefaultConfig"/> (the Inspector values, or the last
+        /// <c>Configure</c>, never the editor's own command line) is the one home every build reads the scene's
+        /// session settings from (UM-T50).
+        /// </summary>
+        public static NetBootstrap FindBootstrap(Scene scene)
+        {
             if (!scene.IsValid() || !scene.isLoaded)
             {
-                return options;
+                return null;
             }
 
             foreach (GameObject root in scene.GetRootGameObjects())
             {
                 NetBootstrap bootstrap = root.GetComponentInChildren<NetBootstrap>(true);
-                if (bootstrap == null)
+                if (bootstrap != null)
                 {
-                    continue;
+                    return bootstrap;
                 }
-
-                // Read the serialized Inspector values: BuildConfig would fold in the editor's own command line.
-                var serialized = new SerializedObject(bootstrap);
-                int port = serialized.FindProperty("port").intValue;
-                if (port > 0 && port <= ushort.MaxValue)
-                {
-                    options.Port = (ushort)port;
-                }
-
-                options.Transport = (TransportKind)serialized.FindProperty("transport").intValue;
-                break;
             }
 
-            return options;
+            return null;
         }
 
         /// <summary>True when this editor can make Linux Dedicated Server builds.</summary>

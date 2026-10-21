@@ -156,16 +156,24 @@ namespace Unity.Multiplayer.Editor
             }
         }
 
-        /// <summary>Reads <see cref="BuildFromCommandLine"/>'s arguments; <paramref name="error"/> names the first bad one.</summary>
+        /// <summary>
+        /// Reads <see cref="BuildFromCommandLine"/>'s arguments; <paramref name="error"/> names the first bad one. The
+        /// config starts from the whole of the open scene's NetBootstrap (<see cref="ConfigFromScene"/>), exactly as the
+        /// menu build does, so a CI build writes the same <c>server.json</c> (UM-T50); <c>-port</c>/<c>-transport</c>
+        /// override it when given.
+        /// </summary>
         public static ServerPackageBuildOptions OptionsFromArgs(string[] args, out string error)
         {
             args = args ?? new string[0];
             DedicatedServerBuildOptions server = DedicatedServerBuild.OptionsFromArgs(args, out error);
+            NetConfig config = ConfigFromScene(SceneManager.GetActiveScene());
+            config.Port = server.Port;
+            config.Transport = server.Transport;
             var options = new ServerPackageBuildOptions
             {
                 ScriptingBackend = server.ScriptingBackend,
                 Development = server.Development,
-                Config = new NetConfig { Port = server.Port, Transport = server.Transport },
+                Config = config,
             };
 
             for (int i = 0; i < args.Length; i++)
@@ -188,46 +196,19 @@ namespace Unity.Multiplayer.Editor
         }
 
         /// <summary>
-        /// The session settings of <paramref name="scene"/>'s NetBootstrap as Inspector values (port, transport, tick
-        /// rate, player cap, server name, reconnect grace, join codes, rendezvous URL, public address and port); defaults
-        /// when the scene has none.
+        /// The whole session config of <paramref name="scene"/>'s NetBootstrap: its <see cref="NetBootstrap.DefaultConfig"/>
+        /// (every Inspector field, or the last <c>Configure</c>: port, transport, tick rate, player cap, game version,
+        /// server name, reconnect grace, join codes, rendezvous URL, public address and port, network conditions), never
+        /// the editor's own command line, as a dedicated server. Secrets (password, rendezvous secret) are dropped: they
+        /// belong in the server's environment, never the package. Defaults when the scene has none.
         /// </summary>
         public static NetConfig ConfigFromScene(Scene scene)
         {
-            var config = new NetConfig { Topology = Topology.Server };
-            if (!scene.IsValid() || !scene.isLoaded)
-            {
-                return config;
-            }
-
-            foreach (GameObject root in scene.GetRootGameObjects())
-            {
-                NetBootstrap bootstrap = root.GetComponentInChildren<NetBootstrap>(true);
-                if (bootstrap == null)
-                {
-                    continue;
-                }
-
-                // Serialized values only: BuildConfig would fold in the editor's own command line.
-                var serialized = new SerializedObject(bootstrap);
-                int port = serialized.FindProperty("port").intValue;
-                if (port > 0 && port <= ushort.MaxValue)
-                {
-                    config.Port = (ushort)port;
-                }
-
-                config.Transport = (TransportKind)serialized.FindProperty("transport").intValue;
-                config.TickRate = Mathf.Clamp(serialized.FindProperty("tickRate").intValue, 1, NetConfig.MaxTickRate);
-                config.MaxPlayers = Mathf.Clamp(serialized.FindProperty("maxPlayers").intValue, 1, NetConfig.MaxMaxPlayers);
-                config.ReconnectGraceSeconds = Mathf.Max(0f, serialized.FindProperty("reconnectGraceSeconds").floatValue);
-                config.JoinCodes = (JoinCodeProvider)serialized.FindProperty("joinCodes").intValue;
-                config.ServerName = NullIfBlank(serialized.FindProperty("serverName").stringValue);
-                config.RendezvousUrl = NullIfBlank(serialized.FindProperty("rendezvousUrl").stringValue);
-                config.PublicAddress = NullIfBlank(serialized.FindProperty("publicAddress").stringValue);
-                config.PublicPort = (ushort)Mathf.Clamp(serialized.FindProperty("publicPort").intValue, 0, ushort.MaxValue);
-                break;
-            }
-
+            NetBootstrap bootstrap = DedicatedServerBuild.FindBootstrap(scene);
+            NetConfig config = bootstrap != null ? bootstrap.DefaultConfig : new NetConfig();
+            config.Topology = Topology.Server;
+            config.Password = null;
+            config.RendezvousSecret = null;
             return config;
         }
 
@@ -366,11 +347,6 @@ namespace Unity.Multiplayer.Editor
             {
                 yield return port.ToString();
             }
-        }
-
-        private static string NullIfBlank(string value)
-        {
-            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private static ServerPackageBuildResult Fail(ServerPackageBuildResult result, string error)
