@@ -7,7 +7,7 @@ a dedicated server from the exact same game code, and joining by IP:port or a sh
 ![Netcode for GameObjects](https://img.shields.io/badge/netcode-2.x-blue)
 ![.NET](https://img.shields.io/badge/dotnet-10-512BD4)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
-![Status](https://img.shields.io/badge/status-early-yellow)
+![Status](https://img.shields.io/badge/status-v1.0.0-brightgreen)
 
 The whole networked surface of a game object is usually three declarations:
 
@@ -27,8 +27,9 @@ public partial class MinimalPlayer : NetEntity
 Try it: the full docs site, with a 10-minute getting-started guide, every attribute's rules, and the complete
 hosting story, is at [mindattic.github.io/Unity.Multiplayer](https://mindattic.github.io/Unity.Multiplayer/).
 
-> **Status: early**, pre-1.0.0 — see Roadmap below for exactly what's built and what's left. The design and
-> build order are in [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
+> **Status: v1.0.0**, first stable release — see Roadmap below for what's built, and
+> [CHANGELOG.md](CHANGELOG.md) for what shipped in this release. The design and build order are in
+> [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md); the rules are in
 > [docs/BIBLE.md](docs/BIBLE.md).
 
 ## Why
@@ -168,14 +169,15 @@ RPC direction and synced fields, the source generator and its analyzer, the rend
 condition simulation, the editor tooling, the Minimal sample, CI and the nightly smoke test, the full hosting
 pipeline (`mp-host` plus every provider's profile), and this docs site.
 
-Planned, not yet done: **v1.0.0** — a CHANGELOG, a tag, a GitHub release and a version banner on the docs site
-(tracked as UM-T20). Until that tag, treat the package's API as still able to change between commits.
+**v1.0.0** is tagged and released (UM-T20): see [CHANGELOG.md](CHANGELOG.md) for everything that shipped and
+the [GitHub releases page](https://github.com/mindattic/Unity.Multiplayer/releases) for the release itself.
 
 ## Documentation
 
 - [Docs site](https://mindattic.github.io/Unity.Multiplayer/) — guides (getting started, topologies,
   attributes, join codes, reconnect and seats, testing, hosting, porting, troubleshooting) and the API
   reference generated from this repo's XML doc comments.
+- [CHANGELOG.md](CHANGELOG.md) — what shipped in each release.
 - [docs/BIBLE.md](docs/BIBLE.md) — the project's rules and verified state.
 - [docs/rfc/0001-architecture.md](docs/rfc/0001-architecture.md) — the design and build order.
 - [docs/USER_STORIES.md](docs/USER_STORIES.md) — every ticket and its status.

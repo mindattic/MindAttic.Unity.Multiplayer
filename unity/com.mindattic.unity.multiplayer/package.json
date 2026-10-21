@@ -1,6 +1,6 @@
 {
   "name": "com.mindattic.unity.multiplayer",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "displayName": "MindAttic Multiplayer",
   "description": "Reusable multiplayer for Unity 6 games: attribute-decorated RPCs ([ToServer], [ToClients], [ToOwner], [ToClient], [Synced]), listen-server or dedicated-server topologies, and joining by IP:port or a join code. Built on Netcode for GameObjects and Unity Transport, hidden behind MindAttic's own API. Unity Relay join codes light up when com.unity.services.multiplayer is installed (MINDATTIC_UGS); AWS GameLift's server lifecycle lights up when its Server SDK package is installed (MINDATTIC_GAMELIFT).",
   "unity": "6000.0",

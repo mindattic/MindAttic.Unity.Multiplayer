@@ -4,6 +4,9 @@ _disableToc: true
 
 # Unity.Multiplayer
 
+> **v1.0.0** — first stable release. See the [changelog](https://github.com/mindattic/Unity.Multiplayer/blob/main/CHANGELOG.md)
+> and [all releases](https://github.com/mindattic/Unity.Multiplayer/releases).
+
 Reusable Unity 6 multiplayer for MindAttic games: attribute-decorated RPCs, a listen server or a dedicated
 server, and joining by IP:port or a join code.
 
