@@ -78,6 +78,32 @@ public sealed class HostingComposer
             "or set MINDATTIC_HOSTING_CREDENTIALS to a directory that has one.");
     }
 
+    /// <summary>
+    /// The rendezvous registration secret a deploy injects into both the game server
+    /// (<c>MINDATTIC_RENDEZVOUS_SECRET</c>) and its rendezvous container
+    /// (<c>Rendezvous__RegistrationSecret</c>) (UM-T52): an explicit <c>--rendezvous-secret</c> wins,
+    /// else the one stored in the vault (<c>mp-host credentials set-rendezvous</c>), else a new one
+    /// is generated and stored, so every later deploy/update reuses it. A dry run never writes the
+    /// vault: with nothing stored it uses a labelled placeholder.
+    /// </summary>
+    public string ResolveRendezvousSecret(string? explicitSecret, IDeployLog log)
+    {
+        ArgumentNullException.ThrowIfNull(log);
+        if (!string.IsNullOrWhiteSpace(explicitSecret)) return explicitSecret;
+        string? stored = _credentials.GetRendezvousSecret();
+        if (stored is not null) return stored;
+        if (_dryRun)
+        {
+            log.Warn("Dry run: no rendezvous secret in the Hosting vault; a real run generates and stores one. Using a placeholder.");
+            return Placeholder("rendezvous-secret");
+        }
+
+        string generated = HostingCredentialStore.GenerateRendezvousSecret();
+        _credentials.SetRendezvousSecret(generated);
+        log.Info("Generated a rendezvous registration secret and stored it in the Hosting vault ('mp-host credentials set-rendezvous' replaces it).");
+        return generated;
+    }
+
     /// <summary>Every hosting profile id <see cref="BuildProvisioner"/> and <see cref="BuildConnection"/> know about, for error messages.</summary>
     private static readonly string[] KnownProfiles =
     {

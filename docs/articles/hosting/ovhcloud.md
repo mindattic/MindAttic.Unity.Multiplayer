@@ -52,7 +52,7 @@ Then deploy:
 ```
 mp-host deploy --profile OvhCloud --name prod-ovh --package ./build/GenericVps \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url http://<assigned-ip>:8080 --rendezvous-secret <a long random string> \
+  --rendezvous-url http://<assigned-ip>:8080 \
   --public-address <assigned-ip> --region GRA --size d2-2
 ```
 

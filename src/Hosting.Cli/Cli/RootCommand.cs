@@ -15,9 +15,9 @@ public static class RootCommand
           mp-host logs         --profile <p> --name <server> --server-id <id> [--tail <n>]
           mp-host update       --profile <p> --name <server> --server-id <id> --image <owner/repo> ...
           mp-host destroy      --profile <p> --name <server> --server-id <id> --yes
-          mp-host local        up --name <server> (--package <dir> | --unity <exe> --unity-project <dir>) [--rendezvous-url <url> --rendezvous-secret <s>] [--public-address <addr>] [--no-upnp]
+          mp-host local        up --name <server> (--package <dir> | --unity <exe> --unity-project <dir>) [--rendezvous-url <url> [--rendezvous-secret <s>]] [--public-address <addr>] [--no-upnp]
                                 down --name <server>
-          mp-host credentials  set-ghcr | set-runpod | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh | set-aws | set-gce | set-azure | set-fly | set-oci | set-cloud-options ...
+          mp-host credentials  set-ghcr | set-runpod | set-rendezvous | set-ssh | set-hetzner | set-vultr | set-digitalocean | set-linode | set-ovh | set-aws | set-gce | set-azure | set-fly | set-oci | set-cloud-options ...
 
         Hetzner/Vultr/DigitalOcean/Linode/OvhCloud (UM-T26) and AwsEc2/AwsLightsail/Gce/AzureVm
         (UM-T27) each create their own VM plus a security group/firewall/NSG for the game port and

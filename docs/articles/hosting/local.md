@@ -17,7 +17,8 @@ plain explanation when the router refuses.
 3. Renders a compose file that **builds from the package directory** (`build: <dir>`) instead of
    pulling a pushed `ghcr.io/...` image -- there is nothing to push to for a box that never leaves the
    LAN -- and runs `docker compose up -d --build`. The rendezvous service is included only when you
-   pass `--rendezvous-url`/`--rendezvous-secret`; LAN-only play has no use for join codes.
+   pass `--rendezvous-url` (its registration secret comes from the vault, see
+   [Secrets](../hosting.md#secrets)); LAN-only play has no use for join codes.
 4. Polls the health port directly over loopback HTTP (no SSH hop needed on the same machine).
 5. Unless `--no-upnp` is given, discovers a UPnP Internet Gateway Device on the LAN (SSDP multicast,
    then a SOAP `AddPortMapping` call against its `WANIPConnection`/`WANPPPConnection` service) and asks
@@ -33,7 +34,7 @@ or, to also be reachable beyond the LAN with a join code:
 
 ```
 mp-host local up --name home --package ./build/GenericVps \
-  --rendezvous-url http://192.168.1.42:8080 --rendezvous-secret <a long random string>
+  --rendezvous-url http://192.168.1.42:8080
 ```
 
 ```

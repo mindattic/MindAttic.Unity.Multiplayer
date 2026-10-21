@@ -48,7 +48,7 @@ Then deploy:
 ```
 mp-host deploy --profile Gce --name prod-gce --package ./build/GenericVps \
   --image myorg/mygame --tag v1 --region us-central1-a --size e2-small \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address prod-gce
 ```
 

@@ -6,6 +6,9 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// <summary>
 /// <c>mp-host credentials set-ghcr --username &lt;u&gt; --token &lt;pat&gt;</c>,
 /// <c>mp-host credentials set-runpod --key &lt;apikey&gt;</c>,
+/// <c>mp-host credentials set-rendezvous [--secret &lt;s&gt;]</c> (UM-T52: the rendezvous registration
+/// secret every deploy injects into the game server and its rendezvous container; without
+/// <c>--secret</c> a new random one is generated),
 /// <c>mp-host credentials set-ssh --name &lt;server&gt; --host &lt;h&gt; [--port &lt;p&gt;] --user &lt;u&gt; --key &lt;path&gt; [--passphrase &lt;p&gt;]</c>,
 /// <c>mp-host credentials set-&lt;hetzner|vultr|digitalocean|linode&gt; --token &lt;apikey&gt; --ssh-user &lt;u&gt; --ssh-key &lt;private key path&gt; --ssh-public-key &lt;public key path&gt;</c>,
 /// <c>mp-host credentials set-ovh --endpoint &lt;ovh-eu|ovh-us|ovh-ca|...&gt; --service-name &lt;public cloud project id&gt; --app-key &lt;k&gt; --app-secret &lt;s&gt; --consumer-key &lt;c&gt; --ssh-user &lt;u&gt; --ssh-key &lt;private key path&gt; --ssh-public-key &lt;public key path&gt;</c>,
@@ -38,7 +41,7 @@ public static class CredentialsCommand
     {
         if (rawArgs.Count < 2)
         {
-            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-oci|set-cloud-options|set-edgegap|set-gameye> ...");
+            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-rendezvous|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-oci|set-cloud-options|set-edgegap|set-gameye> ...");
             return Task.FromResult(1);
         }
 
@@ -53,6 +56,13 @@ public static class CredentialsCommand
             case "set-runpod":
                 credentials.SetRunPodCreds(args.Require("key"));
                 log.Info("RunPod API key stored.");
+                return Task.FromResult(0);
+
+            case "set-rendezvous":
+                string? secret = args.Get("secret");
+                bool generate = string.IsNullOrWhiteSpace(secret);
+                credentials.SetRendezvousSecret(generate ? HostingCredentialStore.GenerateRendezvousSecret() : secret!);
+                log.Info(generate ? "Generated a new rendezvous registration secret and stored it." : "Rendezvous registration secret stored.");
                 return Task.FromResult(0);
 
             case "set-ssh":

@@ -37,7 +37,7 @@ Then deploy:
 ```
 mp-host deploy --profile RunPod --name ws-server --package ./build/RunPod \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address ws-server
 ```
 

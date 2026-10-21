@@ -81,4 +81,47 @@ public class HostingComposerTests
         Assert.That(Directory.Exists(_dir) ? Directory.GetFiles(_dir, "*", SearchOption.AllDirectories) : Array.Empty<string>(), Is.Empty,
             "a dry run must not write to the vault");
     }
+
+    [Test]
+    public void Rendezvous_secret_is_generated_stored_and_injected_into_both_containers_when_absent()
+    {
+        // UM-T52: with no --rendezvous-secret and nothing in the vault, a real deploy generates one,
+        // stores it, and both the game server and its rendezvous container get the same value.
+        var composer = new HostingComposer(_emptyStore, dryRun: false);
+        var log = new RecordingDeployLog();
+        var raw = new[] { "deploy", "--rendezvous-url", "http://rv:8080", "--public-address", "203.0.113.10" };
+
+        string secret = composer.ResolveRendezvousSecret(null, log);
+        var env = DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw, secret);
+        string compose = CloudInit.CloudInitRenderer.RenderCompose(TestManifests.WithHealthPort(), "ghcr.io/o/g:v1", "ghcr.io/o/rv:latest", env);
+
+        Assert.That(secret, Has.Length.GreaterThanOrEqualTo(40));
+        Assert.That(_emptyStore.GetRendezvousSecret(), Is.EqualTo(secret));
+        Assert.That(compose, Does.Contain($"MINDATTIC_RENDEZVOUS_SECRET: \"{secret}\""));
+        Assert.That(compose, Does.Contain($"Rendezvous__RegistrationSecret: \"{secret}\""));
+        Assert.That(new HostingComposer(_emptyStore, dryRun: false).ResolveRendezvousSecret(null, log), Is.EqualTo(secret), "later deploys reuse the stored secret");
+    }
+
+    [Test]
+    public void Rendezvous_secret_flag_wins_and_a_dry_run_never_writes_the_vault()
+    {
+        var log = new RecordingDeployLog();
+        Assert.That(new HostingComposer(_emptyStore, dryRun: false).ResolveRendezvousSecret("explicit", log), Is.EqualTo("explicit"));
+
+        string dry = new HostingComposer(_emptyStore, dryRun: true).ResolveRendezvousSecret(null, log);
+        Assert.That(dry, Does.StartWith(HostingComposer.PlaceholderPrefix));
+        Assert.That(_emptyStore.GetRendezvousSecret(), Is.Null);
+    }
+
+    [Test]
+    public async Task Credentials_set_rendezvous_stores_the_given_secret_or_generates_one()
+    {
+        var log = new RecordingDeployLog();
+        Assert.That(await CredentialsCommand.RunAsync(new[] { "credentials", "set-rendezvous", "--secret", "chosen" }, log, _emptyStore), Is.EqualTo(0));
+        Assert.That(_emptyStore.GetRendezvousSecret(), Is.EqualTo("chosen"));
+
+        Assert.That(await CredentialsCommand.RunAsync(new[] { "credentials", "set-rendezvous" }, log, _emptyStore), Is.EqualTo(0));
+        Assert.That(_emptyStore.GetRendezvousSecret(), Is.Not.EqualTo("chosen").And.Not.Null);
+        Assert.That(_emptyStore.GetRendezvousSecret(), Does.Match("^[A-Za-z0-9_-]+$"));
+    }
 }

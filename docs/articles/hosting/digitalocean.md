@@ -39,7 +39,7 @@ Then deploy:
 ```
 mp-host deploy --profile DigitalOcean --name prod-do --package ./build/GenericVps \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url http://<assigned-ip>:8080 --rendezvous-secret <a long random string> \
+  --rendezvous-url http://<assigned-ip>:8080 \
   --public-address <assigned-ip> --region nyc1 --size s-1vcpu-1gb
 ```
 

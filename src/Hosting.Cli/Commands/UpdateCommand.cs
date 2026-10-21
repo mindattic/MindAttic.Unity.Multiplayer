@@ -10,7 +10,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// <summary>
 /// <c>mp-host update --profile &lt;p&gt; --name &lt;server&gt; --server-id &lt;id&gt; --image &lt;owner/repo&gt;
 /// [--tag &lt;tag&gt;] (--package &lt;dir&gt; | --unity ... --unity-project ...)
-/// --rendezvous-url ... --rendezvous-secret ... --public-address ... [--env KEY=VALUE ...] [--dry-run]</c>
+/// --rendezvous-url ... [--rendezvous-secret ...] --public-address ... [--env KEY=VALUE ...] [--dry-run]</c>
 ///
 /// Rebuilds and re-pushes the image, then asks the provisioner for a rolling restart onto it.
 /// </summary>
@@ -26,7 +26,7 @@ public static class UpdateCommand
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
         var ghcr = composer.RequireGhcrCreds(log);
         string imageReference = DeployArguments.BuildImageReference(args, composer.GhcrRegistry);
-        var environment = DeployArguments.BuildEnvironment(args, rawArgs);
+        var environment = DeployArguments.BuildEnvironment(args, rawArgs, composer.ResolveRendezvousSecret(args.Get("rendezvous-secret"), log));
         var connection = composer.BuildConnection(profile, serverName, log);
 
         IServerPackageBuilder packageBuilder = composer.BuildPackageBuilder();

@@ -52,7 +52,7 @@ Then deploy:
 ```
 mp-host deploy --profile AzureVm --name prod-azure --package ./build/GenericVps \
   --image myorg/mygame --tag v1 --region eastus --size Standard_B1s \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address prod-azure
 ```
 

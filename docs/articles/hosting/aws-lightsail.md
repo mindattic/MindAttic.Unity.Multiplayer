@@ -42,7 +42,7 @@ Then deploy:
 ```
 mp-host deploy --profile AwsLightsail --name prod-lightsail --package ./build/GenericVps \
   --image myorg/mygame --tag v1 --region us-east-1 \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address prod-lightsail
 ```
 

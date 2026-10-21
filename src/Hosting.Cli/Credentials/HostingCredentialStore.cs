@@ -12,6 +12,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Credentials;
 /// {
 ///   "ghcr":      { "type": "ghcr",      "apiKey": "&lt;PAT with write:packages&gt;", "secret": "&lt;github username&gt;" },
 ///   "runpod":    { "type": "runpod",    "apiKey": "&lt;RunPod API key&gt;" },
+///   "rendezvous": { "type": "rendezvous", "apiKey": "&lt;rendezvous registration secret&gt;" },
 ///   "genericvps:prod-box": { "type": "ssh", "apiKey": "&lt;passphrase or empty&gt;", "secret": "root@203.0.113.10:22",
 ///                             "sshKeyPath": "C:\\Users\\me\\.ssh\\id_ed25519" }
 /// }
@@ -142,6 +143,13 @@ public sealed class HostingCredentialStore : CredentialStore
     public const string GameyeProviderId = "gameye";
 
     /// <summary>
+    /// The rendezvous registration secret's id in this store (UM-T52): the shared secret a dedicated
+    /// server sends as <c>MINDATTIC_RENDEZVOUS_SECRET</c> and its rendezvous container checks as
+    /// <c>Rendezvous__RegistrationSecret</c>.
+    /// </summary>
+    public const string RendezvousProviderId = "rendezvous";
+
+    /// <summary>
     /// What <c>mp-host local up</c> remembers between invocations so <c>mp-host local down</c> can
     /// find the same package directory and compose file (and know whether to remove a UPnP mapping)
     /// without the operator repeating every flag. Not a secret -- stored in the same keyring purely
@@ -198,6 +206,33 @@ public sealed class HostingCredentialStore : CredentialStore
 
     /// <summary>Upserts the RunPod API key.</summary>
     public void SetRunPodCreds(string apiKey) => SetKey(RunPodProviderId, apiKey);
+
+    /// <summary>Reads the stored rendezvous registration secret, or null when none is stored.</summary>
+    public string? GetRendezvousSecret()
+    {
+        string? secret = GetKey(RendezvousProviderId);
+        return string.IsNullOrWhiteSpace(secret) ? null : secret.Trim();
+    }
+
+    /// <summary>Upserts the rendezvous registration secret.</summary>
+    public void SetRendezvousSecret(string secret)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secret);
+        SaveRaw(RendezvousProviderId, Write(w =>
+        {
+            w.WriteString("type", "rendezvous");
+            w.WriteString("apiKey", secret.Trim());
+        }));
+    }
+
+    /// <summary>
+    /// A new random rendezvous registration secret: 32 bytes from a cryptographic RNG, base64url
+    /// without padding, so it never holds a character YAML, a shell or Docker Compose's <c>$</c>
+    /// interpolation treats specially.
+    /// </summary>
+    public static string GenerateRendezvousSecret() =>
+        Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     /// <summary>Reads the SSH target for <paramref name="serverName"/>'s generic-VPS entry, or null when missing or incomplete.</summary>
     public SshCreds? GetSshCreds(string serverName)

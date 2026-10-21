@@ -9,7 +9,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 
 /// <summary>
 /// <c>mp-host local up --name &lt;server&gt; (--package &lt;dir&gt; | --unity &lt;exe&gt; --unity-project &lt;dir&gt;)
-/// [--rendezvous-url &lt;url&gt; --rendezvous-secret &lt;secret&gt;] [--public-address &lt;addr&gt;]
+/// [--rendezvous-url &lt;url&gt; [--rendezvous-secret &lt;secret&gt;]] [--public-address &lt;addr&gt;]
 /// [--server-password &lt;pwd&gt;] [--env KEY=VALUE ...] [--health-timeout &lt;seconds&gt;] [--no-upnp] [--dry-run]</c>
 /// and <c>mp-host local down --name &lt;server&gt; [--dry-run]</c> (UM-T31): runs the already-built server
 /// package as a Docker container on the operator's own machine -- no GHCR push, no SSH, no cloud API.
@@ -81,7 +81,8 @@ public static class LocalCommand
         if (rendezvousUrl is not null)
         {
             environment["MINDATTIC_RENDEZVOUS_URL"] = rendezvousUrl;
-            environment["MINDATTIC_RENDEZVOUS_SECRET"] = args.Require("rendezvous-secret");
+            environment["MINDATTIC_RENDEZVOUS_SECRET"] = new Composition.HostingComposer(credentials, dryRun)
+                .ResolveRendezvousSecret(args.Get("rendezvous-secret"), log);
             rendezvousImage = args.GetOrDefault("rendezvous-image", "ghcr.io/mindattic/rendezvous:latest");
         }
         else

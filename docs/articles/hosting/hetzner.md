@@ -38,7 +38,7 @@ Then deploy:
 ```
 mp-host deploy --profile Hetzner --name prod-hetzner --package ./build/GenericVps \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url http://<assigned-ip>:8080 --rendezvous-secret <a long random string> \
+  --rendezvous-url http://<assigned-ip>:8080 \
   --public-address <assigned-ip> --region nbg1 --size cpx11
 ```
 

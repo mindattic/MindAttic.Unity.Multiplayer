@@ -63,10 +63,10 @@ Package > GameLift`, or `-serverProfile GameLift` in batch mode):
 
 ```
 mp-host deploy --profile GameLift --name my-fleet --package ./build/GameLift \
-  --rendezvous-url n/a --rendezvous-secret n/a --public-address n/a
+  --rendezvous-url n/a --public-address n/a
 ```
 
-(`--rendezvous-url`/`--rendezvous-secret`/`--public-address` are required by mp-host's shared argument
+(`--rendezvous-url`/`--public-address` are required by mp-host's shared argument
 parser for every profile, but GameLift ignores them: a matchmaker resolves each match's join code
 directly from `GameLiftMatchAllocator`, never through the rendezvous service. Pass any placeholder.)
 `--image`/`--tag` are accepted but unused too, since there is no Docker image for this profile.

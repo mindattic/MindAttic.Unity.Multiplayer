@@ -27,7 +27,7 @@ public class DeployArgumentsTests
             "deploy", "--rendezvous-url", "http://rendezvous:8080", "--rendezvous-secret", "s3cr3t", "--public-address", "203.0.113.5",
         };
         var args = DeployArguments.Parse(raw);
-        var env = DeployArguments.BuildEnvironment(args, raw);
+        var env = DeployArguments.BuildEnvironment(args, raw, "s3cr3t");
         Assert.That(env["MINDATTIC_RENDEZVOUS_URL"], Is.EqualTo("http://rendezvous:8080"));
         Assert.That(env["MINDATTIC_RENDEZVOUS_SECRET"], Is.EqualTo("s3cr3t"));
         Assert.That(env["MINDATTIC_PUBLIC_ADDRESS"], Is.EqualTo("203.0.113.5"));
@@ -41,7 +41,7 @@ public class DeployArgumentsTests
         {
             "deploy", "--rendezvous-url", "u", "--rendezvous-secret", "s", "--public-address", "a", "--server-password", "hunter2",
         };
-        var env = DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw);
+        var env = DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw, "s");
         Assert.That(env["MINDATTIC_SERVER_PASSWORD"], Is.EqualTo("hunter2"));
     }
 
@@ -54,7 +54,7 @@ public class DeployArgumentsTests
             "--env", "MINDATTIC_RENDEZVOUS_URL=http://override:9999",
             "--env", "CUSTOM_FLAG=1",
         };
-        var env = DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw);
+        var env = DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw, "s");
         Assert.That(env["MINDATTIC_RENDEZVOUS_URL"], Is.EqualTo("http://override:9999"));
         Assert.That(env["CUSTOM_FLAG"], Is.EqualTo("1"));
     }
@@ -66,7 +66,7 @@ public class DeployArgumentsTests
         {
             "deploy", "--rendezvous-url", "u", "--rendezvous-secret", "s", "--public-address", "a", "--env", "not-a-pair",
         };
-        Assert.Throws<ArgumentException>(() => DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw));
+        Assert.Throws<ArgumentException>(() => DeployArguments.BuildEnvironment(DeployArguments.Parse(raw), raw, "s"));
     }
 
     [Test]

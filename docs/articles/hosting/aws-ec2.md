@@ -46,7 +46,7 @@ Then deploy:
 ```
 mp-host deploy --profile AwsEc2 --name prod-ec2 --package ./build/GenericVps \
   --image myorg/mygame --tag v1 --region us-east-1 --size t3.micro \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address prod-ec2
 ```
 

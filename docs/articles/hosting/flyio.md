@@ -54,7 +54,7 @@ Then deploy:
 ```
 mp-host deploy --profile Fly --name my-game-server --package ./build/GenericVps \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url http://my-game-server.fly.dev:8080 --rendezvous-secret <a long random string> \
+  --rendezvous-url http://my-game-server.fly.dev:8080 \
   --public-address <printed dedicated IPv4> --region iad --size shared-cpu-1x
 ```
 

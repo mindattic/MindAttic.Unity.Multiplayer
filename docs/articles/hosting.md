@@ -154,7 +154,7 @@ and `mp-host deploy`/`update`/`destroy` read it back by name:
 | A cloud provider's API token/key | `mp-host credentials set-<hetzner\|vultr\|digitalocean\|linode\|ovh\|aws\|gce\|azure\|fly\|oci\|runpod>` (plus, for the provisioned-VM profiles, an SSH keypair alongside the token) |
 | Per-server launch options (AMI, key pair, resource group, subnet, ...) | `mp-host credentials set-cloud-options --profile <AwsEc2\|AwsLightsail\|Gce\|AzureVm\|Fly\|GameLift> --name <server> --opt KEY=VALUE ...` |
 | A per-match allocator's API credential | `mp-host credentials set-edgegap` / `set-gameye` |
-| The rendezvous shared secret | `--rendezvous-secret <a long random string>`, passed to `mp-host deploy`/`update`/`local up` and injected into the container as `MINDATTIC_RENDEZVOUS_SECRET`; pick it yourself and keep it as secret as any other credential |
+| The rendezvous registration secret | `mp-host credentials set-rendezvous [--secret <s>]` (without `--secret` it generates a random one). `mp-host deploy`/`update`/`local up` read it from the vault -- generating and storing one on first use when none is stored -- and inject it into both the game server (`MINDATTIC_RENDEZVOUS_SECRET`) and its rendezvous container (`Rendezvous__RegistrationSecret`). `--rendezvous-secret <s>` on a single command overrides it, e.g. to match a rendezvous service you run elsewhere |
 
 `--dry-run` (every `mp-host` command accepts it) prints the exact API call, SSH command or compose
 file it would send, so you can check a deploy before it touches a credential-backed resource or

@@ -27,17 +27,20 @@ public static class DeployArguments
     }
 
     /// <summary>
-    /// <c>MINDATTIC_RENDEZVOUS_URL</c>/<c>_SECRET</c>, <c>MINDATTIC_PUBLIC_ADDRESS</c> and an
+    /// <c>MINDATTIC_RENDEZVOUS_URL</c>, <c>MINDATTIC_RENDEZVOUS_SECRET</c> (<paramref name="rendezvousSecret"/>,
+    /// resolved by <see cref="Composition.HostingComposer.ResolveRendezvousSecret"/> from
+    /// <c>--rendezvous-secret</c> or the vault), <c>MINDATTIC_PUBLIC_ADDRESS</c> and an
     /// optional <c>MINDATTIC_SERVER_PASSWORD</c>, then every repeated <c>--env KEY=VALUE</c> on top
     /// (so an operator can override or add to the defaults without a code change).
     /// </summary>
     /// <exception cref="ArgumentException">An <c>--env</c> value is not <c>KEY=VALUE</c>.</exception>
-    public static Dictionary<string, string> BuildEnvironment(ArgumentReader args, IReadOnlyList<string> rawArgs)
+    public static Dictionary<string, string> BuildEnvironment(ArgumentReader args, IReadOnlyList<string> rawArgs, string rendezvousSecret)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rendezvousSecret);
         var env = new Dictionary<string, string>
         {
             ["MINDATTIC_RENDEZVOUS_URL"] = args.Require("rendezvous-url"),
-            ["MINDATTIC_RENDEZVOUS_SECRET"] = args.Require("rendezvous-secret"),
+            ["MINDATTIC_RENDEZVOUS_SECRET"] = rendezvousSecret,
             ["MINDATTIC_PUBLIC_ADDRESS"] = args.Require("public-address"),
         };
         string? password = args.Get("server-password");

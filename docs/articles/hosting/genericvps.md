@@ -42,7 +42,7 @@ Then deploy:
 ```
 mp-host deploy --profile GenericVps --name prod-box --package ./build/GenericVps \
   --image myorg/mygame --tag v1 \
-  --rendezvous-url http://203.0.113.5:8080 --rendezvous-secret <a long random string> \
+  --rendezvous-url http://203.0.113.5:8080 \
   --public-address 203.0.113.5
 ```
 

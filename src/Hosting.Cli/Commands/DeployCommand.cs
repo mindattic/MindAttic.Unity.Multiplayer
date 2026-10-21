@@ -8,7 +8,7 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// <summary>
 /// <c>mp-host deploy --profile &lt;GenericVps|RunPod|...|GameLift&gt; --name &lt;server&gt; --image &lt;owner/repo&gt;
 /// [--tag &lt;tag&gt;] (--package &lt;dir&gt; | --unity &lt;exe&gt; --unity-project &lt;dir&gt;)
-/// --rendezvous-url &lt;url&gt; --rendezvous-secret &lt;secret&gt; --public-address &lt;addr&gt;
+/// --rendezvous-url &lt;url&gt; [--rendezvous-secret &lt;secret&gt;] --public-address &lt;addr&gt;
 /// [--server-password &lt;pwd&gt;] [--env KEY=VALUE ...] [--region &lt;r&gt;] [--size &lt;s&gt;]
 /// [--health-timeout &lt;seconds&gt;] [--joincode-timeout &lt;seconds&gt;] [--dry-run]</c>
 ///
@@ -25,7 +25,7 @@ public static class DeployCommand
         var composer = new HostingComposer(credentials, args.Has("dry-run"));
         var ghcr = composer.RequireGhcrCreds(log);
         string imageReference = DeployArguments.BuildImageReference(args, composer.GhcrRegistry);
-        var environment = DeployArguments.BuildEnvironment(args, rawArgs);
+        var environment = DeployArguments.BuildEnvironment(args, rawArgs, composer.ResolveRendezvousSecret(args.Get("rendezvous-secret"), log));
         var connection = composer.BuildConnection(profile, serverName, log);
 
         var pipeline = new DeployPipeline(composer.BuildPackageBuilder(), composer.BuildImageTool(log), composer.BuildProvisioner(profile, log));

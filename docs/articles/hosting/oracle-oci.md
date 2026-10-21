@@ -81,7 +81,7 @@ Then deploy:
 ```
 mp-host deploy --profile Oci --name home-oci --package ./build/GenericVps \
   --image myorg/mygame --tag v1 --region us-ashburn-1 \
-  --rendezvous-url https://rendezvous.example.com --rendezvous-secret <a long random string> \
+  --rendezvous-url https://rendezvous.example.com \
   --public-address home-oci
 ```
 
