@@ -212,12 +212,17 @@ public static class CloudInitRenderer
         text.Append(marker).Append('\n');
     }
 
-    // Escapes for YAML's own quoting (\ and ") AND, separately, for Docker Compose's variable
-    // interpolation of the parsed file ($VAR / ${VAR}): a literal '$' in a secret or env value (for
-    // example a generated password) would otherwise be read as a variable reference and silently
-    // replaced -- usually with an empty string, since there is no such variable -- corrupting the
-    // value. Compose's own escape for a literal '$' is '$$'.
-    private static string YamlQuote(string value) =>
+    /// <summary>
+    /// Quotes a scalar for a generated Docker Compose file. Escapes for YAML's own quoting (\ and ")
+    /// AND, separately, for Docker Compose's variable interpolation of the parsed file
+    /// (<c>$VAR</c> / <c>${VAR}</c>): a literal '$' in a secret or env value (for example a
+    /// generated password) would otherwise be read as a variable reference and silently replaced --
+    /// usually with an empty string, since there is no such variable -- corrupting the value.
+    /// Compose's own escape for a literal '$' is '$$' (UM-T42). The one home for that rule in
+    /// Hosting.Cli: both this renderer's compose file and
+    /// <see cref="Local.LocalComposeRenderer"/>'s quote through it (UM-T53).
+    /// </summary>
+    public static string YamlQuote(string value) =>
         "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "$$") + "\"";
 
     /// <summary>

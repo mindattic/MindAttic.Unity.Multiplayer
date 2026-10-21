@@ -54,6 +54,23 @@ public class LocalComposeRendererTests
     }
 
     [Test]
+    public void Render_escapes_a_literal_dollar_against_compose_interpolation()
+    {
+        // UM-T53: the local compose file quoted only YAML's \ and ", so a '$' in a secret, password
+        // or --env value was read by Compose as $VAR / ${VAR} and silently substituted. It now
+        // quotes through the same CloudInitRenderer.YamlQuote as the cloud compose (UM-T42).
+        var env = new Dictionary<string, string>(Env)
+        {
+            ["MINDATTIC_SERVER_PASSWORD"] = "pa$word${X}",
+            ["MINDATTIC_RENDEZVOUS_SECRET"] = "s$cr\"t",
+        };
+        string yaml = LocalComposeRenderer.Render(TestManifests.WithHealthPort(), "/pkg", env, "ghcr.io/mindattic/rendezvous:latest");
+        Assert.That(yaml, Does.Contain("MINDATTIC_SERVER_PASSWORD: \"pa$$word$${X}\"\n"));
+        Assert.That(yaml, Does.Contain("Rendezvous__RegistrationSecret: \"s$$cr\\\"t\"\n"));
+        Assert.That(yaml, Does.Not.Contain("pa$word"));
+    }
+
+    [Test]
     public void Render_throws_on_a_null_manifest()
     {
         Assert.Throws<ArgumentNullException>(() => LocalComposeRenderer.Render(null!, "/pkg", Env, null));
