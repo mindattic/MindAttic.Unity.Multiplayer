@@ -92,6 +92,8 @@ namespace Unity.Multiplayer.UI
         private MenuScreen _mainScreen;
         private MenuScreen _pauseScreen;
         private MenuScreen _lobbyScreen;
+        private MaButton _inviteButton;
+        private MaButton _leaveButton;
         private MaCodeDisplay _lobbyCode;
         private MaModal _busy;
         private MaModal _alert;
@@ -276,14 +278,19 @@ namespace Unity.Multiplayer.UI
             return this;
         }
 
-        /// <summary>Adds the game's own items to the in-game menu, before Leave.</summary>
+        /// <summary>
+        /// Adds the game's own items to the in-game menu, before Leave. <paramref name="add"/> runs once, on the in-game
+        /// menu's one screen (when the menus are built, or at once if they already are), and the items it adds stay for
+        /// the front end's life, across games: refresh what they show from the screen's <c>Shown</c> event, which fires
+        /// once each time the menu opens.
+        /// </summary>
         /// <returns>This component, so calls chain.</returns>
         public NetFrontEnd AddPauseMenuItems(Action<MenuScreen> add)
         {
             _pauseItems.Add(add ?? throw new ArgumentNullException(nameof(add)));
-            if (_state == FrontEndState.InGame)
+            if (_pauseScreen != null)
             {
-                FillPauseScreen();
+                RunPauseItem(add);
             }
 
             return this;
@@ -653,7 +660,7 @@ namespace Unity.Multiplayer.UI
 
             if (_state == FrontEndState.InGame)
             {
-                FillPauseScreen();
+                RefreshPauseScreen();
             }
         }
 
@@ -1048,6 +1055,7 @@ namespace Unity.Multiplayer.UI
             _pause = MenuStack.Create(_canvas, true);
             _pause.name = "In-Game Menu";
             _pauseScreen = _pause.CreateScreen(s.pauseTitle);
+            BuildPauseScreen(_pauseScreen);
             _pause.ConfigureAsPauseMenu(_pauseScreen);
             _pause.gameObject.SetActive(false);
             if (!_menusVisible)
@@ -1275,7 +1283,7 @@ namespace Unity.Multiplayer.UI
 
             if (armed && Settings.pauseMenu && _menusVisible)
             {
-                FillPauseScreen();
+                RefreshPauseScreen();
                 _pause.gameObject.SetActive(true);
                 _pause.Close();
             }
@@ -1287,7 +1295,49 @@ namespace Unity.Multiplayer.UI
             }
         }
 
-        private void FillPauseScreen()
+        /// <summary>
+        /// Builds the in-game menu's one screen (UM-T64): Resume, Invite players, Settings, the game's items, Leave. It is
+        /// never cleared and refilled, so each game item callback runs once and whatever it hooks onto the screen (a
+        /// <c>Shown</c> handler) is hooked once; <see cref="RefreshPauseScreen"/> only updates the built-in parts.
+        /// </summary>
+        private void BuildPauseScreen(MenuScreen s)
+        {
+            s.AddButton("Resume", () => _pause.Close(), ButtonVariant.Primary, MaIcon.Play);
+            _inviteButton = s.AddButton("Invite players", () => PushOn(_pause, "Players", screen => FillLobby(screen, false)), ButtonVariant.Secondary, MaIcon.User);
+            if (Settings.settingsScreen)
+            {
+                s.AddButton("Settings", OpenSettings, ButtonVariant.Secondary, MaIcon.Settings);
+            }
+
+            _leaveButton = s.AddButton("Leave game", ConfirmLeave, ButtonVariant.Danger, MaIcon.Exit);
+            foreach (Action<MenuScreen> add in _pauseItems)
+            {
+                RunPauseItem(add);
+            }
+        }
+
+        /// <summary>Runs one game item callback on the in-game menu's screen and keeps Leave last.</summary>
+        private void RunPauseItem(Action<MenuScreen> add)
+        {
+            try
+            {
+                add(_pauseScreen);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex, this);
+            }
+
+            if (_leaveButton != null)
+            {
+                _leaveButton.transform.SetAsLastSibling();
+            }
+
+            _pauseScreen.MarkNavigationDirty();
+        }
+
+        /// <summary>Points the in-game menu at the current session: the subtitle, Invite for a host, End game or Leave game.</summary>
+        private void RefreshPauseScreen()
         {
             if (_pauseScreen == null || _session == null)
             {
@@ -1296,24 +1346,21 @@ namespace Unity.Multiplayer.UI
 
             MenuScreen s = _pauseScreen;
             bool host = _session.IsServer;
-            s.Clear();
             s.Title = Settings.pauseTitle;
             s.Subtitle = host && _session.PublishedCodeText.Length > 0
                 ? "Hosting - join code " + _session.PublishedCodeText
                 : host ? "Hosting" : "Playing as " + _session.Identity.DisplayName;
-            s.AddButton("Resume", () => _pause.Close(), ButtonVariant.Primary, MaIcon.Play);
-            if (host)
+            if (_inviteButton != null)
             {
-                s.AddButton("Invite players", () => PushOn(_pause, "Players", screen => FillLobby(screen, false)), ButtonVariant.Secondary, MaIcon.User);
+                _inviteButton.gameObject.SetActive(host);
             }
 
-            if (Settings.settingsScreen)
+            if (_leaveButton != null)
             {
-                s.AddButton("Settings", OpenSettings, ButtonVariant.Secondary, MaIcon.Settings);
+                _leaveButton.Label = host ? "End game" : "Leave game";
             }
 
-            RunItems(_pauseItems, s);
-            s.AddButton(host ? "End game" : "Leave game", ConfirmLeave, ButtonVariant.Danger, MaIcon.Exit);
+            s.MarkNavigationDirty();
         }
 
         private void PushOn(MenuStack stack, string title, Action<MenuScreen> build)

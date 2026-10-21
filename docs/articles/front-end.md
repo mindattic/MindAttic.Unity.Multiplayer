@@ -147,6 +147,19 @@ frontEnd.AddSettingsItems(s => s.AddToggle("Show ping", showPing, v => showPing 
 frontEnd.MenusVisible = false;
 ```
 
+Each `Add...Items` callback adds items to a screen the front end owns. The in-game menu is built once, so an
+`AddPauseMenuItems` callback runs exactly once (when the menus are built, or at once if they already are) and its items
+stay for the front end's life, across games. Refresh what they show from the screen's `Shown` event, which fires once
+each time the menu opens:
+
+```csharp
+frontEnd.AddPauseMenuItems(s =>
+{
+    MaToggle shake = s.AddToggle("Screen shake", false, on => player.Shake = on);
+    s.Shown += () => shake.SetValueWithoutNotify(player.Shake);   // hooked once, never piles up
+});
+```
+
 An assembly that calls these hooks references `Unity.Multiplayer.UI`, `MindAttic.Components.Unity` and
 `MindAttic.Components.Unity.Core` (the default `Assembly-CSharp` references them all already). `s` is a MindAttic
 Components `MenuScreen`, so everything it offers (`AddButton`, `AddToggle`, `AddRange`, `AddSelect`,
@@ -207,7 +220,9 @@ run (`FrontEndTesting.ForceMenus`). See [Testing your front end](testing.md#test
   Transport on loopback, are driven through their menus:
   - hosting shows the lobby; Join by IP gets the client in; the roster shows the client's name and colour from the
     approval payload; Start enters the game; Leave from the in-game menu returns to the main menu;
-  - join by code uses the code the lobby shows, through an in-process rendezvous server;
+  - join by code uses the code the lobby shows, through an in-process rendezvous server, also with Join Codes left at
+    Auto and only a rendezvous URL configured;
+  - the in-game menu's game items run once and their `Shown` handlers fire once per open, across several games;
   - a version mismatch and a kick each show their dialog;
   - a lost connection (a UDP relay that cuts the link) reconnects to the same seat; a link that never comes back gives
     up with a message;

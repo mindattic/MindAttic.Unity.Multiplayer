@@ -409,6 +409,58 @@ namespace Unity.Multiplayer.UI.Tests
         }
 
         [UnityTest]
+        public IEnumerator PauseMenuItems_RunOnce_AndTheirShowHandlersDoNotPileUp()
+        {
+            // UM-T64: a game item callback used to run again on every refill of the in-game menu (each game entered, each
+            // code published), adding another Shown handler each time.
+            yield return CreateFrontEnds();
+            int built = 0;
+            int shown = 0;
+            _host.AddPauseMenuItems(s =>
+            {
+                built++;
+                s.AddToggle("Shake", false);
+                s.Shown += () => shown++;
+            });
+
+            for (int game = 1; game <= 2; game++)
+            {
+                yield return HostFromMenu();
+                Click(_host.LobbyScreen, "Start");
+                Assert.That(_host.State, Is.EqualTo(FrontEndState.InGame));
+                for (int open = 0; open < 3; open++)
+                {
+                    _host.PauseMenu.Open();
+                    Assert.That(Buttons(_host.PauseMenu.Current), Is.EqualTo(new[] { "Resume", "Invite players", "Settings", "End game" }));
+                    Click(_host.PauseMenu.Current, "Resume");
+                }
+
+                Assert.That(built, Is.EqualTo(1), "the item callback ran once, game " + game);
+                Assert.That(shown, Is.EqualTo(3 * game), "one Shown per open, game " + game);
+                Assert.That(_host.PauseMenu.Current.GetComponentsInChildren<MaToggle>(true).Length, Is.EqualTo(1), "one Shake switch");
+
+                _host.Leave();
+                yield return Wait(() => _host.State == FrontEndState.Menu && _hostSession.CanStart, 5f, () => "the host never got back to the menu");
+            }
+
+            // An item added later goes before Leave, also once.
+            yield return HostFromMenu();
+            Click(_host.LobbyScreen, "Start");
+            _host.AddPauseMenuItems(s => s.AddButton("Restart", () => { }));
+            _host.PauseMenu.Open();
+            Assert.That(Buttons(_host.PauseMenu.Current), Is.EqualTo(new[] { "Resume", "Invite players", "Settings", "Restart", "End game" }));
+            Assert.That(shown, Is.EqualTo(7));
+            Assert.That(built, Is.EqualTo(1));
+            Click(_host.PauseMenu.Current, "Resume");
+
+            // A client's menu has no Invite, and says Leave game.
+            yield return JoinByAddressFromMenu("127.0.0.1:" + _port);
+            yield return ClientInGame();
+            _client.PauseMenu.Open();
+            Assert.That(Buttons(_client.PauseMenu.Current), Is.EqualTo(new[] { "Resume", "Settings", "Leave game" }));
+        }
+
+        [UnityTest]
         public IEnumerator Settings_SaveNameAndColour_AndGameItemsSitBeforeQuit()
         {
             yield return CreateFrontEnds();

@@ -64,6 +64,10 @@ carries the package's own version.
   Relay hosted with no code. `Auto` for a listen server is now Relay when it is installed, then the rendezvous service
   when a URL is set (`JoinCodeDefaults.HostingOrder` / `ForHosting`); the front end tries each in turn before hosting
   for joining by IP, and `PublishCode` on a running host uses the URL.
+- **In-game menu items run once** (UM-T64) — `NetFrontEnd.AddPauseMenuItems` callbacks ran again on every refill of the
+  in-game menu (each game entered, each join code published) on the same screen, so a `Shown` handler they hooked
+  piled up one more each time. The in-game menu is now built once: each callback runs exactly once, its items stay,
+  and only the built-in parts (subtitle, Invite players for a host, End game / Leave game) follow the session.
 
 ## [1.0.0] — 2026-10-21
 
