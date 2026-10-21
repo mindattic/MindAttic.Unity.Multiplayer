@@ -72,6 +72,10 @@ namespace Unity.Multiplayer.Core
                 .Append(" && chown ").Append(User).Append(':').Append(User).Append(' ').Append(logs).Append(' ').Append(saves).Append('\n');
             text.Append('\n');
             text.Append("USER ").Append(User).Append('\n');
+
+            // A server built as a plain player (no Dedicated Server build support installed, as on GameCI) still polls
+            // input through SDL, whose default video driver crashes with no display; the dummy driver doesn't (UM-T57).
+            text.Append("ENV SDL_VIDEODRIVER=dummy\n");
             foreach (DeclaredPort port in ports)
             {
                 text.Append("EXPOSE ").Append(port.Port).Append('/').Append(port.ProtocolName).Append('\n');

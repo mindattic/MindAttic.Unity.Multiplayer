@@ -424,7 +424,7 @@ namespace Unity.Multiplayer
             bool headless = HeadlessBootstrap.IsHeadless;
             NetCommandLineResult commandLine = readCommandLine
                 ? NetCommandLine.Apply(new NetConfig(), System.Environment.GetCommandLineArgs())
-                : new NetCommandLineResult(false, false, null);
+                : new NetCommandLineResult(false, false, null, NetBots.Launch.Role); // a -bot launch never serves by itself
 
             bool start = NetLaunch.ShouldStart(config, commandLine, headless, autoStart, serveWhenHeadless);
             ServerStartupResult package = null;

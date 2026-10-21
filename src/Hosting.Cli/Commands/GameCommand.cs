@@ -28,6 +28,11 @@ public static class GameCommand
           game status | logs [--tail n] | destroy --yes     the deployed server (profile and id remembered from the
                          project's last 'game deploy' / 'game local'; --profile picks another)
 
+          game smoke     build one Linux player, run it as a dedicated server + N bots + rendezvous under Docker
+                         Compose and wait until every bot's IBotDriver passes (UM-T57; exit 0/1, CI-ready)
+                         --bots <A,B | 3>  --scenario <s>  --server-args "<args>"  --bot-args "<args>"
+                         --timeout <s, default 300>  --skip-build  --player <dir>  --keep  --multiplayer <checkout>
+
         Options: --profile <GenericVps|RunPod|Hetzner|...|Local>  --scene <Assets/...unity>  --unity <editor exe>
                  --name <server>  --image <owner/repo>  --tag <t>  --public-address <addr>  --rendezvous-url <url>
                  --rendezvous-secret <s>  --server-password <p>  --env KEY=VALUE  --skip-build  --package <dir>
@@ -48,6 +53,11 @@ public static class GameCommand
         {
             log.Info(Usage);
             return rawArgs.Count < 2 ? 1 : 0;
+        }
+
+        if (string.Equals(rawArgs[1], "smoke", StringComparison.OrdinalIgnoreCase))
+        {
+            return await SmokeCommand.RunAsync(rawArgs, log, services, ct);
         }
 
         GamePlan plan = GamePlan.Create(rawArgs, services, log);

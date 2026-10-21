@@ -20,6 +20,21 @@ carries the package's own version.
   key and its holder; an object spawned another way with a missing or duplicate key is logged as an error on every
   peer and left out. Core (engine-free) gets `NetKeys` (validation and messages) and `NetKeyTable<T>`. See
   [Networked objects by key](docs/articles/objects.md).
+- **Bots and end-to-end smoke tests** (UM-T57, promoted from Unity.Cursory's UC-T14). `-bot <role>` makes any game a
+  headless bot client. Core's `NetLaunch` never starts it by itself or gives it menus, and `NetBots` joins by `-joincode`,
+  by `-joincodefile` (waiting for the file) or by `-address`. It then hands the connected session to the game's
+  `IBotDriver`, which is either a class marked `[NetBotDriver]` or a component in the scene. The driver gets a `NetBot`
+  with the role, the `-scenario`, `Pass`/`Fail`, and waits that resume on the main thread (`NextFrame`, `Seconds`,
+  `Until`, `Spawned<T>`, `LocalPlayer<T>`). The verdict is the log line `[NetBot:<role>] OK:` or `FAIL:`; a failed
+  player quits with exit code 1. A server launched with `-joincodefile` writes each join code it publishes there,
+  atomically. `NetBotRunner` runs one bot on any session. Core gets `BotCommandLine` (`-bot`, `-joincode`,
+  `-joincodefile`, `-scenario`, `-bottimeout`), `JoinCodeFile` and `BotLog`.
+  `Unity.Multiplayer.Testing.NetBotTest` runs a dedicated server and N bots in one PlayMode test.
+  `Unity.Multiplayer.Editor.BotPlayerBuild.BuildFromCommandLine` builds the one Linux player that plays every role.
+  `mp-host game smoke` builds it and writes the stack to `Builds/Smoke`: a Dockerfile with `SDL_VIDEODRIVER=dummy` and
+  a compose file holding the rendezvous service, the server and N bots. It runs the stack and exits 0 once every bot
+  logs OK. `.github/workflows/game-smoke.yml` is the reusable nightly a game adopts with one job. The generated server
+  package Dockerfile also sets `SDL_VIDEODRIVER=dummy`. See [Bots](docs/articles/bots.md).
 - **Votes kit** (UM-T54) — server-authoritative votes any game can offer, promoted from Unity.Cursory. Core (engine-free)
   gets `VoteBox` (one vote at a time over a roster of client ids; passes when Yes reaches the quorum, rejected as soon
   as it cannot, lapses on the `ITickClock`; a leaver is dropped and the quorum recomputed), `VoteRules` (quorum fraction,

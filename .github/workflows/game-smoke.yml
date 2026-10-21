@@ -1,0 +1,169 @@
+# UM-T57: the nightly end-to-end smoke for ANY Unity.Multiplayer game, as a reusable workflow. A game adopts it with
+# one job in its own .github/workflows/nightly.yml (see docs/articles/bots.md):
+#
+#   on: { schedule: [{ cron: '0 10 * * *' }], workflow_dispatch: {} }
+#   jobs:
+#     smoke:
+#       uses: mindattic/Unity.Multiplayer/.github/workflows/game-smoke.yml@main
+#       secrets: inherit
+#
+# Job 1 builds one StandaloneLinux64 player of the game with the library's own build method
+# (Unity.Multiplayer.Editor.BotPlayerBuild, no per-game build code). Job 2 runs `mp-host game smoke --player ...`:
+# the rendezvous service, the player as a dedicated server (-mode server -joincodefile ...) and one container per bot
+# (-bot <role>), under Docker Compose, until every bot's IBotDriver logs "[NetBot:<role>] OK:". Bots, scenario and
+# arguments come from the inputs below, else the game's mp-host.json ("bots", "scenario", "server-args",
+# "bot-args", "smoke-timeout"), else two bots A and B.
+#
+# Secrets: UNITY_LICENSE (or UNITY_EMAIL + UNITY_PASSWORD + UNITY_SERIAL), as GameCI needs; MINDATTIC_REPOS_TOKEN when
+# Unity.Multiplayer or a sibling repo is private (falls back to github.token).
+name: Game smoke (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      project-path:
+        description: The Unity project inside the game repo.
+        type: string
+        default: .
+      siblings:
+        description: >-
+          Repos (owner/name, space-separated) checked out beside the game, for file:../../<name> package references in
+          Packages/manifest.json. Unity.Multiplayer is always checked out beside it.
+        type: string
+        default: ''
+      bots:
+        description: Bot roles (A,B) or a count (3); empty for mp-host.json's, else A,B.
+        type: string
+        default: ''
+      scenario:
+        description: -scenario for the server and every bot; empty for mp-host.json's, else none.
+        type: string
+        default: ''
+      server-args:
+        description: More arguments for the server's launch line.
+        type: string
+        default: ''
+      bot-args:
+        description: More arguments for every bot's launch line.
+        type: string
+        default: ''
+      timeout:
+        description: Seconds to wait for every bot to pass; empty for mp-host.json's, else 300.
+        type: string
+        default: ''
+      unity-version:
+        description: The editor version; auto reads ProjectSettings/ProjectVersion.txt.
+        type: string
+        default: auto
+      multiplayer-ref:
+        description: The Unity.Multiplayer ref the CLI (and a file:-referenced package) come from.
+        type: string
+        default: main
+    secrets:
+      UNITY_LICENSE:
+        required: false
+      UNITY_EMAIL:
+        required: false
+      UNITY_PASSWORD:
+        required: false
+      UNITY_SERIAL:
+        required: false
+      MINDATTIC_REPOS_TOKEN:
+        required: false
+
+jobs:
+  build-player:
+    name: Build the Linux player (server + bots)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ github.event.repository.name }}
+      - uses: actions/checkout@v4
+        if: github.event.repository.name != 'Unity.Multiplayer'
+        with:
+          repository: mindattic/Unity.Multiplayer
+          ref: ${{ inputs.multiplayer-ref }}
+          path: Unity.Multiplayer
+          token: ${{ secrets.MINDATTIC_REPOS_TOKEN || github.token }}
+      - name: Check out sibling repos
+        if: inputs.siblings != ''
+        env:
+          TOKEN: ${{ secrets.MINDATTIC_REPOS_TOKEN || github.token }}
+        run: |
+          for repo in ${{ inputs.siblings }}; do
+            git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${repo}.git" "${repo#*/}"
+          done
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ github.event.repository.name }}/${{ inputs.project-path }}/Library
+          key: Library-smoke-${{ github.event.repository.name }}-${{ hashFiles('**/Packages/manifest.json', '**/ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-smoke-${{ github.event.repository.name }}-
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: ${{ github.event.repository.name }}/${{ inputs.project-path }}
+          unityVersion: ${{ inputs.unity-version }}
+          targetPlatform: StandaloneLinux64
+          buildMethod: Unity.Multiplayer.Editor.BotPlayerBuild.BuildFromCommandLine
+          customParameters: -botOutput /github/workspace/smoke-player
+          allowDirtyBuild: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-player
+          path: smoke-player
+          retention-days: 2
+          if-no-files-found: error
+
+  smoke:
+    name: Docker Compose smoke (server + bots)
+    needs: build-player
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ github.event.repository.name }}
+      - uses: actions/checkout@v4
+        if: github.event.repository.name != 'Unity.Multiplayer'
+        with:
+          repository: mindattic/Unity.Multiplayer
+          ref: ${{ inputs.multiplayer-ref }}
+          path: Unity.Multiplayer
+          token: ${{ secrets.MINDATTIC_REPOS_TOKEN || github.token }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: smoke-player
+          path: smoke-player
+
+      - name: mp-host game smoke
+        env:
+          BOTS: ${{ inputs.bots }}
+          SCENARIO: ${{ inputs.scenario }}
+          SERVER_ARGS: ${{ inputs.server-args }}
+          BOT_ARGS: ${{ inputs.bot-args }}
+          TIMEOUT: ${{ inputs.timeout }}
+        run: |
+          args=(game smoke --project "${{ github.event.repository.name }}/${{ inputs.project-path }}" --player smoke-player --multiplayer Unity.Multiplayer)
+          [ -n "$BOTS" ] && args+=(--bots "$BOTS")
+          [ -n "$SCENARIO" ] && args+=(--scenario "$SCENARIO")
+          [ -n "$SERVER_ARGS" ] && args+=(--server-args "$SERVER_ARGS")
+          [ -n "$BOT_ARGS" ] && args+=(--bot-args "$BOT_ARGS")
+          [ -n "$TIMEOUT" ] && args+=(--timeout "$TIMEOUT")
+          dotnet run --project Unity.Multiplayer/src/Hosting.Cli -c Release -- "${args[@]}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-logs
+          path: ${{ github.event.repository.name }}/${{ inputs.project-path }}/Builds/Smoke/compose.log
+          if-no-files-found: ignore

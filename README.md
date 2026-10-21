@@ -119,7 +119,7 @@ project onto the package.
 | `src/Hosting.Cli/` | `mp-host`: builds a server package and deploys it to any hosting profile |
 | `server/Rendezvous/` | The rendezvous service (ASP.NET Core .NET 10 minimal API + Dockerfile): join code to a dedicated server's IP:port |
 | `tests/` | `Core.Tests`, `Generators.Tests`, `Rendezvous.Tests`, `Hosting.Cli.Tests` (plain `dotnet test`); `Core.Build` compiles Core the way Unity does; `PlayModeHost`, `MinimalSample` and `FrontEndSample` run the Unity PlayMode/EditMode suites |
-| `smoke/` | The nightly Docker Compose smoke test: rendezvous, a dedicated server and two headless bot clients joining by code |
+| `smoke/` | The package's own nightly Docker Compose smoke test: rendezvous, a dedicated server and two headless bot clients joining by code (games use `mp-host game smoke`, see [Bots](docs/articles/bots.md)) |
 | `docs/` | DocFX site (`docfx.json`, `articles/`), BIBLE, RFCs, user stories |
 
 ## Run a dedicated server

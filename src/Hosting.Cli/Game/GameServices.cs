@@ -26,6 +26,9 @@ public sealed class GameServices
     /// <summary>The default <c>--project</c>.</summary>
     public string CurrentDirectory { get; init; } = Environment.CurrentDirectory;
 
+    /// <summary>Waits between polls of a running smoke stack (<c>game smoke</c>); tests make it instant.</summary>
+    public Func<TimeSpan, CancellationToken, Task> Delay { get; init; } = Task.Delay;
+
     /// <summary>Point docker at Docker Desktop's Linux engine when it is in Windows-containers mode (real runs only).</summary>
     public bool PreferLinuxDocker { get; init; } = true;
 }

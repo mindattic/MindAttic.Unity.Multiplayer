@@ -8,6 +8,7 @@ namespace Unity.Multiplayer.Core
     /// </summary>
     /// <remarks>
     /// <list type="number">
+    /// <item>A bot (<c>-bot &lt;role&gt;</c>) never starts by itself: the bot runner joins once it has a join code.</item>
     /// <item>A <c>-mode</c> on the command line always wins: the process starts as that topology.</item>
     /// <item>Otherwise a headless process (batch mode, <c>-nographics</c>, a Dedicated Server build) with
     /// <c>serveWhenHeadless</c> set starts as a dedicated <see cref="Topology.Server"/>.</item>
@@ -33,6 +34,11 @@ namespace Unity.Multiplayer.Core
                 throw new ArgumentNullException(nameof(commandLine));
             }
 
+            if (commandLine.IsBot)
+            {
+                return false;
+            }
+
             if (commandLine.TopologySpecified)
             {
                 return true;
@@ -49,8 +55,8 @@ namespace Unity.Multiplayer.Core
 
         /// <summary>
         /// True when a player-facing front end (menus, dialogs) may be created: never in a headless process (a
-        /// dedicated server, a CI run), and never when <c>-mode</c> launched the process into a role by itself (a server,
-        /// or a bot client), since nobody is there to click.
+        /// dedicated server, a CI run), and never when <c>-mode</c> or <c>-bot</c> launched the process into a role by
+        /// itself (a server, or a bot client), since nobody is there to click.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="commandLine"/> is null.</exception>
         public static bool ShowsMenus(NetCommandLineResult commandLine, bool headless)
@@ -60,7 +66,7 @@ namespace Unity.Multiplayer.Core
                 throw new ArgumentNullException(nameof(commandLine));
             }
 
-            return !headless && !commandLine.TopologySpecified;
+            return !headless && !commandLine.TopologySpecified && !commandLine.IsBot;
         }
     }
 }

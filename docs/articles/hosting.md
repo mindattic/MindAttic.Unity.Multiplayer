@@ -57,6 +57,9 @@ An optional **`mp-host.json`** at the project root sets defaults for any option 
 `{ "name": "cursory", "image": "mindattic/unity-cursory" }`. The repo's own `deploy.ps1`, if it keeps one for the
 `/deploy` router, is then just `mp-host game deploy --project $PSScriptRoot @args`.
 
+`mp-host game smoke` builds the same project as one Linux player and runs it as a dedicated server, the rendezvous
+service and N bots under Docker Compose, until every bot's driver passes: see [Bots and end-to-end smoke tests](bots.md).
+
 `mp-host game` resolves everything above and then runs the lower-level commands this page describes
 (`mp-host deploy`, `local up`, …), printing each one, so those remain available for CI or a package built elsewhere.
 

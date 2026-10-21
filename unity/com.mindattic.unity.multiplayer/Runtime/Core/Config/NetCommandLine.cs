@@ -27,6 +27,7 @@ namespace Unity.Multiplayer.Core
     /// <item><term><c>-publicaddress</c></term><description>Address players reach this server at (<see cref="NetConfig.PublicAddress"/>).</description></item>
     /// <item><term><c>-publicport</c></term><description>Port players reach this server at (<see cref="NetConfig.PublicPort"/>).</description></item>
     /// <item><term><c>-netsim</c></term><description>Simulated network conditions: <c>none</c>, <c>broadband</c>, <c>mobile4g</c>, <c>mobile3g</c>, <c>lossy</c> or <c>custom</c> (<see cref="NetConfig.Conditions"/>).</description></item>
+    /// <item><term><c>-bot</c></term><description>Launches this process as a bot client playing that role (<see cref="NetCommandLineResult.BotRole"/>): it starts no session by itself and shows no menus; the bot runner joins (see <see cref="BotCommandLine"/>).</description></item>
     /// <item><term><c>-latency</c> / <c>-jitter</c> / <c>-loss</c></term><description>Simulated milliseconds of delay, milliseconds of jitter and percent of packets lost. Each switches to <see cref="NetConditionsProfile.Custom"/>, keeping the other numbers of the profile chosen so far (<see cref="NetConfig.UseCustomConditions"/>).</description></item>
     /// </list>
     /// <para>Anything else is ignored, because Unity and the OS put their own arguments on the same line.
@@ -89,6 +90,9 @@ namespace Unity.Multiplayer.Core
         /// <summary>Sets the simulated packet loss in percent (custom conditions).</summary>
         public const string LossArg = "-loss";
 
+        /// <summary>Launches a bot client playing the given role (<see cref="BotCommandLine.BotArg"/>).</summary>
+        public const string BotArg = BotCommandLine.BotArg;
+
         /// <summary>Unity's batch-mode switch; its presence marks a headless run.</summary>
         public const string BatchModeArg = "-batchmode";
 
@@ -116,6 +120,7 @@ namespace Unity.Multiplayer.Core
             var errors = new List<string>();
             bool topologySpecified = false;
             bool headless = false;
+            string botRole = null;
 
             for (int i = 0; i < args.Count; i++)
             {
@@ -164,7 +169,11 @@ namespace Unity.Multiplayer.Core
                 }
 
                 value = value.Trim();
-                if (Is(name, ModeArg))
+                if (Is(name, BotArg))
+                {
+                    botRole = value;
+                }
+                else if (Is(name, ModeArg))
                 {
                     Topology topology;
                     if (TryParseTopology(value, out topology))
@@ -335,7 +344,7 @@ namespace Unity.Multiplayer.Core
                 }
             }
 
-            return new NetCommandLineResult(topologySpecified, headless, errors);
+            return new NetCommandLineResult(topologySpecified, headless, errors, botRole);
         }
 
         /// <summary>True when the arguments contain Unity's <c>-batchmode</c> or <c>-nographics</c> switch.</summary>
@@ -427,7 +436,8 @@ namespace Unity.Multiplayer.Core
                 || Is(name, TransportArg) || Is(name, TickRateArg) || Is(name, MaxPlayersArg)
                 || Is(name, JoinCodesArg) || Is(name, RendezvousArg) || Is(name, RendezvousSecretArg)
                 || Is(name, PublicAddressArg) || Is(name, PublicPortArg) || Is(name, NameArg) || Is(name, PasswordArg)
-                || Is(name, NetSimArg) || Is(name, LatencyArg) || Is(name, JitterArg) || Is(name, LossArg);
+                || Is(name, NetSimArg) || Is(name, LatencyArg) || Is(name, JitterArg) || Is(name, LossArg)
+                || Is(name, BotArg);
         }
 
         private static bool TryParseInRange(string text, int min, int max, out int value)
@@ -446,10 +456,26 @@ namespace Unity.Multiplayer.Core
     {
         /// <summary>Creates a result.</summary>
         public NetCommandLineResult(bool topologySpecified, bool headless, IReadOnlyList<string> errors)
+            : this(topologySpecified, headless, errors, null)
+        {
+        }
+
+        /// <summary>Creates a result for a launch line that may name a bot role.</summary>
+        public NetCommandLineResult(bool topologySpecified, bool headless, IReadOnlyList<string> errors, string botRole)
         {
             TopologySpecified = topologySpecified;
             Headless = headless;
             Errors = errors ?? new string[0];
+            BotRole = string.IsNullOrWhiteSpace(botRole) ? null : botRole.Trim();
+        }
+
+        /// <summary>The role <c>-bot</c> gave this process, or null when it is not a bot.</summary>
+        public string BotRole { get; }
+
+        /// <summary>True when <c>-bot &lt;role&gt;</c> was on the line: a bot client the bot runner joins, never a session that starts by itself or shows menus.</summary>
+        public bool IsBot
+        {
+            get { return BotRole != null; }
         }
 
         /// <summary>True when a valid <c>-mode</c> was given, so the launch line chose host, server or client.</summary>

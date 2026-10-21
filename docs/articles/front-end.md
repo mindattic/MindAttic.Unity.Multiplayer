@@ -209,8 +209,8 @@ Optional. **Assets ▸ Create ▸ MindAttic ▸ Multiplayer ▸ Front End Settin
 ## Servers, bots and CI: no UI, ever
 
 A headless process never creates a canvas, a menu or a dialog. That covers batch mode, `-nographics`, a Dedicated
-Server build and a CI run, and also any launch that picked its role with `-mode` (a server or a bot client). The rule
-is Core's `NetLaunch.ShowsMenus`. The component still follows the session, so `SessionStarted`, `GameStarted` and `Left`
+Server build and a CI run, and also any launch that picked its role with `-mode` (a server) or `-bot` (a bot client,
+even in a window; see [Bots](bots.md)). The rule is Core's `NetLaunch.ShowsMenus`. The component still follows the session, so `SessionStarted`, `GameStarted` and `Left`
 fire, and messages go to the log. The same scene therefore runs as the player's game, a dedicated server and a bot.
 
 ## The Front End sample

@@ -180,13 +180,21 @@ Give the clients `NetConfig.Conditions` (latency, jitter, loss through Unity Tra
 join with, and raise `TimeoutSeconds`; `LossyNetworkTests` in the package does exactly that, over the
 [lossy profile](topologies.md#testing-a-bad-connection).
 
+### Bots: a server and N bots in one test
+
+`NetBotTest` is a `NetSessionTest` with a dedicated server and one client per bot. Each bot is a `NetBotRunner` that
+joins by the join code the server writes to a file, through an in-process rendezvous service, and then hands its
+session to your `IBotDriver`. `RunBots(role => new MyBot(), "A", "B")` fails the test unless every bot passes. This is
+the nightly compose smoke without Docker; see [Bots and end-to-end smoke tests](bots.md#in-process-tests-netbottest).
+
 ### Examples to copy
 
 - `tests/MinimalSample/Tests` — the Minimal sample's player prefab tested as a game would: `SetPlayerPrefab`,
   `StartAndJoinAll`, `WaitForSpawn` for each peer's player, `WaitUntil` on synced positions and RPCs.
 - The package's own suites under `unity/com.mindattic.unity.multiplayer/Tests/Runtime`: `HostAndClientTests` and
   `ServerAndClientsTests` (both topologies, both transports), `EntityRpcTests`, `ApprovalAndSeatTests`,
-  `JoinByCodeTests` (the rendezvous helper), `LossyNetworkTests`, and `TestKitTests` (the kit's own guarantees).
+  `JoinByCodeTests` (the rendezvous helper), `LossyNetworkTests`, `NetBotTests` (`NetBotTest`: two bots join by code
+  and get an RPC answered), and `TestKitTests` (the kit's own guarantees).
 - Unity.Cursory's PlayMode suite, the first game built on the package.
 
 ## The package's own suites
@@ -270,7 +278,8 @@ Docker Compose (`smoke/docker-compose.yml`). The server registers with rendezvou
 shared volume; two bot clients read it, join through the rendezvous service, and drive their squares into the
 arena wall. `smoke/wait-for-smoke.sh` watches for both bots' `OK:` log lines. This is the one test that proves
 the join-code flow and an RPC round trip end to end, against the actual built player, not a PlayMode stand-in.
-Run it locally with `powershell -File tests/run-smoke.ps1`.
+Run it locally with `powershell -File tests/run-smoke.ps1`. A game gets the same smoke with no code of its own from
+`mp-host game smoke` and the reusable `game-smoke.yml` workflow ([Bots](bots.md)).
 
 ### CI
 

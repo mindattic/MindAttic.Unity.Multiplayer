@@ -18,6 +18,8 @@
   href: reconnect-seats.md
 - name: Testing
   href: testing.md
+- name: Bots and end-to-end smoke tests
+  href: bots.md
 - name: Hosting
   href: hosting.md
   items:

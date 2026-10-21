@@ -566,13 +566,13 @@ public class GameCommandTests
         return i >= 0 && i + 1 < args.Count ? args[i + 1] : null;
     }
 
-    private static void Touch(string path)
+    internal static void Touch(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, "");
     }
 
-    private static void WriteProject(string directory, string? productName, params (string Path, bool Enabled)[] scenes)
+    internal static void WriteProject(string directory, string? productName, params (string Path, bool Enabled)[] scenes)
     {
         Directory.CreateDirectory(Path.Combine(directory, "ProjectSettings"));
         Directory.CreateDirectory(Path.Combine(directory, "Packages"));

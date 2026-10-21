@@ -251,6 +251,7 @@ namespace Unity.Multiplayer.Core.Tests
             Assert.That(dockerfile, Does.Contain("EXPOSE " + ServerSettings.DefaultHealthPort + "/tcp\n"));
             Assert.That(dockerfile, Does.Contain("VOLUME [\"/srv/game/Saves\", \"/srv/game/Logs\"]\n"));
             Assert.That(dockerfile, Does.Contain("STOPSIGNAL SIGTERM\n"));
+            Assert.That(dockerfile, Does.Contain("ENV SDL_VIDEODRIVER=dummy\n"), "a plain-player server survives having no display (UM-T57)");
             Assert.That(dockerfile, Does.Contain("curl -fsS http://127.0.0.1:" + ServerSettings.DefaultHealthPort + "/healthz"));
             Assert.That(dockerfile, Does.EndWith("ENTRYPOINT [\"./start.sh\"]\n"));
             Assert.That(dockerfile.IndexOf("USER server", StringComparison.Ordinal), Is.GreaterThan(dockerfile.IndexOf("COPY", StringComparison.Ordinal)));
