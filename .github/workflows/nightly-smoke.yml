@@ -1,0 +1,111 @@
+# UM-T17: nightly Docker Compose smoke test (RFC 0001 "Verification"). One Linux Player build of the Minimal
+# sample plays all three roles - the dedicated server and both bot clients - picked at run time by SmokeDriver.cs
+# reading MINDATTIC_ROLE. The server self-registers with the rendezvous service and publishes a join code; each bot
+# waits for it, joins by code, and drives its square into the arena wall to prove the [ToServer]/[Synced] round trip
+# works end to end over a real join code, not just a direct address.
+#
+# Needs the same UNITY_LICENSE repo secret as ci.yml. Run it by hand with workflow_dispatch to check it without
+# waiting for the schedule; tests/run-smoke.ps1 builds the same thing locally on a Windows box with Unity installed.
+name: Nightly smoke test
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # ~02:00 America/Los_Angeles
+  workflow_dispatch: {}
+
+jobs:
+  build-game:
+    name: Build the smoke host (server + bot Linux player)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: tests/PlayModeHost/Library
+          key: >-
+            Library-smoke-${{
+            hashFiles('unity/com.mindattic.unity.multiplayer/**', 'tests/MinimalSample/**') }}
+          restore-keys: Library-smoke-
+
+      # Phase 1: import the Minimal sample through Package Manager (MinimalSampleHost.Import), the same way
+      # run-sample.ps1 does locally. A separate Unity process from the build below, because the sample's scripts
+      # need a domain reload to compile before anything can reference them.
+      - name: Import the Minimal sample
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: tests/PlayModeHost
+          unityVersion: 6000.4.3f1
+          targetPlatform: StandaloneLinux64
+          buildMethod: MinimalSampleHost.Import
+          allowDirtyBuild: true
+
+      - name: Add the smoke driver and build method
+        run: |
+          mkdir -p tests/PlayModeHost/Assets/Editor
+          cp tests/MinimalSample/Editor/MinimalSampleHost.cs tests/PlayModeHost/Assets/Editor/
+          cp tests/MinimalSample/Editor/SmokeHostBuild.cs tests/PlayModeHost/Assets/Editor/
+          cp tests/MinimalSample/Runtime/SmokeDriver.cs tests/PlayModeHost/Assets/
+
+      # Phase 2: build. SmokeHostBuild turns off the sample's NetBootstrap "serve when headless" default (the smoke
+      # test picks server/bot through SmokeDriver's own MINDATTIC_ROLE instead of NetLaunch's own rule) and builds
+      # a StandaloneLinux64 Player into smoke/build.
+      - name: Build the Linux player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: tests/PlayModeHost
+          unityVersion: 6000.4.3f1
+          targetPlatform: StandaloneLinux64
+          buildMethod: SmokeHostBuild.BuildFromCommandLine
+          customParameters: -smokeOutput /github/workspace/smoke/build
+          allowDirtyBuild: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-build
+          path: smoke/build
+          retention-days: 2
+          if-no-files-found: error
+
+  smoke:
+    name: Docker Compose smoke test
+    needs: build-game
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smoke-build
+          path: smoke/build
+
+      - run: chmod +x smoke/build/*.x86_64
+
+      - name: Build images
+        run: |
+          docker build -f server/Rendezvous/Dockerfile -t mindattic-rendezvous:ci .
+          docker build -f smoke/Bot.Dockerfile -t mindattic-smoke-game:ci smoke
+
+      - name: Run the smoke stack
+        working-directory: smoke
+        env:
+          RENDEZVOUS_SECRET: ${{ secrets.RENDEZVOUS_SMOKE_SECRET }}
+        run: docker compose up -d
+
+      - name: Wait for both bots to exchange RPCs
+        working-directory: smoke
+        run: ./wait-for-smoke.sh 180
+
+      - name: Collect logs
+        if: always()
+        working-directory: smoke
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        working-directory: smoke
+        run: docker compose down -v

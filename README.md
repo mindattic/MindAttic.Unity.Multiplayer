@@ -44,8 +44,9 @@ and one `[Synced]` field. The sample's
 | `tests/Generators.Tests/` | Snapshot and diagnostic tests for the generator |
 | `tests/Core.Tests/` | NUnit tests for the engine-free Core, compiled straight from `Runtime/Core` |
 | `tests/Core.Build/` | Compiles `Runtime/Core` as netstandard2.1 / C# 9, the way Unity does |
-| `tests/MinimalSample/` | The batch-mode importer and PlayMode tests `run-sample.ps1` runs against the imported Minimal sample |
+| `tests/MinimalSample/` | The batch-mode importer and PlayMode tests `run-sample.ps1` runs against the imported Minimal sample; its `Runtime/SmokeDriver.cs` and `Editor/SmokeHostBuild.cs` build the nightly smoke test's Linux player |
 | `tests/PlayModeHost/` | A bare Unity 6000.4.3f1 project that lists the package in `testables`, for the PlayMode and EditMode suites |
+| `smoke/` | The nightly Docker Compose smoke test: the rendezvous service, a dedicated server and two headless bot clients joining by code (`.github/workflows/nightly-smoke.yml`, `tests/run-smoke.ps1` locally) |
 | `docs/` | BIBLE, RFCs, user stories |
 
 ## Run a dedicated server
@@ -133,7 +134,15 @@ dotnet test tests/Generators.Tests          # UPDATE_SNAPSHOTS=1 rewrites Snapsh
 powershell -File tests/run-playmode.ps1     # PlayMode suite in Unity 6000.4.3f1 batch mode
 powershell -File tests/run-editmode.ps1     # EditMode suite (editor tooling, one real Linux server build; -SkipBuild leaves it out)
 powershell -File tests/run-sample.ps1       # imports the Minimal sample through Package Manager and runs its PlayMode tests (-Author rebuilds its scene and prefabs)
+powershell -File tests/run-smoke.ps1        # builds the nightly smoke test's Linux player (server + 2 bots, same build, role picked by MINDATTIC_ROLE)
 ```
+
+CI (`.github/workflows/ci.yml`) runs the three `dotnet test` suites and the PlayMode/EditMode suites through
+GameCI's `unity-test-runner` (`-runTests -batchmode`, filtered to one assembly per mode), and needs a `UNITY_LICENSE`
+repository secret. A nightly job (`.github/workflows/nightly-smoke.yml`) builds the Linux player above and runs it
+as a dedicated server plus two headless bot clients under Docker Compose (`smoke/docker-compose.yml`): the server
+registers with the rendezvous service and publishes a join code, and each bot joins by that code and drives its
+square into the arena wall, proving the join-code flow and an RPC round trip end to end.
 
 After changing `src/Generators`, run `dotnet build src/Generators -c Release`. It copies the DLL into
 `Runtime/Generators/`, where Unity loads it; commit that DLL along with the source change.

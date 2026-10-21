@@ -1,0 +1,73 @@
+# Nightly smoke test (RFC 0001, UM-T17): the rendezvous service, the dedicated server and two headless bot clients.
+# All three game roles are played by the same Linux Player build (tests/run-smoke.ps1 locally, or
+# .github/workflows/nightly-smoke.yml's SmokeHostBuild step in CI; this file expects it already unpacked into
+# smoke/build/, which smoke/Bot.Dockerfile copies into the image). The server publishes its join code to the shared
+# "shared" volume; each bot waits for it, joins by code through the rendezvous service, and drives its square to the
+# arena wall as proof the RPC round trip and the join-code flow both work end to end (see SmokeDriver.cs).
+#
+# Run it locally: RENDEZVOUS_SECRET=dev docker compose -f smoke/docker-compose.yml up
+# Then watch for success:          docker compose -f smoke/docker-compose.yml logs -f bot1 bot2
+services:
+  rendezvous:
+    image: mindattic-rendezvous:ci
+    environment:
+      Rendezvous__RegistrationSecret: ${RENDEZVOUS_SECRET:-smoke-test-secret}
+    healthcheck:
+      test: ["CMD", "dotnet", "Unity.Multiplayer.Rendezvous.dll", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    image: mindattic-smoke-game:ci
+    depends_on:
+      rendezvous:
+        condition: service_healthy
+    environment:
+      MINDATTIC_ROLE: server
+      MINDATTIC_RENDEZVOUS_SECRET: ${RENDEZVOUS_SECRET:-smoke-test-secret}
+      MINDATTIC_SHARED_DIR: /shared
+    command:
+      - -batchmode
+      - -nographics
+      - -logFile
+      - "-"
+      - -mode
+      - server
+      - -port
+      - "7777"
+      - -transport
+      - udp
+      - -rendezvous
+      - http://rendezvous:8080
+    volumes:
+      - shared:/shared
+
+  bot1:
+    image: mindattic-smoke-game:ci
+    depends_on:
+      - server
+    environment:
+      MINDATTIC_ROLE: bot
+      MINDATTIC_BOT_NAME: bot1
+      MINDATTIC_RENDEZVOUS_URL: http://rendezvous:8080
+      MINDATTIC_SHARED_DIR: /shared
+    command: [-batchmode, -nographics, -logFile, "-"]
+    volumes:
+      - shared:/shared
+
+  bot2:
+    image: mindattic-smoke-game:ci
+    depends_on:
+      - server
+    environment:
+      MINDATTIC_ROLE: bot
+      MINDATTIC_BOT_NAME: bot2
+      MINDATTIC_RENDEZVOUS_URL: http://rendezvous:8080
+      MINDATTIC_SHARED_DIR: /shared
+    command: [-batchmode, -nographics, -logFile, "-"]
+    volumes:
+      - shared:/shared
+
+volumes:
+  shared:

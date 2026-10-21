@@ -5,3 +5,7 @@ TestResults/
 
 # Minimal sample test host, built by tests/run-sample.ps1
 tests/SampleHost/
+
+# Smoke-test host and its Linux Player build, built by tests/run-smoke.ps1
+tests/SmokeHost/
+smoke/build/

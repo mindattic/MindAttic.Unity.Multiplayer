@@ -1,0 +1,87 @@
+# UM-T17: dotnet tests (Core, Generators, Rendezvous) plus the GameCI EditMode/PlayMode suites.
+# The Unity job needs a UNITY_LICENSE repo secret (Ryan supplies it); see docs/BIBLE.md UM-T17 for the nightly
+# Docker Compose smoke test this does not cover.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  dotnet-tests:
+    name: dotnet test (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [Core.Tests, Generators.Tests, Rendezvous.Tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: dotnet test tests/${{ matrix.project }}
+        run: >
+          dotnet test tests/${{ matrix.project }} --configuration Release
+          --logger "trx;LogFileName=${{ matrix.project }}.trx"
+          --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dotnet-test-results-${{ matrix.project }}
+          path: TestResults/${{ matrix.project }}.trx
+          if-no-files-found: ignore
+
+  unity-tests:
+    name: Unity ${{ matrix.testMode }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - testMode: editmode
+            assemblyNames: Unity.Multiplayer.Editor.Tests
+          - testMode: playmode
+            assemblyNames: Unity.Multiplayer.Tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: tests/PlayModeHost/Library
+          key: >-
+            Library-PlayModeHost-${{ matrix.testMode }}-${{
+            hashFiles('unity/com.mindattic.unity.multiplayer/**', 'tests/PlayModeHost/Packages/**') }}
+          restore-keys: |
+            Library-PlayModeHost-${{ matrix.testMode }}-
+            Library-PlayModeHost-
+
+      # Mirrors tests/run-editmode.ps1 / run-playmode.ps1: -runTests -batchmode -nographics against
+      # tests/PlayModeHost, filtered to the one assembly for this mode. The Linux Dedicated Server build inside
+      # the EditMode suite's [Category("Build")] test needs the Linux Dedicated Server build-support module, which
+      # GameCI's editor image does not ship; -testCategory '!Build' leaves it out here (run-editmode.ps1 still
+      # covers it locally, see HOUSE-LAW-8).
+      - uses: game-ci/unity-test-runner@v4
+        id: unity-tests
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: tests/PlayModeHost
+          unityVersion: 6000.4.3f1
+          testMode: ${{ matrix.testMode }}
+          customParameters: >-
+            -assemblyNames ${{ matrix.assemblyNames }}
+            ${{ matrix.testMode == 'editmode' && '-testCategory !Build' || '' }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unity-${{ matrix.testMode }}-results
+          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          if-no-files-found: ignore
