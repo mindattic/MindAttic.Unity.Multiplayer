@@ -11,6 +11,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     private readonly Func<HttpRequestMessage, HttpStatusCode> _status;
     private readonly string _contentType;
     public List<string> RequestBodies { get; } = new();
+    public List<string> RequestUris { get; } = new();
 
     public FakeHttpMessageHandler(Func<HttpRequestMessage, string> respond, HttpStatusCode statusCode = HttpStatusCode.OK, string contentType = "application/json")
         : this(respond, _ => statusCode, contentType)
@@ -26,6 +27,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
+        RequestUris.Add(request.RequestUri!.ToString());
         if (request.Content is not null)
         {
             RequestBodies.Add(await request.Content.ReadAsStringAsync(ct));

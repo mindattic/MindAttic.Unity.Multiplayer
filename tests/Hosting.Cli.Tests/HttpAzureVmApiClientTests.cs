@@ -27,6 +27,10 @@ public class HttpAzureVmApiClientTests
         Assert.That(info.ProvisioningState, Is.EqualTo("Succeeded"));
         Assert.That(info.PowerState, Is.EqualTo("running"));
         Assert.That(handler.RequestBodies, Has.Some.Matches<string>(b => b.Contains("grant_type=client_credentials")));
+        Assert.That(handler.RequestUris, Has.Some.Matches<string>(u =>
+            u.Contains("/subscriptions/sub-1/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1")
+            && u.Contains("?api-version=")
+            && u.Contains("&$expand=instanceView")));
     }
 
     [Test]

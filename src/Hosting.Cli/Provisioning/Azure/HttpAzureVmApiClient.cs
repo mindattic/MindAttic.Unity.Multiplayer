@@ -155,7 +155,7 @@ public sealed class HttpAzureVmApiClient : IAzureVmApiClient
     /// <inheritdoc />
     public async Task<AzureVmInfo> GetVirtualMachineAsync(string resourceGroup, string vmName, CancellationToken ct)
     {
-        JsonElement data = await SendAsync(HttpMethod.Get, ComputePath(resourceGroup, vmName) + "&$expand=instanceView", null, null, ct);
+        JsonElement data = await SendAsync(HttpMethod.Get, ComputePath(resourceGroup, vmName), ComputeApiVersion, null, ct, "$expand=instanceView");
         return ParseVm(vmName, data);
     }
 
@@ -204,10 +204,15 @@ public sealed class HttpAzureVmApiClient : IAzureVmApiClient
         return new AzureVmInfo(name, provisioningState, powerState);
     }
 
-    private async Task<JsonElement> SendAsync(HttpMethod method, string path, string? apiVersion, object? body, CancellationToken ct)
+    private async Task<JsonElement> SendAsync(HttpMethod method, string path, string? apiVersion, object? body, CancellationToken ct, string? extraQuery = null)
     {
         string separator = path.Contains('?') ? "&" : "?";
         string url = apiVersion is null ? $"{ManagementBaseUrl}{path}" : $"{ManagementBaseUrl}{path}{separator}api-version={apiVersion}";
+        if (extraQuery is not null)
+        {
+            url += (url.Contains('?') ? "&" : "?") + extraQuery;
+        }
+
         using var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(ct));
         if (body is not null)
