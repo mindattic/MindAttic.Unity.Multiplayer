@@ -18,7 +18,12 @@ namespace Unity.Multiplayer.Hosting.Cli.Commands;
 /// (also how a Fly deploy overrides its defaults: <c>--opt rendezvousMode=app</c> or <c>--opt rendezvousImage=...</c>)
 /// (the per-server launch options each UM-T27 provisioner's class doc lists, e.g. <c>sshUser</c>,
 /// <c>sshKeyPath</c>, <c>sshPublicKeyPath</c>, <c>amiId</c>, <c>keyName</c>, <c>resourceGroup</c>,
-/// <c>subnetId</c> -- none of them secret, but none safe to default blindly either).
+/// <c>subnetId</c> -- none of them secret, but none safe to default blindly either),
+/// <c>mp-host credentials set-edgegap --token &lt;Edgegap API token&gt; --app-name &lt;app&gt;</c>,
+/// <c>mp-host credentials set-gameye --key &lt;Gameye API key&gt; --image-name &lt;image&gt; --location &lt;location&gt;</c>
+/// (UM-T29's per-match allocation profiles: mp-host never calls either API itself -- these only give a
+/// matchmaking service, or a one-off script, a vault-backed place to read the credential from instead
+/// of hard-coding it, for <c>Unity.Multiplayer.Core.EdgegapMatchAllocator</c>/<c>GameyeMatchAllocator</c>).
 ///
 /// The one place a secret is ever typed at mp-host: it's written straight into
 /// <see cref="HostingCredentialStore"/> (<c>%APPDATA%\MindAttic\Hosting\</c>) and nowhere in the
@@ -32,7 +37,7 @@ public static class CredentialsCommand
     {
         if (rawArgs.Count < 2)
         {
-            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-cloud-options> ...");
+            log.Error("Usage: mp-host credentials <set-ghcr|set-runpod|set-ssh|set-hetzner|set-vultr|set-digitalocean|set-linode|set-ovh|set-aws|set-gce|set-azure|set-fly|set-cloud-options|set-edgegap|set-gameye> ...");
             return Task.FromResult(1);
         }
 
@@ -118,6 +123,17 @@ public static class CredentialsCommand
 
                 credentials.SetCloudVmOptions(profile, serverName, options);
                 log.Info($"Launch options for '{profile}'/'{serverName}' stored: {string.Join(", ", options.Keys)}.");
+                return Task.FromResult(0);
+
+            case "set-edgegap":
+                credentials.SetEdgegapCreds(new HostingCredentialStore.EdgegapCreds(args.Require("token"), args.Require("app-name")));
+                log.Info("Edgegap credential stored.");
+                return Task.FromResult(0);
+
+            case "set-gameye":
+                credentials.SetGameyeCreds(new HostingCredentialStore.GameyeCreds(
+                    args.Require("key"), args.Require("image-name"), args.Require("location")));
+                log.Info("Gameye credential stored.");
                 return Task.FromResult(0);
 
             default:

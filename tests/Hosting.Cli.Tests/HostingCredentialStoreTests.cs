@@ -221,4 +221,49 @@ public class HostingCredentialStoreTests
         _store.SaveRaw("fly", "{\"type\":\"fly\",\"apiKey\":\"fo1_abc123\",\"secret\":\"\"}");
         Assert.That(_store.GetFlyCreds(), Is.Null);
     }
+
+    [Test]
+    public void Edgegap_creds_round_trip()
+    {
+        _store.SetEdgegapCreds(new HostingCredentialStore.EdgegapCreds("edg-token-1", "my-game"));
+        var creds = _store.GetEdgegapCreds();
+        Assert.That(creds!.ApiToken, Is.EqualTo("edg-token-1"));
+        Assert.That(creds.AppName, Is.EqualTo("my-game"));
+    }
+
+    [Test]
+    public void GetEdgegapCreds_is_null_before_anything_is_stored()
+    {
+        Assert.That(_store.GetEdgegapCreds(), Is.Null);
+    }
+
+    [Test]
+    public void GetEdgegapCreds_is_null_when_a_field_is_missing()
+    {
+        _store.SaveRaw("edgegap", "{\"type\":\"edgegap\",\"apiKey\":\"edg-token-1\",\"appName\":\"\"}");
+        Assert.That(_store.GetEdgegapCreds(), Is.Null);
+    }
+
+    [Test]
+    public void Gameye_creds_round_trip()
+    {
+        _store.SetGameyeCreds(new HostingCredentialStore.GameyeCreds("gy-key-1", "my-game", "eu-west"));
+        var creds = _store.GetGameyeCreds();
+        Assert.That(creds!.ApiKey, Is.EqualTo("gy-key-1"));
+        Assert.That(creds.ImageName, Is.EqualTo("my-game"));
+        Assert.That(creds.Location, Is.EqualTo("eu-west"));
+    }
+
+    [Test]
+    public void GetGameyeCreds_is_null_before_anything_is_stored()
+    {
+        Assert.That(_store.GetGameyeCreds(), Is.Null);
+    }
+
+    [Test]
+    public void GetGameyeCreds_is_null_when_a_field_is_missing()
+    {
+        _store.SaveRaw("gameye", "{\"type\":\"gameye\",\"apiKey\":\"gy-key-1\",\"imageName\":\"my-game\",\"location\":\"\"}");
+        Assert.That(_store.GetGameyeCreds(), Is.Null);
+    }
 }

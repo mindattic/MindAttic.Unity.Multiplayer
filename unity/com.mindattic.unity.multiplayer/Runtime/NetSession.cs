@@ -38,6 +38,9 @@ namespace Unity.Multiplayer
     /// <para>Network conditions (UM-T14): <see cref="NetConfig.Conditions"/> makes this peer's link slow and lossy for
     /// testing (latency, jitter, packet loss through Unity Transport's simulator stage, editor and development builds
     /// only), from the moment it starts; <see cref="SetConditions"/> changes them while it runs.</para>
+    /// <para>Per-match allocation (UM-T29): a matchmaker asks an <see cref="IMatchAllocator"/> (Edgegap, Gameye, ...) for
+    /// a server, and <see cref="JoinAllocatedServerAsync"/> joins what it hands back directly -- the endpoint is already
+    /// known, so there is no code to resolve first, unlike <see cref="JoinByCode"/>.</para>
     /// <para>Events are raised on Unity's main thread, from NGO's callbacks. An exception thrown by a handler
     /// is logged and does not stop the session's own bookkeeping.</para>
     /// </remarks>
@@ -575,6 +578,7 @@ namespace Unity.Multiplayer
             }
 
             ForgetPublishedCode();
+            JoinedAllocation = null;
             _config = copy;
             _transportFailed = false;
             _machine.Start(copy.Topology);
@@ -955,6 +959,83 @@ namespace Unity.Multiplayer
             join.Address = target.Address;
             join.Port = target.Port;
             return StartCore(join, null);
+        }
+
+        /// <summary>
+        /// The server <see cref="JoinAllocatedServerAsync"/> most recently joined through, or null before that is called
+        /// (or after a plain <see cref="JoinByAddress"/>/<see cref="JoinByCode"/>). Hand this to the allocator's
+        /// <see cref="IMatchAllocator.ReleaseAsync"/> once the match ends.
+        /// </summary>
+        public MatchAllocation JoinedAllocation { get; private set; }
+
+        /// <summary>
+        /// Requests a server for <paramref name="request"/> from <paramref name="allocator"/> and joins the endpoint it
+        /// returns directly -- unlike <see cref="JoinByCode"/>, there is no code to resolve, since the allocator already
+        /// handed back the resolved <see cref="JoinTarget"/> in its <see cref="MatchAllocation"/>. The rest of the
+        /// settings (transport, tick rate, game version) come from <paramref name="config"/> when given; the transport
+        /// is always overridden from the allocation's endpoint.
+        /// </summary>
+        /// <returns>
+        /// True when NGO began connecting (the session is then Connecting, as after <see cref="JoinByAddress"/>). False
+        /// when the allocator could not provide a server; <see cref="JoinCodeFailed"/> carries a message to show.
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="allocator"/> or <paramref name="request"/> is null.</exception>
+        /// <exception cref="ArgumentException">The config is invalid.</exception>
+        /// <exception cref="InvalidOperationException">A session is already active.</exception>
+        public async Task<bool> JoinAllocatedServerAsync(IMatchAllocator allocator, MatchRequest request, NetConfig config = null)
+        {
+            if (allocator == null)
+            {
+                throw new ArgumentNullException(nameof(allocator));
+            }
+
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            NetConfig join = WithTopology(config, Core.Topology.Client);
+            join.EnsureValid();
+            if (_machine.IsActive)
+            {
+                throw new InvalidOperationException("Cannot join while the session is " + _machine.State + "; call Leave first.");
+            }
+
+            MatchAllocation allocation;
+            try
+            {
+                allocation = await allocator.AllocateAsync(request);
+            }
+            catch (Exception ex)
+            {
+                Fail("Could not get a server for " + request + " from " + allocator.DisplayName + ": " + ex.Message);
+                return false;
+            }
+
+            if (_disposed || _machine.IsActive)
+            {
+                Fail("Another session started while a server for " + request + " was being allocated.");
+                return false;
+            }
+
+            Debug.Log("[MindAttic.Multiplayer] " + allocator.DisplayName + " allocated " + allocation + " for " + request + ".");
+            JoinTarget target = allocation.Endpoint;
+            join.Transport = target.Transport;
+            bool started = target.Kind == JoinTargetKind.Relay
+                ? StartCore(join, transport => _relay.ApplyJoin(target, join.Transport, transport))
+                : StartCore(SetEndpoint(join, target), null);
+
+            // Set after StartCore, which clears it as part of every start (JoinByAddress, JoinByCode, ...);
+            // the allocation exists either way and callers release it even if the join itself failed.
+            JoinedAllocation = allocation;
+            return started;
+        }
+
+        private static NetConfig SetEndpoint(NetConfig config, JoinTarget target)
+        {
+            config.Address = target.Address;
+            config.Port = target.Port;
+            return config;
         }
 
         /// <summary>Reads environment variables for <see cref="ServerAdvertisement.For"/>; tests swap it. Null reads the process environment.</summary>

@@ -77,6 +77,21 @@ public sealed class HostingCredentialStore : CredentialStore
     /// <summary>A Fly.io API token plus the org slug mp-host creates apps under (e.g. <c>personal</c>).</summary>
     public sealed record FlyCreds(string ApiToken, string OrgSlug);
 
+    /// <summary>
+    /// An Edgegap API token plus the app name <c>Unity.Multiplayer.Core.EdgegapMatchAllocator</c> deploys
+    /// (UM-T29). mp-host itself never calls Edgegap's API; this only gives a matchmaking service (or a
+    /// one-off script) a vault-backed place to read the token from instead of hard-coding it.
+    /// </summary>
+    public sealed record EdgegapCreds(string ApiToken, string AppName);
+
+    /// <summary>
+    /// A Gameye API key plus the image name and location <c>Unity.Multiplayer.Core.GameyeMatchAllocator</c>
+    /// starts sessions with (UM-T29). mp-host itself never calls Gameye's API; this only gives a
+    /// matchmaking service (or a one-off script) a vault-backed place to read the key from instead of
+    /// hard-coding it.
+    /// </summary>
+    public sealed record GameyeCreds(string ApiKey, string ImageName, string Location);
+
     /// <summary>GHCR provider id in this store.</summary>
     public const string GhcrProviderId = "ghcr";
 
@@ -109,6 +124,12 @@ public sealed class HostingCredentialStore : CredentialStore
 
     /// <summary>Fly.io provider id in this store.</summary>
     public const string FlyProviderId = "fly";
+
+    /// <summary>Edgegap provider id in this store.</summary>
+    public const string EdgegapProviderId = "edgegap";
+
+    /// <summary>Gameye provider id in this store.</summary>
+    public const string GameyeProviderId = "gameye";
 
     /// <summary>The generic-VPS provider id for a given server name (one SSH target per server).</summary>
     public static string GenericVpsProviderId(string serverName) => "genericvps:" + serverName;
@@ -449,6 +470,70 @@ public sealed class HostingCredentialStore : CredentialStore
             w.WriteString("type", "fly");
             w.WriteString("apiKey", creds.ApiToken);
             w.WriteString("secret", creds.OrgSlug);
+        }));
+    }
+
+    /// <summary>Reads the Edgegap credential, or null when missing or incomplete.</summary>
+    public EdgegapCreds? GetEdgegapCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(EdgegapProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string token = StringProp(doc, "apiKey");
+            string appName = StringProp(doc, "appName");
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(appName)) return null;
+            return new EdgegapCreds(token, appName);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the Edgegap credential.</summary>
+    public void SetEdgegapCreds(EdgegapCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(EdgegapProviderId, Write(w =>
+        {
+            w.WriteString("type", "edgegap");
+            w.WriteString("apiKey", creds.ApiToken);
+            w.WriteString("appName", creds.AppName);
+        }));
+    }
+
+    /// <summary>Reads the Gameye credential, or null when missing or incomplete.</summary>
+    public GameyeCreds? GetGameyeCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(GameyeProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string apiKey = StringProp(doc, "apiKey");
+            string imageName = StringProp(doc, "imageName");
+            string location = StringProp(doc, "location");
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(imageName) || string.IsNullOrWhiteSpace(location)) return null;
+            return new GameyeCreds(apiKey, imageName, location);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the Gameye credential.</summary>
+    public void SetGameyeCreds(GameyeCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(GameyeProviderId, Write(w =>
+        {
+            w.WriteString("type", "gameye");
+            w.WriteString("apiKey", creds.ApiKey);
+            w.WriteString("imageName", creds.ImageName);
+            w.WriteString("location", creds.Location);
         }));
     }
 
