@@ -65,6 +65,15 @@ public sealed class HostingCredentialStore : CredentialStore
         string Endpoint, string ServiceName, string ApplicationKey, string ApplicationSecret, string ConsumerKey,
         string SshUser, string SshPrivateKeyPath, string SshPublicKey);
 
+    /// <summary>An AWS account's long-term access key (AwsEc2 and AwsLightsail share one; each deploy's <c>--region</c> picks the endpoint).</summary>
+    public sealed record AwsCreds(string AccessKeyId, string SecretAccessKey, string Region);
+
+    /// <summary>A GCE project id plus an operator-refreshed OAuth2 access token (see <c>docs/articles/hosting/gce.md</c> for how to mint one).</summary>
+    public sealed record GceCreds(string ProjectId, string AccessToken);
+
+    /// <summary>An Entra ID (Azure AD) service principal mp-host uses for ARM's client-credentials flow.</summary>
+    public sealed record AzureCreds(string TenantId, string ClientId, string ClientSecret, string SubscriptionId);
+
     /// <summary>GHCR provider id in this store.</summary>
     public const string GhcrProviderId = "ghcr";
 
@@ -86,8 +95,20 @@ public sealed class HostingCredentialStore : CredentialStore
     /// <summary>OVHcloud provider id in this store.</summary>
     public const string OvhProviderId = "ovh";
 
+    /// <summary>AWS (EC2 + Lightsail) provider id in this store.</summary>
+    public const string AwsProviderId = "aws";
+
+    /// <summary>GCE provider id in this store.</summary>
+    public const string GceProviderId = "gce";
+
+    /// <summary>Azure provider id in this store.</summary>
+    public const string AzureProviderId = "azure";
+
     /// <summary>The generic-VPS provider id for a given server name (one SSH target per server).</summary>
     public static string GenericVpsProviderId(string serverName) => "genericvps:" + serverName;
+
+    /// <summary>The cloud-VM launch-options id for a given profile + server name (one set of options per server).</summary>
+    public static string CloudVmOptionsProviderId(string profileId, string serverName) => $"cloudvmoptions:{profileId}:{serverName}";
 
     /// <summary>Reads the GHCR credential, or null when missing or incomplete.</summary>
     public GhcrCreds? GetGhcrCreds()
@@ -291,6 +312,154 @@ public sealed class HostingCredentialStore : CredentialStore
             w.WriteString("secret", creds.SshPublicKey);
             w.WriteString("sshUser", creds.SshUser);
             w.WriteString("sshKeyPath", creds.SshPrivateKeyPath);
+        }));
+    }
+
+    /// <summary>Reads the AWS account credential, or null when missing or incomplete.</summary>
+    public AwsCreds? GetAwsCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(AwsProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string accessKeyId = StringProp(doc, "accessKeyId");
+            string secretAccessKey = StringProp(doc, "secretAccessKey");
+            string region = StringProp(doc, "region");
+            if (string.IsNullOrWhiteSpace(accessKeyId) || string.IsNullOrWhiteSpace(secretAccessKey) || string.IsNullOrWhiteSpace(region)) return null;
+            return new AwsCreds(accessKeyId, secretAccessKey, region);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the AWS account credential.</summary>
+    public void SetAwsCreds(AwsCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(AwsProviderId, Write(w =>
+        {
+            w.WriteString("type", "aws");
+            w.WriteString("accessKeyId", creds.AccessKeyId);
+            w.WriteString("secretAccessKey", creds.SecretAccessKey);
+            w.WriteString("region", creds.Region);
+        }));
+    }
+
+    /// <summary>Reads the GCE project + access token credential, or null when missing or incomplete.</summary>
+    public GceCreds? GetGceCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(GceProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string projectId = StringProp(doc, "projectId");
+            string accessToken = StringProp(doc, "accessToken");
+            if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(accessToken)) return null;
+            return new GceCreds(projectId, accessToken);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the GCE project + access token credential.</summary>
+    public void SetGceCreds(GceCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(GceProviderId, Write(w =>
+        {
+            w.WriteString("type", "gce");
+            w.WriteString("projectId", creds.ProjectId);
+            w.WriteString("accessToken", creds.AccessToken);
+        }));
+    }
+
+    /// <summary>Reads the Azure service-principal credential, or null when missing or incomplete.</summary>
+    public AzureCreds? GetAzureCreds()
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(AzureProviderId, out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            string tenantId = StringProp(doc, "tenantId");
+            string clientId = StringProp(doc, "clientId");
+            string clientSecret = StringProp(doc, "clientSecret");
+            string subscriptionId = StringProp(doc, "subscriptionId");
+            if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientId)
+                || string.IsNullOrWhiteSpace(clientSecret) || string.IsNullOrWhiteSpace(subscriptionId)) return null;
+            return new AzureCreds(tenantId, clientId, clientSecret, subscriptionId);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Upserts the Azure service-principal credential.</summary>
+    public void SetAzureCreds(AzureCreds creds)
+    {
+        ArgumentNullException.ThrowIfNull(creds);
+        SaveRaw(AzureProviderId, Write(w =>
+        {
+            w.WriteString("type", "azure");
+            w.WriteString("tenantId", creds.TenantId);
+            w.WriteString("clientId", creds.ClientId);
+            w.WriteString("clientSecret", creds.ClientSecret);
+            w.WriteString("subscriptionId", creds.SubscriptionId);
+        }));
+    }
+
+    /// <summary>
+    /// Reads the free-form launch options stored for <paramref name="profileId"/>/<paramref name="serverName"/>
+    /// (<c>sshUser</c>/<c>sshKeyPath</c>/<c>sshPublicKeyPath</c>, plus whichever provider-specific keys
+    /// that provisioner's class doc lists -- <c>amiId</c>/<c>keyName</c> for AwsEc2,
+    /// <c>resourceGroup</c>/<c>subnetId</c> for AzureVm, and so on), or null when nothing is stored.
+    /// These become a cloud <see cref="Provisioning.ProviderConnection.ProviderOptions"/> verbatim;
+    /// <see cref="Composition.HostingComposer"/> is the only reader.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? GetCloudVmOptions(string profileId, string serverName)
+    {
+        var raw = LoadAllRaw();
+        if (!raw.TryGetValue(CloudVmOptionsProviderId(profileId, serverName), out var json) || string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
+            var options = new Dictionary<string, string>();
+            foreach (var property in doc.RootElement.EnumerateObject())
+            {
+                if (property.Name == "type") continue;
+                if (property.Value.ValueKind == JsonValueKind.String)
+                {
+                    options[property.Name] = property.Value.GetString() ?? "";
+                }
+            }
+
+            return options;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Replaces the launch options stored for <paramref name="profileId"/>/<paramref name="serverName"/>.</summary>
+    public void SetCloudVmOptions(string profileId, string serverName, IReadOnlyDictionary<string, string> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        SaveRaw(CloudVmOptionsProviderId(profileId, serverName), Write(w =>
+        {
+            w.WriteString("type", "cloudvmoptions");
+            foreach (var (key, value) in options)
+            {
+                w.WriteString(key, value);
+            }
         }));
     }
 

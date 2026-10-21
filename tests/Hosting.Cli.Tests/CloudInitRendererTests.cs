@@ -75,4 +75,42 @@ public class CloudInitRendererTests
         Assert.That(userData, Does.Contain("  - ssh-ed25519 AAAA...\n"));
         Assert.That(userData, Does.Not.Contain("ssh-ed25519 AAAA...\n\n"));
     }
+
+    [Test]
+    public void RenderCloudConfig_is_a_cloud_config_that_writes_compose_token_and_bootstrap_into_the_ssh_users_home()
+    {
+        string compose = CloudInitRenderer.RenderCompose(TestManifests.WithHealthPort(), "img", "rzv", new Dictionary<string, string>());
+        string bootstrap = CloudInitRenderer.RenderBootstrapScript("ghcr.io", "octocat");
+        string cloudConfig = CloudInitRenderer.RenderCloudConfig("ubuntu", compose, bootstrap, "ghp_token");
+
+        Assert.That(cloudConfig, Does.StartWith("#cloud-config\n"));
+        Assert.That(cloudConfig, Does.Contain("path: /home/ubuntu/docker-compose.yml"));
+        Assert.That(cloudConfig, Does.Contain("path: /tmp/mp-host-ghcr-token"));
+        Assert.That(cloudConfig, Does.Contain("path: /home/ubuntu/mp-host-bootstrap.sh"));
+        Assert.That(cloudConfig, Does.Contain("cd /home/ubuntu && ./mp-host-bootstrap.sh"));
+    }
+
+    [Test]
+    public void RenderCloudConfig_base64_encodes_every_files_content()
+    {
+        string cloudConfig = CloudInitRenderer.RenderCloudConfig("ubuntu", "compose-body", "bootstrap-body", "token-body");
+        Assert.That(cloudConfig, Does.Contain(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("compose-body"))));
+        Assert.That(cloudConfig, Does.Contain(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("token-body"))));
+    }
+
+    [Test]
+    public void RenderStartupScript_is_a_plain_shell_script_that_writes_the_same_three_files_and_runs_bootstrap()
+    {
+        string compose = CloudInitRenderer.RenderCompose(TestManifests.WithHealthPort(), "img", "rzv", new Dictionary<string, string>());
+        string bootstrap = CloudInitRenderer.RenderBootstrapScript("ghcr.io", "octocat");
+        string script = CloudInitRenderer.RenderStartupScript("ubuntu", compose, bootstrap, "ghp_token");
+
+        Assert.That(script, Does.StartWith("#!/bin/sh\n"));
+        Assert.That(script, Does.Not.Contain("#cloud-config"));
+        Assert.That(script, Does.Contain("cat > /home/ubuntu/docker-compose.yml"));
+        Assert.That(script, Does.Contain("cat > /tmp/mp-host-ghcr-token"));
+        Assert.That(script, Does.Contain("cat > /home/ubuntu/mp-host-bootstrap.sh"));
+        Assert.That(script, Does.Contain("ghp_token"));
+        Assert.That(script, Does.Contain("cd /home/ubuntu && ./mp-host-bootstrap.sh"));
+    }
 }

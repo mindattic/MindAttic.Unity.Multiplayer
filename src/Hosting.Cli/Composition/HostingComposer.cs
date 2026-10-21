@@ -5,8 +5,12 @@ using Unity.Multiplayer.Hosting.Cli.Docker;
 using Unity.Multiplayer.Hosting.Cli.Packaging;
 using Unity.Multiplayer.Hosting.Cli.Processes;
 using Unity.Multiplayer.Hosting.Cli.Provisioning;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Aws.Ec2;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Aws.Lightsail;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Azure;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.CloudVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.DigitalOcean;
+using Unity.Multiplayer.Hosting.Cli.Provisioning.Gce;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.GenericVps;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Hetzner;
 using Unity.Multiplayer.Hosting.Cli.Provisioning.Linode;
@@ -53,6 +57,7 @@ public sealed class HostingComposer
     {
         GenericVpsProvisioner.Id, RunPodProvisioner.Id,
         HetznerProvisioner.Id, VultrProvisioner.Id, DigitalOceanProvisioner.Id, LinodeProvisioner.Id, OvhProvisioner.Id,
+        Ec2Provisioner.Id, LightsailProvisioner.Id, GceProvisioner.Id, AzureVmProvisioner.Id,
     };
 
     /// <summary>The provisioner for <paramref name="profileId"/>, wired to the vault credential (or dry-run) for it.</summary>
@@ -100,15 +105,44 @@ public sealed class HostingComposer
             return new OvhProvisioner(api, BuildSsh(log));
         }
 
+        if (string.Equals(profileId, Ec2Provisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IEc2ApiClient api = _dryRun ? new DryRunEc2ApiClient(log) : BuildRealEc2Client();
+            return new Ec2Provisioner(api, BuildSsh(log));
+        }
+
+        if (string.Equals(profileId, LightsailProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            ILightsailApiClient api = _dryRun ? new DryRunLightsailApiClient(log) : BuildRealLightsailClient();
+            return new LightsailProvisioner(api, BuildSsh(log));
+        }
+
+        if (string.Equals(profileId, GceProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IGceApiClient api = _dryRun ? new DryRunGceApiClient(log) : BuildRealGceClient();
+            return new GceProvisioner(api, BuildSsh(log));
+        }
+
+        if (string.Equals(profileId, AzureVmProvisioner.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            IAzureVmApiClient api = _dryRun ? new DryRunAzureVmApiClient(log) : BuildRealAzureVmClient();
+            return new AzureVmProvisioner(api, BuildSsh(log));
+        }
+
         throw new ArgumentException($"Unknown hosting profile '{profileId}'. Known: {string.Join(", ", KnownProfiles)}.");
     }
 
+    /// <summary>
+    /// Every UM-T26/UM-T27 cloud provisioner reaches its box the same way GenericVps does once
+    /// cloud-init (or the UM-T26 providers' own user-data) has booted it: over SSH. Real or
+    /// dry-run, same switch as <see cref="BuildImageTool"/>.
+    /// </summary>
     private ISshCommandRunner BuildSsh(IDeployLog log) => _dryRun ? new DryRunSshCommandRunner(log) : new ProcessSshCommandRunner(new ProcessRunner());
 
     private static DryRunCloudVpsApiClient DryRunCloudVps(string providerId, string apiBaseUrl, IDeployLog log) => new(log, providerId, apiBaseUrl);
 
     /// <summary>The connection info a provisioner needs for <paramref name="serverName"/>, resolved from the vault.</summary>
-    /// <exception cref="InvalidOperationException">GenericVps was asked for but has no stored SSH target.</exception>
+    /// <exception cref="InvalidOperationException">The profile needs a stored credential/target that isn't there.</exception>
     public ProviderConnection BuildConnection(string profileId, string serverName)
     {
         if (string.Equals(profileId, GenericVpsProvisioner.Id, StringComparison.OrdinalIgnoreCase))
@@ -166,6 +200,14 @@ public sealed class HostingComposer
             return CloudVpsConnection(serverName, creds.SshUser, creds.SshPrivateKeyPath, creds.SshPublicKey);
         }
 
+        if (IsBigCloudProfile(profileId))
+        {
+            var options = _credentials.GetCloudVmOptions(profileId, serverName) ?? throw new InvalidOperationException(
+                $"No launch options stored for '{profileId}'/'{serverName}'. Store them first (HostingCredentialStore.SetCloudVmOptions, " +
+                "or 'mp-host credentials set-cloud-options').");
+            return new ProviderConnection(serverName, options, new Dictionary<string, string>());
+        }
+
         return ProviderConnection.Named(serverName);
     }
 
@@ -189,6 +231,16 @@ public sealed class HostingComposer
         };
         return new ProviderConnection(serverName, options, new Dictionary<string, string>());
     }
+
+    /// <summary>
+    /// True for a UM-T27 big-cloud profile, whose launch options come from the generic
+    /// <see cref="HostingCredentialStore.GetCloudVmOptions"/> bag rather than a typed credential.
+    /// </summary>
+    private static bool IsBigCloudProfile(string profileId) =>
+        string.Equals(profileId, Ec2Provisioner.Id, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(profileId, LightsailProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(profileId, GceProvisioner.Id, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(profileId, AzureVmProvisioner.Id, StringComparison.OrdinalIgnoreCase);
 
     private HttpRunPodApiClient BuildRealRunPodClient()
     {
@@ -241,5 +293,39 @@ public sealed class HostingComposer
             "No OVHcloud credential in the Hosting vault. Store one first (HostingCredentialStore.SetOvhCreds).");
         var http = new HttpClient { BaseAddress = new Uri($"https://{creds.Endpoint}.api.ovh.com/1.0/") };
         return new HttpOvhApiClient(http, creds.ApplicationKey, creds.ApplicationSecret, creds.ConsumerKey, creds.ServiceName);
+    }
+
+    private HostingCredentialStore.AwsCreds RequireAwsCreds() =>
+        _credentials.GetAwsCreds() ?? throw new InvalidOperationException(
+            "No AWS credential in the Hosting vault. Store one first (HostingCredentialStore.SetAwsCreds, or 'mp-host credentials set-aws').");
+
+    private HttpEc2ApiClient BuildRealEc2Client()
+    {
+        var creds = RequireAwsCreds();
+        var http = new HttpClient { BaseAddress = new Uri($"https://ec2.{creds.Region}.amazonaws.com/") };
+        return new HttpEc2ApiClient(http, creds.AccessKeyId, creds.SecretAccessKey, creds.Region);
+    }
+
+    private HttpLightsailApiClient BuildRealLightsailClient()
+    {
+        var creds = RequireAwsCreds();
+        var http = new HttpClient { BaseAddress = new Uri($"https://lightsail.{creds.Region}.amazonaws.com/") };
+        return new HttpLightsailApiClient(http, creds.AccessKeyId, creds.SecretAccessKey, creds.Region);
+    }
+
+    private HttpGceApiClient BuildRealGceClient()
+    {
+        var creds = _credentials.GetGceCreds() ?? throw new InvalidOperationException(
+            "No GCE credential in the Hosting vault. Store one first (HostingCredentialStore.SetGceCreds, or 'mp-host credentials set-gce').");
+        var http = new HttpClient { BaseAddress = new Uri("https://compute.googleapis.com/compute/v1/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", creds.AccessToken);
+        return new HttpGceApiClient(http, creds.ProjectId);
+    }
+
+    private HttpAzureVmApiClient BuildRealAzureVmClient()
+    {
+        var creds = _credentials.GetAzureCreds() ?? throw new InvalidOperationException(
+            "No Azure credential in the Hosting vault. Store one first (HostingCredentialStore.SetAzureCreds, or 'mp-host credentials set-azure').");
+        return new HttpAzureVmApiClient(new HttpClient(), creds.TenantId, creds.ClientId, creds.ClientSecret, creds.SubscriptionId);
     }
 }

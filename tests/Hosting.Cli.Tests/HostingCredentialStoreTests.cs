@@ -136,4 +136,70 @@ public class HostingCredentialStoreTests
         Assert.That(_store.GetRunPodCreds()!.ApiKey, Is.EqualTo("runpod-token"));
         Assert.That(_store.GetDigitalOceanCreds(), Is.Null);
     }
+
+    [Test]
+    public void Aws_creds_round_trip_and_are_shared_by_both_aws_profiles()
+    {
+        _store.SetAwsCreds(new HostingCredentialStore.AwsCreds("AKIAEXAMPLE", "secret", "us-east-1"));
+        var creds = _store.GetAwsCreds();
+        Assert.That(creds, Is.Not.Null);
+        Assert.That(creds!.AccessKeyId, Is.EqualTo("AKIAEXAMPLE"));
+        Assert.That(creds.SecretAccessKey, Is.EqualTo("secret"));
+        Assert.That(creds.Region, Is.EqualTo("us-east-1"));
+    }
+
+    [Test]
+    public void Gce_creds_round_trip()
+    {
+        _store.SetGceCreds(new HostingCredentialStore.GceCreds("my-project", "ya29.token"));
+        var creds = _store.GetGceCreds();
+        Assert.That(creds!.ProjectId, Is.EqualTo("my-project"));
+        Assert.That(creds.AccessToken, Is.EqualTo("ya29.token"));
+    }
+
+    [Test]
+    public void Azure_creds_round_trip()
+    {
+        _store.SetAzureCreds(new HostingCredentialStore.AzureCreds("tenant-1", "client-1", "secret-1", "sub-1"));
+        var creds = _store.GetAzureCreds();
+        Assert.That(creds!.TenantId, Is.EqualTo("tenant-1"));
+        Assert.That(creds.ClientId, Is.EqualTo("client-1"));
+        Assert.That(creds.ClientSecret, Is.EqualTo("secret-1"));
+        Assert.That(creds.SubscriptionId, Is.EqualTo("sub-1"));
+    }
+
+    [Test]
+    public void GetAwsCreds_is_null_when_a_field_is_missing()
+    {
+        _store.SaveRaw("aws", "{\"type\":\"aws\",\"accessKeyId\":\"AKIA\",\"secretAccessKey\":\"\",\"region\":\"us-east-1\"}");
+        Assert.That(_store.GetAwsCreds(), Is.Null);
+    }
+
+    [Test]
+    public void Cloud_vm_options_round_trip_arbitrary_keys_per_profile_and_server()
+    {
+        _store.SetCloudVmOptions("AwsEc2", "ec2-box", new Dictionary<string, string>
+        {
+            ["amiId"] = "ami-123", ["keyName"] = "my-keypair", ["sshUser"] = "ubuntu", ["sshKeyPath"] = "/keys/id_ed25519",
+        });
+        var options = _store.GetCloudVmOptions("AwsEc2", "ec2-box");
+        Assert.That(options, Is.Not.Null);
+        Assert.That(options!["amiId"], Is.EqualTo("ami-123"));
+        Assert.That(options["sshUser"], Is.EqualTo("ubuntu"));
+    }
+
+    [Test]
+    public void Cloud_vm_options_are_independent_per_profile_for_the_same_server_name()
+    {
+        _store.SetCloudVmOptions("AwsEc2", "box", new Dictionary<string, string> { ["amiId"] = "ami-1" });
+        _store.SetCloudVmOptions("Gce", "box", new Dictionary<string, string> { ["zone"] = "us-central1-a" });
+        Assert.That(_store.GetCloudVmOptions("AwsEc2", "box")!.ContainsKey("zone"), Is.False);
+        Assert.That(_store.GetCloudVmOptions("Gce", "box")!["zone"], Is.EqualTo("us-central1-a"));
+    }
+
+    [Test]
+    public void GetCloudVmOptions_is_null_before_anything_is_stored()
+    {
+        Assert.That(_store.GetCloudVmOptions("AzureVm", "nobody"), Is.Null);
+    }
 }

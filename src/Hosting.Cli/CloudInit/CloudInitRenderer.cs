@@ -136,5 +136,70 @@ public static class CloudInitRenderer
         }
     }
 
+    /// <summary>
+    /// A <c>#cloud-config</c> user-data document for the providers whose VM boot mechanism *is*
+    /// cloud-init (AWS EC2, AWS Lightsail, Azure VM via <c>customData</c>): writes
+    /// <paramref name="compose"/>, <paramref name="ghcrToken"/> and <paramref name="bootstrapScript"/>
+    /// into <paramref name="sshUser"/>'s home directory (the same relative layout
+    /// <see cref="RenderCompose"/>'s caller uploads over SSH for GenericVps, so the shared
+    /// post-boot SSH operations -- status/logs/update -- run the identical commands against
+    /// either kind of host) and runs the bootstrap script once, on first boot only.
+    /// </summary>
+    public static string RenderCloudConfig(string sshUser, string compose, string bootstrapScript, string ghcrToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sshUser);
+        string home = $"/home/{sshUser}";
+        var text = new StringBuilder();
+        text.Append("#cloud-config\n");
+        text.Append("write_files:\n");
+        AppendCloudConfigFile(text, $"{home}/{ComposeFileName}", compose, sshUser, "0644");
+        AppendCloudConfigFile(text, GhcrTokenPath, ghcrToken, "root", "0600");
+        AppendCloudConfigFile(text, $"{home}/mp-host-bootstrap.sh", bootstrapScript, sshUser, "0700");
+        text.Append("runcmd:\n");
+        text.Append("  - [ sh, -c, \"cd ").Append(home).Append(" && ./mp-host-bootstrap.sh\" ]\n");
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// The plain-shell equivalent of <see cref="RenderCloudConfig"/> for GCE's <c>startup-script</c>
+    /// metadata key, which the guest agent runs as a literal script rather than parsing as
+    /// cloud-init YAML. Writes the same three files to the same paths and runs the bootstrap script
+    /// every boot; the bootstrap script itself is idempotent (re-login, re-pull, re-up), so a reboot
+    /// just re-applies the already-running stack instead of double-provisioning it.
+    /// </summary>
+    public static string RenderStartupScript(string sshUser, string compose, string bootstrapScript, string ghcrToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sshUser);
+        string home = $"/home/{sshUser}";
+        var text = new StringBuilder();
+        text.Append("#!/bin/sh\n");
+        text.Append("set -e\n");
+        AppendHeredoc(text, $"{home}/{ComposeFileName}", compose);
+        AppendHeredoc(text, GhcrTokenPath, ghcrToken);
+        AppendHeredoc(text, $"{home}/mp-host-bootstrap.sh", bootstrapScript);
+        text.Append("chown ").Append(sshUser).Append(':').Append(sshUser).Append(' ').Append(home).Append('/').Append(ComposeFileName).Append('\n');
+        text.Append("chmod 0700 ").Append(home).Append("/mp-host-bootstrap.sh\n");
+        text.Append("cd ").Append(home).Append(" && ./mp-host-bootstrap.sh\n");
+        return text.ToString();
+    }
+
+    private static void AppendCloudConfigFile(StringBuilder text, string path, string content, string owner, string permissions)
+    {
+        text.Append("  - path: ").Append(path).Append('\n');
+        text.Append("    owner: ").Append(owner).Append(':').Append(owner).Append('\n');
+        text.Append("    permissions: '").Append(permissions).Append("'\n");
+        text.Append("    encoding: b64\n");
+        text.Append("    content: ").Append(Convert.ToBase64String(Encoding.UTF8.GetBytes(content))).Append('\n');
+    }
+
+    private static void AppendHeredoc(StringBuilder text, string path, string content)
+    {
+        const string marker = "MPHOST_EOF";
+        text.Append("cat > ").Append(path).Append(" <<'").Append(marker).Append("'\n");
+        text.Append(content);
+        if (!content.EndsWith('\n')) text.Append('\n');
+        text.Append(marker).Append('\n');
+    }
+
     private static string YamlQuote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

@@ -8,9 +8,21 @@ namespace Unity.Multiplayer.Hosting.Cli.Tests;
 internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly Func<HttpRequestMessage, string> _respond;
+    private readonly Func<HttpRequestMessage, HttpStatusCode> _status;
+    private readonly string _contentType;
     public List<string> RequestBodies { get; } = new();
 
-    public FakeHttpMessageHandler(Func<HttpRequestMessage, string> respond) => _respond = respond;
+    public FakeHttpMessageHandler(Func<HttpRequestMessage, string> respond, HttpStatusCode statusCode = HttpStatusCode.OK, string contentType = "application/json")
+        : this(respond, _ => statusCode, contentType)
+    {
+    }
+
+    public FakeHttpMessageHandler(Func<HttpRequestMessage, string> respond, Func<HttpRequestMessage, HttpStatusCode> statusSelector, string contentType = "application/json")
+    {
+        _respond = respond;
+        _status = statusSelector;
+        _contentType = contentType;
+    }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
@@ -19,9 +31,9 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
             RequestBodies.Add(await request.Content.ReadAsStringAsync(ct));
         }
 
-        return new HttpResponseMessage(HttpStatusCode.OK)
+        return new HttpResponseMessage(_status(request))
         {
-            Content = new StringContent(_respond(request), Encoding.UTF8, "application/json"),
+            Content = new StringContent(_respond(request), Encoding.UTF8, _contentType),
         };
     }
 }
