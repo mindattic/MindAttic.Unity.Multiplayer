@@ -31,6 +31,18 @@ public class DryRunSshCommandRunnerTests
     }
 
     [Test]
+    public async Task RunAsync_simulates_the_game_service_running_so_a_dry_run_status_check_reports_running()
+    {
+        var runner = new DryRunSshCommandRunner(new RecordingDeployLog());
+        SshCommandResult result = await runner.RunAsync(
+            Target, "docker compose -f docker-compose.yml ps --status running --services", CancellationToken.None);
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            Has.Some.EqualTo("game"));
+    }
+
+    [Test]
     public async Task RunAsync_echoes_the_command_and_returns_an_otherwise_empty_success()
     {
         var log = new RecordingDeployLog();
