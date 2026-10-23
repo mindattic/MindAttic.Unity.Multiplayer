@@ -181,6 +181,73 @@ namespace Unity.Multiplayer.Editor.Tests
             Assert.That(TestKitDefine.WithSymbol("", true), Is.EqualTo(TestKitDefine.Symbol));
         }
 
+        [Serializable]
+        private class AsmdefShape
+        {
+            public string name;
+            public string[] references;
+            public string[] defineConstraints;
+        }
+
+        private static AsmdefShape ParseAsmdef(string json) => UnityEngine.JsonUtility.FromJson<AsmdefShape>(json);
+
+        // UM-T72: a game test assembly that references the kit without the constraint fails a clean checkout's first compile.
+        [Test]
+        public void AGameAsmdefThatReferencesTheKitGetsTheConstraint()
+        {
+            const string none = "{\n    \"name\": \"Cursory.Tests\",\n    \"references\": [\n        \"Cursory\",\n        \"Unity.Multiplayer.Testing\"\n    ],\n    \"autoReferenced\": false\n}\n";
+            const string empty = "{\n    \"name\": \"A.Tests\",\n    \"references\": [ \"GUID:" + TestKitDefine.KitAssemblyGuid + "\" ],\n    \"defineConstraints\": [],\n    \"noEngineReferences\": false\n}\n";
+            const string some = "{\n    \"name\": \"B.Tests\",\n    \"references\": [ \"Unity.Multiplayer.Testing\" ],\n    \"defineConstraints\": [\n        \"UNITY_INCLUDE_TESTS\"\n    ],\n    \"versionDefines\": []\n}\n";
+
+            foreach (string before in new[] { none, empty, some })
+            {
+                string after = TestKitDefine.WithKitConstraint(before);
+                Assert.That(after, Is.Not.Null, before);
+                AsmdefShape shape = ParseAsmdef(after);
+                Assert.That(shape.defineConstraints, Does.Contain(TestKitDefine.Symbol), after);
+                Assert.That(shape.references, Is.EqualTo(ParseAsmdef(before).references), after);
+                Assert.That(TestKitDefine.WithKitConstraint(after), Is.Null, "a second pass changes nothing");
+            }
+
+            Assert.That(ParseAsmdef(TestKitDefine.WithKitConstraint(some)).defineConstraints, Is.EqualTo(new[] { "UNITY_INCLUDE_TESTS", TestKitDefine.Symbol }));
+            Assert.That(TestKitDefine.WithKitConstraint("{ \"name\": \"Game\", \"references\": [ \"Unity.Multiplayer\" ] }"), Is.Null, "no kit reference, no change");
+        }
+
+        [Test]
+        public void AddConstraintToGameAssembliesFixesOnlyTheAssetsAsmdefsThatNeedIt()
+        {
+            string tests = Path.Combine(_temp, "Assets", "Game", "Tests");
+            Directory.CreateDirectory(tests);
+            string old = Path.Combine(tests, "Game.Tests.asmdef");
+            string game = Path.Combine(_temp, "Assets", "Game", "Game.asmdef");
+            File.WriteAllText(old, "{\n    \"name\": \"Game.Tests\",\n    \"references\": [ \"Game\", \"Unity.Multiplayer.Testing\" ]\n}\n");
+            File.WriteAllText(game, "{\n    \"name\": \"Game\",\n    \"references\": [ \"Unity.Multiplayer\" ]\n}\n");
+            string gameBefore = File.ReadAllText(game);
+
+            List<string> changed = TestKitDefine.AddConstraintToGameAssemblies(_temp);
+
+            Assert.That(changed, Is.EqualTo(new[] { "Assets/Game/Tests/Game.Tests.asmdef" }));
+            Assert.That(ParseAsmdef(File.ReadAllText(old)).defineConstraints, Does.Contain(TestKitDefine.Symbol));
+            Assert.That(File.ReadAllText(game), Is.EqualTo(gameBefore));
+            Assert.That(TestKitDefine.AddConstraintToGameAssemblies(_temp), Is.Empty, "a second pass changes nothing");
+        }
+
+        [Test]
+        public void EveryTemplateAsmdefThatReferencesTheKitAlreadyHasTheConstraint()
+        {
+            string template = NewGame.DefaultTemplateFolder();
+            Assert.That(template, Is.Not.Null);
+            int kitUsers = 0;
+            foreach (string asmdef in Directory.GetFiles(template, "*.asmdef", SearchOption.AllDirectories))
+            {
+                string json = File.ReadAllText(asmdef);
+                kitUsers += TestKitDefine.ReferencesKit(json) ? 1 : 0;
+                Assert.That(TestKitDefine.WithKitConstraint(json), Is.Null, asmdef);
+            }
+
+            Assert.That(kitUsers, Is.GreaterThan(0));
+        }
+
         private static HashSet<string> Guids(string folder, string pattern)
         {
             var guids = new HashSet<string>();

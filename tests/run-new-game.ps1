@@ -16,9 +16,13 @@
        copied back into Samples~/GameTemplate (then Assets/MyGame is removed again).
     7. NewGame.CreateFromCommandLine -gameName <GameName> creates the game.
     8. The game's EditMode (<GameName>.EditorTests) and PlayMode (<GameName>.Tests) suites run.
-    9. With -Smoke: `mp-host game smoke` (dotnet run of src/Hosting.Cli) builds the Linux player and runs the server and
+    9. A clean checkout (Assets, Packages, ProjectSettings copied, no Library) batch-builds a Win64 player with no compile
+       error and leaves ProjectSettings.asset and the asmdefs unchanged (UM-T72); a checkout without MINDATTIC_NGO_TESTABLE
+       committed still compiles.
+   10. With -Smoke: `mp-host game smoke` (dotnet run of src/Hosting.Cli) builds the Linux player and runs the server and
        two bots under Docker Compose until both pass.
-  Logs and results land in <project>\logs. Exits non-zero on any failure.
+  Logs and results land in <project>\logs. Exits non-zero on any failure. Keep -Root short: step 9's player build fails
+  in Burst's link step when the checkout's Temp\Burst paths pass Windows' 260-character limit.
 
 .PARAMETER GameName
   The new game's name (default SpaceCrates, so the template's MyGame token is replaced; -Author forces MyGame).
@@ -132,7 +136,56 @@ Get-Content (Join-Path $project 'mp-host.json')
 Invoke-Tests 'EditMode' "$GameName.EditorTests"
 Invoke-Tests 'PlayMode' "$GameName.Tests"
 
-# --- 9. the end-to-end smoke ----------------------------------------------------------------------------------------
+# --- 9. a clean checkout of the game builds in batch mode (UM-T72) -------------------------------------------------
+# What a deploy or CI job sees: the committed files only (Assets, Packages, ProjectSettings, no Library). The first compile
+# must not fail (a game test asmdef that references Unity.Multiplayer.Testing without the MINDATTIC_NGO_TESTABLE constraint
+# fails it with CS0234 before any editor script runs), and the build must not rewrite ProjectSettings.asset (the define is
+# committed, so TestKitDefine has nothing to change).
+function Copy-Checkout([string]$to) {
+    if (Test-Path $to) { Remove-Item $to -Recurse -Force }
+    New-Item -ItemType Directory -Force $to | Out-Null
+    foreach ($dir in 'Assets', 'Packages', 'ProjectSettings') { Copy-Item (Join-Path $project $dir) (Join-Path $to $dir) -Recurse }
+    Copy-Item (Join-Path $project 'mp-host.json') $to
+}
+function Get-Tracked([string]$root) {
+    $files = @(Get-Item (Join-Path $root 'ProjectSettings/ProjectSettings.asset')) + @(Get-ChildItem (Join-Path $root 'Assets') -Recurse -Filter *.asmdef)
+    $map = @{}
+    foreach ($f in $files) { $map[$f.FullName.Substring($root.Length)] = (Get-FileHash $f.FullName).Hash }
+    return $map
+}
+function Invoke-Checkout([string]$checkout, [string]$log, [string[]]$extra) {
+    $a = @('-batchmode', '-nographics', '-quit', '-projectPath', "`"$checkout`"", '-logFile', "`"$(Join-Path $logs $log)`"") + $extra
+    $p = Start-Process -FilePath $Unity -ArgumentList $a -Wait -PassThru -NoNewWindow
+    $errors = Select-String -Path (Join-Path $logs $log) -Pattern 'error CS\d+' | Select-Object -First 5
+    if ($p.ExitCode -ne 0 -or $errors) { Fail "the clean checkout at $checkout (Unity exit $($p.ExitCode)) $($errors -join ' '); see $log" }
+}
+
+$settings = Get-Content (Join-Path $project 'ProjectSettings/ProjectSettings.asset') -Raw
+if ($settings -notmatch 'Standalone: [^\r\n]*MINDATTIC_NGO_TESTABLE') { Fail 'ProjectSettings.asset does not hold MINDATTIC_NGO_TESTABLE for Standalone, so a clean checkout would not have it' }
+
+$checkout = Join-Path $Root "$GameName-checkout"
+Copy-Checkout $checkout
+$before = Get-Tracked $checkout
+$player = Join-Path $checkout "Builds/Win64/$GameName.exe"
+Invoke-Checkout $checkout 'checkout-build.log' @('-buildTarget', 'Win64', '-buildWindows64Player', "`"$player`"")
+if (-not (Test-Path $player)) { Fail "the clean checkout's batch build wrote no player; see checkout-build.log" }
+$after = Get-Tracked $checkout
+$dirty = @($before.Keys | Where-Object { $after[$_] -ne $before[$_] }) + @($after.Keys | Where-Object { -not $before.ContainsKey($_) })
+if ($dirty.Count -gt 0) { Fail "the clean checkout's batch build changed committed files: $($dirty -join ', ')" }
+Write-Host "A clean checkout of $GameName built a Win64 player in batch mode and left ProjectSettings.asset and the asmdefs unchanged."
+
+# A game that never committed the define: the first compile still succeeds (its test assemblies are left out until
+# TestKitDefine sets the define, then come back on the recompile).
+$bare = Join-Path $Root "$GameName-checkout-nodefine"
+Copy-Checkout $bare
+$path = Join-Path $bare 'ProjectSettings/ProjectSettings.asset'
+[IO.File]::WriteAllText($path, ((Get-Content $path -Raw) -replace ';?MINDATTIC_NGO_TESTABLE', ''))
+Invoke-Checkout $bare 'checkout-nodefine.log' @()
+if ((Get-Content $path -Raw) -notmatch 'MINDATTIC_NGO_TESTABLE') { Fail 'TestKitDefine did not set the define in a checkout that lacked it; see checkout-nodefine.log' }
+Write-Host 'A clean checkout without the define committed also compiled (and TestKitDefine set it).'
+Remove-Item $checkout, $bare -Recurse -Force
+
+# --- 10. the end-to-end smoke ---------------------------------------------------------------------------------------
 if ($Smoke) {
     $cli = Join-Path $repo 'src/Hosting.Cli/Hosting.Cli.csproj'
     & dotnet run --project $cli -c Release -- game smoke --project $project --multiplayer $repo --unity $Unity

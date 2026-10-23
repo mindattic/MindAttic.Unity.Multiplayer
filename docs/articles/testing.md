@@ -23,10 +23,28 @@ never happened, not a bare timeout.
 2. Reference the kit from your PlayMode test assembly. Its define constraint is `UNITY_EDITOR ||
    UNITY_INCLUDE_TESTS`: it compiles in the Editor and in test builds, and it (with NUnit and NGO's test helpers)
    never reaches a player build. It also requires `MINDATTIC_NGO_TESTABLE`, a symbol the package's editor script sets
-   while the manifest lists NGO under `"testables"`, so a project without that line compiles fine and simply has no kit
-   (a test assembly that references the kit should carry the same constraint). It deliberately does not use `UNITY_INCLUDE_TESTS` alone, which Unity honours only
+   while the manifest lists NGO under `"testables"`, so a project without that line compiles fine and simply has no kit.
+   It deliberately does not use `UNITY_INCLUDE_TESTS` alone, which Unity honours only
    for packages listed under `testables`; like Unity's own Performance Testing package, it is a test utility a game
    uses without making the package's own tests part of its Test Runner.
+
+3. **Give every test assembly that references the kit the `MINDATTIC_NGO_TESTABLE` constraint too, and commit the
+   define.** The symbol is set by an editor script, and an editor script only runs after the project has compiled. On a
+   clean checkout (a CI job, a deploy build, a teammate's first clone) the define is not set yet unless it is committed,
+   the kit is left out, and a test assembly that references it without the constraint fails the very first compile
+   with `CS0234: The type or namespace name 'Testing' does not exist`; a batch build aborts there, before any script
+   can fix it. So:
+
+   - the constraint goes in each such asmdef (the New Game template has it; for an older game the package's editor
+     script adds it to any asmdef under `Assets` that references the kit without it, and logs which files it changed),
+   - and `ProjectSettings/ProjectSettings.asset`, which holds the symbol under **Player Settings > Scripting Define
+     Symbols** (Standalone, Server and the active platform), is committed along with `Packages/manifest.json`. The
+     script logs "Commit ProjectSettings/ProjectSettings.asset" whenever it changes that file; if a clean checkout's
+     build leaves `ProjectSettings.asset` modified, the define was not committed.
+
+   With both in place a clean checkout compiles the kit and the game's tests on its first compile and changes no
+   committed file. `tests/run-new-game.ps1` checks exactly this: it copies the generated game's committed folders
+   (no `Library`) and batch-builds a Win64 player from them.
 
    ```json
    {
@@ -44,7 +62,7 @@ never happened, not a bare timeout.
        "overrideReferences": true,
        "precompiledReferences": [ "nunit.framework.dll" ],
        "autoReferenced": false,
-       "defineConstraints": [ "UNITY_INCLUDE_TESTS" ]
+       "defineConstraints": [ "UNITY_INCLUDE_TESTS", "MINDATTIC_NGO_TESTABLE" ]
    }
    ```
 

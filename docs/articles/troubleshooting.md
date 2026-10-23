@@ -28,6 +28,7 @@ runs before they're fixed. Full table and examples: [Attributes reference](attri
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Your test assembly cannot find `NetSessionTest`, `FreePort` or `Unity.Multiplayer.Testing` | The test kit builds on NGO's test helpers, which only compile when NGO is a testable, so it is absent until `Packages/manifest.json` lists NGO under `"testables"` (the package alone still compiles). | Add `"testables": [ "com.unity.netcode.gameobjects" ]` ([Testing](testing.md#set-up)); the kit appears on the next domain reload (the editor sets `MINDATTIC_NGO_TESTABLE`). |
+| A clean checkout (CI, a deploy build) fails its first compile with `CS0234 ... 'Testing' does not exist`, or a build leaves `ProjectSettings.asset` modified | `MINDATTIC_NGO_TESTABLE` is set by an editor script, which cannot run before the first compile: the define was not committed, and a test asmdef references the kit without the same define constraint. | Open the project once in the editor (it adds the constraint to such asmdefs and sets the define), then commit the asmdefs and `ProjectSettings/ProjectSettings.asset` ([Testing](testing.md#set-up), step 3). |
 | **New Game…** or **Add Front End** says MindAttic Components is missing | The front end and the vote overlay are built from it, and a `package.json` cannot depend on a `file:` package. | Click **Add missing lines to Packages/manifest.json** in **New Game…**, or add the line it shows. See [The kit](kit.md). |
 
 ## Editor: Validate Prefabs

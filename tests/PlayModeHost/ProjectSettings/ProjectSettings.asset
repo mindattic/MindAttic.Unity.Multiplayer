@@ -814,7 +814,9 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Server: MINDATTIC_NGO_TESTABLE
+    Standalone: MINDATTIC_NGO_TESTABLE
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

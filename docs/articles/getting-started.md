@@ -77,6 +77,11 @@ and fresh asset GUIDs. It also:
 
 - puts `Assets/SpaceCrates/Game.unity` first in Build Settings,
 - turns on **Run In Background**,
+- makes sure **Player Settings > Scripting Define Symbols** holds `MINDATTIC_NGO_TESTABLE`, the switch for the test kit
+  (the package's editor script sets it while NGO is under `"testables"`). **Commit
+  `ProjectSettings/ProjectSettings.asset` with `Packages/manifest.json` and the game:** the game's test assemblies
+  carry the same symbol as a define constraint, so without the committed define a clean checkout (CI, a deploy build)
+  compiles without the tests and then rewrites that file. See [Testing](testing.md#set-up), step 3,
 - writes `mp-host.json` at the project root, with the server scene and the smoke test's bots,
 - writes `.github/workflows/nightly.yml`, the nightly smoke test,
 - and opens the scene.

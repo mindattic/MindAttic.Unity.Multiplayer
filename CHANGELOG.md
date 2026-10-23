@@ -15,6 +15,12 @@ carries the package's own version.
   `TestKitDefine` sets while `Packages/manifest.json` lists NGO under `"testables"` (and removes otherwise). Without the
   testables line the kit is absent; with it, it appears on the next domain reload. The game template's test assembly
   carries the same constraint.
+- A clean checkout of a game builds again (UM-T72). `MINDATTIC_NGO_TESTABLE` is set by an editor script, which only runs
+  after a successful compile, so a game test asmdef that referenced the kit without the constraint failed the first
+  compile (CS0234) and a batch build aborted; setting the define then also rewrote `ProjectSettings.asset`. `TestKitDefine`
+  now adds the constraint to any asmdef under `Assets` that references the kit without it, and logs that
+  `ProjectSettings/ProjectSettings.asset` must be committed whenever it changes the define; New Game says the same.
+  `tests/run-new-game.ps1` batch-builds a clean copy of the generated game and fails if a committed file changes.
 
 ## [2.0.0] — 2026-10-21
 

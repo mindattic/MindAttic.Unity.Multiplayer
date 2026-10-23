@@ -290,6 +290,15 @@ namespace Unity.Multiplayer.Editor
                     result.Changes.Add("Turned on Player Settings > Run In Background (a host keeps serving when its window loses focus).");
                 }
 
+                // UM-T72: the game's test assemblies need the define on a clean checkout's first compile, before any editor
+                // script can set it, so it has to be committed.
+                TestKitDefine.Apply();
+                if (Array.IndexOf(PlayerSettings.GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.Standalone).Split(';'), TestKitDefine.Symbol) >= 0)
+                {
+                    result.Changes.Add("Player Settings > Scripting Define Symbols has " + TestKitDefine.Symbol + " (the test kit's switch). Commit"
+                        + " ProjectSettings/ProjectSettings.asset and Packages/manifest.json with the game, so a clean checkout compiles its tests at once.");
+                }
+
                 AssetDatabase.SaveAssets();
             }
 
