@@ -58,9 +58,15 @@ the editor loads, with no pop-up.
 **Host** publishes a join code when one can be published. With the NetBootstrap's Join Codes left at Auto it tries
 Unity Relay when `com.unity.services.multiplayer` is installed, then the rendezvous service when the NetBootstrap has a
 Rendezvous URL (the same rule as `NetSession.HostWithCode`, see [Join codes](join-codes.md)); Relay or Rendezvous
-chosen explicitly is the only one tried. When none can, for example when Relay is installed but the project is not
-linked to Unity Cloud and there is no URL, the game is hosted anyway. A toast says why there is no code, and players
-join by IP.
+chosen explicitly is the only one tried. When none can, the game is hosted anyway, a toast says why there is no code,
+and players join by IP. For example, when Relay is installed but the project isn't linked to a Unity Cloud project and
+there is no URL, the toast reads "No join code: Unity Relay isn't set up: this project isn't linked to a Unity Cloud
+project. In the editor open Edit > Project Settings > Services, ... Players can still join by IP." **Join by code**
+with a Relay code in that project shows a *Couldn't join* dialog with the same sentence. Other Relay problems are
+explained the same way: Relay off for the Cloud project, a missing environment, no internet. To make Relay work for a
+home host, see [Unity Relay for a home host](join-codes.md#unity-relay-for-a-home-host-no-port-forwarding). The New
+Game wizard's step 3 and `tools/link-unity-cloud.ps1` set it up, and the NetBootstrap signs in anonymously as the
+scene starts.
 
 ### When a game ends
 
@@ -234,6 +240,8 @@ run (`FrontEndTesting.ForceMenus`). See [Testing your front end](testing.md#test
     approval payload; Start enters the game; Leave from the in-game menu returns to the main menu;
   - join by code uses the code the lobby shows, through an in-process rendezvous server, also with Join Codes left at
     Auto and only a rendezvous URL configured;
+  - with Relay installed but the project not linked, Host toasts how to link it and hosts for joining by IP, and Join
+    by code explains it in a dialog;
   - the in-game menu's game items run once and their `Shown` handlers fire once per open, across several games;
   - a version mismatch and a kick each show their dialog;
   - a lost connection (a UDP relay that cuts the link) reconnects to the same seat; a link that never comes back gives

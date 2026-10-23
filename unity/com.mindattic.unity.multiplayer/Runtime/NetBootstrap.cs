@@ -72,6 +72,18 @@ namespace Unity.Multiplayer
         [Tooltip("Server: the port players reach it at, when a host maps it. 0 = the listen port (or RunPod's RUNPOD_TCP_PORT_* mapping).")]
         [SerializeField, Range(0, 65535)] private int publicPort;
 
+        [Header("Unity Relay (com.unity.services.multiplayer)")]
+        [Tooltip("The Unity Services environment of the linked Cloud project that Relay join codes use. Empty = production.")]
+        [SerializeField] private string relayEnvironment = RelaySetup.DefaultEnvironment;
+
+        [Tooltip("The Relay region to allocate in (for example us-east1). Empty lets Relay pick the one closest to the host.")]
+        [SerializeField] private string relayRegion = string.Empty;
+
+        [Tooltip("When Relay is installed and the project is linked to a Unity Cloud project, sign in to Unity Authentication anonymously "
+            + "as the scene starts, so Host and Join by code don't wait for it (not in a headless dedicated server). A project that "
+            + "is installed but not linked logs how to link it.")]
+        [SerializeField] private bool signInAtStartup = true;
+
         [Header("Network conditions (editor and development builds)")]
         [Tooltip("Simulate a slow or lossy link on this peer, for testing. None simulates nothing; Custom uses the three numbers below. -netsim, -latency, -jitter and -loss override it.")]
         [SerializeField] private NetConditionsProfile conditions = NetConditionsProfile.None;
@@ -401,6 +413,8 @@ namespace Unity.Multiplayer
         {
             Session = new NetSession(GetComponent<NetworkManager>());
             Session.Identity = BuildIdentity();
+            Session.Relay.Environment = relayEnvironment;
+            Session.Relay.Region = string.IsNullOrWhiteSpace(relayRegion) ? null : relayRegion.Trim();
             if (prefabLists != null)
             {
                 foreach (NetPrefabList list in prefabLists)
@@ -444,6 +458,12 @@ namespace Unity.Multiplayer
                 HeadlessBootstrap.Apply(config.TickRate);
             }
 
+            if (signInAtStartup && !(start && config.Topology == Topology.Server) && config.JoinCodes != JoinCodeProvider.None
+                && config.JoinCodes != JoinCodeProvider.Rendezvous)
+            {
+                _ = SignInToRelayAsync();
+            }
+
             if (start)
             {
                 Debug.Log("[MindAttic.Multiplayer] Starting " + config);
@@ -468,6 +488,35 @@ namespace Unity.Multiplayer
                     Debug.LogError("[MindAttic.Multiplayer] The dedicated server could not start; exiting.");
                     Application.Quit(1);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Signs in to Unity Services for Relay join codes ahead of the first Host or Join by code (Sign In At Startup).
+        /// Nothing happens without the package; a project that is not linked logs <see cref="RelaySetup.NotLinkedMessage"/>
+        /// once; any other failure is logged and tried again by the first Relay call.
+        /// </summary>
+        private async System.Threading.Tasks.Task SignInToRelayAsync()
+        {
+            RelayReadiness readiness = RelayJoinCodeService.Readiness;
+            if (readiness == RelayReadiness.NotInstalled)
+            {
+                return;
+            }
+
+            if (readiness == RelayReadiness.NotLinked)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] " + RelaySetup.NotLinkedMessage);
+                return;
+            }
+
+            try
+            {
+                await Session.Relay.SignInAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[MindAttic.Multiplayer] Signing in to Unity Services for Relay failed (Host and Join by code try again): " + ex.Message);
             }
         }
 

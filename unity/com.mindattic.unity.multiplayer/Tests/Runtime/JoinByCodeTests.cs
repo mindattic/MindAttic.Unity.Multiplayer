@@ -192,6 +192,43 @@ namespace Unity.Multiplayer.Tests
         }
 
         [UnityTest]
+        public IEnumerator RelayInstalledButNotLinked_HostAndJoinByCode_SayHowToLinkTheProject()
+        {
+            // UM-T71: com.unity.services.multiplayer installed but the project not linked to a Unity Cloud project. Both
+            // sides stop before Unity Services is touched, with the sentence that says how to link it.
+            if (RelayJoinCodeService.Readiness == RelayReadiness.Ready)
+            {
+                Assert.Ignore("This project is linked to a Unity Cloud project; the not-linked path cannot be shown.");
+            }
+
+            RelayJoinCodeService.ReadinessOverride = RelayReadiness.NotLinked;
+            try
+            {
+                Assert.That(RelayJoinCodeService.IsInstalled, Is.True, "installed, so the defaults try Relay");
+                NetConfig config = ServerConfig();
+                config.RendezvousUrl = null;
+                Task<JoinCode> host = Server.HostWithCode(config);
+                yield return WaitFor(host);
+                Assert.That(host.Result.IsEmpty, Is.True);
+                Assert.That(_serverFailures, Is.EqualTo(new[] { RelaySetup.NotLinkedMessage }), "the not-linked sentence, nothing else");
+                Assert.That(Server.IsActive, Is.False, "no host is started without its Relay allocation");
+
+                JoinCode relayShaped = RelayCodes.ToJoinCode("6789BCDF");
+                Task<bool> join = Client.JoinByCode(relayShaped.Value, new NetConfig { GameVersion = GameVersion });
+                yield return WaitFor(join);
+                Assert.That(join.Result, Is.False);
+                Assert.That(_clientFailures, Has.Count.EqualTo(1));
+                Assert.That(_clientFailures[0], Does.StartWith("Could not look up code " + JoinCodeFormat.Format(relayShaped.Value) + ": ")
+                    .And.EndWith(RelaySetup.NotLinkedMessage));
+                Assert.That(Client.IsActive, Is.False);
+            }
+            finally
+            {
+                RelayJoinCodeService.ReadinessOverride = null;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator ListenServer_DefaultJoinCodes_WithoutRelay_UseTheRendezvousUrl()
         {
             if (RelayJoinCodeService.IsAvailable)

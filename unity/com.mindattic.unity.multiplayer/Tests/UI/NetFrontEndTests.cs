@@ -42,6 +42,7 @@ namespace Unity.Multiplayer.UI.Tests
         private string _clientVersion;
         private bool _codes;
         private bool _defaultJoinCodes;
+        private bool _relayOnly;
         private readonly List<Disconnection> _clientLeft = new List<Disconnection>();
         private int _clientReconnects;
         private int _hostGameStarts;
@@ -66,6 +67,7 @@ namespace Unity.Multiplayer.UI.Tests
             _clientVersion = "test";
             _codes = false;
             _defaultJoinCodes = false;
+            _relayOnly = false;
             _clientLeft.Clear();
             _clientReconnects = 0;
             _hostGameStarts = 0;
@@ -110,6 +112,11 @@ namespace Unity.Multiplayer.UI.Tests
                 config.RendezvousSecret = _rendezvous.Secret;
             }
 
+            if (_relayOnly)
+            {
+                config.JoinCodes = JoinCodeProvider.Auto; // the NetBootstrap default with no rendezvous URL: Relay or nothing
+            }
+
             return config;
         }
 
@@ -120,6 +127,11 @@ namespace Unity.Multiplayer.UI.Tests
             {
                 config.JoinCodes = JoinCodeProvider.Auto;
                 config.RendezvousUrl = _rendezvous.Url;
+            }
+
+            if (_relayOnly)
+            {
+                config.JoinCodes = JoinCodeProvider.Auto;
             }
 
             return config;
@@ -281,6 +293,47 @@ namespace Unity.Multiplayer.UI.Tests
             _client.MainMenu.Current.GetComponentInChildren<MaTextbox>().Text = _host.LobbyCode.Code;
             Click(_client.MainMenu.Current, "Join");
             yield return ClientInGame();
+        }
+
+        [UnityTest]
+        public IEnumerator RelayNotLinked_HostToastsHowToLink_AndStillHostsByIp_JoinByCodeExplainsItInADialog()
+        {
+            // UM-T71: Relay installed but the project not linked to a Unity Cloud project, Join Codes at Auto, no rendezvous
+            // URL. Host says how to link the project and hosts for joining by IP; Join by code explains the same thing.
+            if (RelayJoinCodeService.Readiness == RelayReadiness.Ready)
+            {
+                Assert.Ignore("This project is linked to a Unity Cloud project; the not-linked path cannot be shown.");
+            }
+
+            RelayJoinCodeService.ReadinessOverride = RelayReadiness.NotLinked;
+            try
+            {
+                _relayOnly = true;
+                yield return CreateFrontEnds();
+                Assert.That(HasButton(_client.MainScreen, "Join by code"), Is.True, "Relay is installed, so codes are offered");
+
+                yield return HostFromMenu();
+                Assert.That(_hostSession.IsHost, Is.True, "hosted anyway, for joining by IP");
+                Assert.That(_host.LobbyCode, Is.Null, "no code without a linked project");
+                Assert.That(MaToast.OnScreen.Any(t => t != null && t.Message != null && t.Message.StartsWith("No join code: ")
+                    && t.Message.Contains(RelaySetup.NotLinkedMessage) && t.Message.EndsWith("Players can still join by IP.")), Is.True,
+                    "a toast says how to link the project");
+
+                Click(_client.MainScreen, "Join by code");
+                _client.MainMenu.Current.GetComponentInChildren<MaTextbox>().Text = RelayCodes.ToJoinCode("6789BCDF").Value;
+                Click(_client.MainMenu.Current, "Join");
+                yield return Wait(() => _client.LastMessage.HasValue && _client.State == FrontEndState.Menu, 10f,
+                    () => "the client was never told (" + _client.State + ")");
+                DisconnectMessage message = _client.LastMessage.Value;
+                Assert.That(message.Title, Is.EqualTo("Couldn't join"));
+                Assert.That(message.Body, Does.EndWith(RelaySetup.NotLinkedMessage));
+                Assert.That(_client.MessageDialog, Is.Not.Null.And.Property("IsOpen").True);
+                Assert.That(_clientSession.IsActive, Is.False);
+            }
+            finally
+            {
+                RelayJoinCodeService.ReadinessOverride = null;
+            }
         }
 
         [UnityTest]

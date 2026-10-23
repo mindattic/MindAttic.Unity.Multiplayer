@@ -172,7 +172,9 @@ If you have nowhere to rent a box and no port forwarding at home (an HOA-control
 2. **A listen server reachable off the LAN:** use **Unity Relay** as the join-code provider
    (`JoinCodeProvider.Relay`, the default `Auto` choice for a `Host` topology) instead of the
    self-hosted rendezvous service -- Relay gets through NAT; rendezvous maps codes to addresses but
-   cannot. `mp-host local up` (the `Local` profile) also makes a best-effort UPnP port-mapping
+   cannot. Relay needs the package and a Unity Cloud project link, set up in a few minutes by the New Game wizard's
+   step 3 or `tools/link-unity-cloud.ps1` (see [Unity Relay for a home host](join-codes.md#unity-relay-for-a-home-host-no-port-forwarding)).
+   `mp-host local up` (the `Local` profile) also makes a best-effort UPnP port-mapping
    attempt for players connecting by IP, and reports plainly when the router refuses it (the expected
    outcome on a managed/HOA network) rather than treating that as an error.
 

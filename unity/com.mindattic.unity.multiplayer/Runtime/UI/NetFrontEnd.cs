@@ -1008,7 +1008,7 @@ namespace Unity.Multiplayer.UI
                 return new[] { JoinCodeProvider.Rendezvous };
             }
 
-            return JoinCodeDefaults.HostingOrder(config.JoinCodes, RelayJoinCodeService.IsAvailable, !string.IsNullOrWhiteSpace(config.RendezvousUrl));
+            return JoinCodeDefaults.HostingOrder(config.JoinCodes, RelayJoinCodeService.IsInstalled, !string.IsNullOrWhiteSpace(config.RendezvousUrl));
         }
 
         private bool JoinByCodeOffered()

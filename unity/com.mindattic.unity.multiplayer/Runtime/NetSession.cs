@@ -815,7 +815,7 @@ namespace Unity.Multiplayer
 
             JoinCodeProvider provider = _joinCodeOverride != null
                 ? JoinCodeProvider.Rendezvous
-                : JoinCodeDefaults.ForHosting(host.JoinCodes, RelayJoinCodeService.IsAvailable, !string.IsNullOrWhiteSpace(host.RendezvousUrl));
+                : JoinCodeDefaults.ForHosting(host.JoinCodes, RelayJoinCodeService.IsInstalled, !string.IsNullOrWhiteSpace(host.RendezvousUrl));
             if (provider == JoinCodeProvider.None)
             {
                 throw new InvalidOperationException("Join codes are off (NetConfig.JoinCodes = None); use StartHost.");
@@ -832,7 +832,7 @@ namespace Unity.Multiplayer
                 return await PublishOrLeave();
             }
 
-            if (!RelayJoinCodeService.IsAvailable)
+            if (!RelayJoinCodeService.IsInstalled)
             {
                 Fail(RelayJoinCodeService.MissingPackageMessage);
                 return JoinCode.Empty;
@@ -845,7 +845,8 @@ namespace Unity.Multiplayer
             }
             catch (Exception ex)
             {
-                Fail("Could not get a Unity Relay allocation: " + ex.Message);
+                // A setup problem (not linked, Relay off, offline) carries its own sentence saying what to fix.
+                Fail(RelayJoinCodeService.Describe(ex, "Could not get a Unity Relay allocation"));
                 return JoinCode.Empty;
             }
 
@@ -975,7 +976,7 @@ namespace Unity.Multiplayer
             {
                 Fail(join.JoinCodes == JoinCodeProvider.None
                     ? "Join codes are off (NetConfig.JoinCodes = None)."
-                    : join.JoinCodes == JoinCodeProvider.Relay && !RelayJoinCodeService.IsAvailable
+                    : join.JoinCodes == JoinCodeProvider.Relay && !RelayJoinCodeService.IsInstalled
                         ? RelayJoinCodeService.MissingPackageMessage
                         : "No join-code service is set up: set NetConfig.RendezvousUrl, or install com.unity.services.multiplayer for Relay.");
                 return false;
@@ -1130,7 +1131,7 @@ namespace Unity.Multiplayer
 
                     break;
                 case JoinCodeProvider.Relay:
-                    if (RelayJoinCodeService.IsAvailable)
+                    if (RelayJoinCodeService.IsInstalled)
                     {
                         services.Add(_relay);
                     }
@@ -1142,7 +1143,7 @@ namespace Unity.Multiplayer
                         services.Add(RendezvousFor(join));
                     }
 
-                    if (RelayJoinCodeService.IsAvailable && RelayCodes.TryGetRelayCode(code, out relayCode))
+                    if (RelayJoinCodeService.IsInstalled && RelayCodes.TryGetRelayCode(code, out relayCode))
                     {
                         services.Add(_relay);
                     }

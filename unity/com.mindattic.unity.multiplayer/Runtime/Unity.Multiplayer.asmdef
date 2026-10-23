@@ -10,6 +10,7 @@
         "Unity.Services.Core",
         "Unity.Services.Authentication",
         "Unity.Services.Relay",
+        "Unity.Services.Core.Environments",
         "Aws.GameLift.Server"
     ],
     "includePlatforms": [],

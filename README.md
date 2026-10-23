@@ -116,8 +116,10 @@ also list Netcode for GameObjects as a testable, see [Testing](docs/articles/tes
 }
 ```
 
-It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. Install `com.unity.services.multiplayer` as
-well for Unity Relay join codes.
+It pulls in Netcode for GameObjects 2.x and Unity Transport 2.x. For Unity Relay join codes, which let a player host
+from home with no port forwarding, add `com.unity.services.multiplayer` and link the project to a Unity Cloud project.
+The New Game wizard's step 3 or `tools/link-unity-cloud.ps1` does both; see
+[Join codes](docs/articles/join-codes.md#unity-relay-for-a-home-host-no-port-forwarding).
 
 **A new game:** run **MindAttic ▸ Multiplayer ▸ New Game…**, click **Add missing lines to Packages/manifest.json**,
 type a name and click **Create game**, then open its `Game.unity`, press Play and click **Host**. That is a whole game

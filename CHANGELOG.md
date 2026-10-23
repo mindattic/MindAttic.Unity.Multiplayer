@@ -7,6 +7,24 @@ carries the package's own version.
 
 ## [Unreleased]
 
+### Added
+
+- Unity Relay join codes set up end to end for a home host with no port forwarding (UM-T71).
+  - **Engine-free check.** `RelaySetup` (Core) checks whether the package is installed and the project linked to a
+    Unity Cloud project (`RelayReadiness`). It holds the setup sentences and turns raw Unity Services failures into
+    ones that say what to fix: not linked, Relay off, a missing environment, offline.
+  - **`RelayJoinCodeService`.** Adds `Readiness`, `IsInstalled`, an `Environment` (Unity Services environment,
+    `production` by default) and a shared anonymous `SignInAsync()`. A project that isn't linked fails before
+    anything is sent, with `RelaySetup.NotLinkedMessage`. Other failures become a `RelaySetupException`.
+  - **NetBootstrap.** A **Unity Relay** section: **Relay Environment**, **Relay Region** and **Sign In At Startup**,
+    which signs in as the scene starts.
+  - **Front end.** Host and Join by code show the explained sentence in the menu, as a toast or a dialog.
+  - **Setup.** **MindAttic ▸ Multiplayer ▸ New Game…** gains step 3, which adds the package, opens Services settings
+    or the dashboard, and shows the link. **MindAttic ▸ Multiplayer ▸ Check Unity Relay Setup** and
+    `RelaySetupCheck.CheckBatch` do the same check in the editor and in batch mode. `tools/link-unity-cloud.ps1` links
+    a project to a Cloud project and adds the package with the editor closed.
+  - **Docs.** [Join codes](docs/articles/join-codes.md#unity-relay-for-a-home-host-no-port-forwarding).
+
 ### Fixed
 
 - A project that adds only the package line compiles and runs batch mode again (UM-T67). The test kit

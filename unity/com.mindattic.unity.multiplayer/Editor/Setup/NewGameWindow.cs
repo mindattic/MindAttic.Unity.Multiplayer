@@ -3,11 +3,15 @@ using UnityEngine;
 
 namespace Unity.Multiplayer.Editor
 {
-    /// <summary>The window behind MindAttic ▸ Multiplayer ▸ New Game: the manifest check, the game's name, and Create.</summary>
+    /// <summary>
+    /// The window behind MindAttic ▸ Multiplayer ▸ New Game: the manifest check, the game's name and Create, and the optional
+    /// Unity Relay step (the package, the Cloud project link) for join codes that need no port forwarding.
+    /// </summary>
     internal sealed class NewGameWindow : EditorWindow
     {
         private string _name;
         private ManifestCheck _check;
+        private RelaySetupStatus _relay;
         private string _status;
         private Vector2 _scroll;
 
@@ -36,6 +40,7 @@ namespace Unity.Multiplayer.Editor
         private void Refresh()
         {
             _check = NewGame.CheckProject();
+            _relay = RelaySetupCheck.Check();
         }
 
         private void OnGUI()
@@ -98,6 +103,9 @@ namespace Unity.Multiplayer.Editor
                 }
             }
 
+            EditorGUILayout.Space();
+            DrawRelayStep();
+
             if (!string.IsNullOrEmpty(_status))
             {
                 EditorGUILayout.Space();
@@ -105,6 +113,34 @@ namespace Unity.Multiplayer.Editor
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        /// <summary>Step 3: Unity Relay, so a game hosted at home gets a join code without port forwarding.</summary>
+        private void DrawRelayStep()
+        {
+            EditorGUILayout.LabelField("3. Join codes without port forwarding (Unity Relay, optional)", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(_relay.Message, _relay.IsReady ? MessageType.Info : MessageType.Warning);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(_relay.PackageInManifest))
+                {
+                    if (GUILayout.Button("Add " + Core.RelaySetup.PackageName))
+                    {
+                        _status = RelaySetupCheck.AddPackage();
+                        Refresh();
+                    }
+                }
+
+                if (GUILayout.Button("Link project (Services settings)"))
+                {
+                    RelaySetupCheck.OpenServicesSettings();
+                }
+
+                if (GUILayout.Button("Unity Cloud dashboard"))
+                {
+                    RelaySetupCheck.OpenDashboard();
+                }
+            }
         }
     }
 }
